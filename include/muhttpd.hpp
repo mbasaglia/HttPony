@@ -171,6 +171,7 @@ struct Request
     std::string body;
     Headers     headers;
     Headers     cookies;
+    Headers     get;
     IPAddress   from;
     Auth        auth;
 };

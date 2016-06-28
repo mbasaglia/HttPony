@@ -45,6 +45,10 @@ public:
         for ( const auto& head : request.cookies )
             std::cout << '\t' << head.name << ' ' << head.value << '\n';
 
+        std::cout << "Get:\n";
+        for ( const auto& head : request.get )
+            std::cout << '\t' << head.name << ' ' << head.value << '\n';
+
         std::cout << '\n' << request.body << '\n';
         return muhttpd::Response("Hello, world!\n");
     }
