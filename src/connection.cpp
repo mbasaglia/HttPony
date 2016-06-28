@@ -103,6 +103,7 @@ static int receive(
     }
 
     MHD_get_connection_values(connection, MHD_HEADER_KIND, &collect_headers, &request.headers);
+    MHD_get_connection_values(connection, MHD_COOKIE_KIND, &collect_headers, &request.cookies);
 
     return send(self->respond(request), connection);
 }

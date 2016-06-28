@@ -36,8 +36,15 @@ public:
                   << request.method << ' ' << request.url << ' '
                   << request.auth.user << ' ' << request.auth.password
                   << '\n';
+
+        std::cout << "Headers:\n";
         for ( const auto& head : request.headers )
             std::cout << '\t' << head.name << ' ' << head.value << '\n';
+
+        std::cout << "Cookies:\n";
+        for ( const auto& head : request.cookies )
+            std::cout << '\t' << head.name << ' ' << head.value << '\n';
+
         std::cout << '\n' << request.body << '\n';
         return muhttpd::Response("Hello, world!\n");
     }
