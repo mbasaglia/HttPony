@@ -28,23 +28,31 @@
 
 namespace muhttpd {
 
+/**
+ * \brief Gives access to the internal request object
+ *
+ * This is needed because different bits of information are provided by
+ * different callbacks
+ */
 Request& _request(Server* sv)
 {
     return sv->request;
 }
 
-static int collect_header(
-    void *cls,
-    MHD_ValueKind kind,
-    const char *key,
-    const char *value
-)
+/**
+ * \brief Callback used to retrieve headers
+ * \param cls A pointer to a Headers object
+ */
+static int collect_headers(void *cls, MHD_ValueKind kind, const char *key, const char *value)
 {
     auto headers = reinterpret_cast<Headers*>(cls);
     headers->append(key, value);
     return MHD_YES;
 }
 
+/**
+ * \brief Sends a Response object to a Microhttpd connection
+ */
 static int send(const Response& resp, MHD_Connection* connection)
 {
     MHD_Response *response;
@@ -63,6 +71,10 @@ static int send(const Response& resp, MHD_Connection* connection)
     return ret;
 }
 
+/**
+ * \brief Callback for receiving a request
+ * \param cls A pointer to a Server object
+ */
 static int receive(
     void *cls,
     MHD_Connection *connection,
@@ -90,11 +102,15 @@ static int receive(
         request.auth.password = password;
     }
 
-    MHD_get_connection_values(connection, MHD_HEADER_KIND, &collect_header, &request.headers);
+    MHD_get_connection_values(connection, MHD_HEADER_KIND, &collect_headers, &request.headers);
 
     return send(self->respond(request), connection);
 }
 
+/**
+ * \brief Callback called when a request has been completed
+ * \param cls A pointer to a Server object
+ */
 static void request_completed(
     void *cls,
     MHD_Connection *connection,
@@ -106,6 +122,9 @@ static void request_completed(
     _request(self) = Request();
 }
 
+/**
+ * \brief Populates an IPAddress object from a sockaddr
+ */
 static IPAddress address(const sockaddr *addr)
 {
     IPAddress result;
@@ -135,7 +154,11 @@ static IPAddress address(const sockaddr *addr)
     return result;
 }
 
-static int on_client_connect (void *cls, const sockaddr *addr, socklen_t addrlen)
+/**
+ * \brief Callback called to determine whether a connection should be accepted
+ * \param cls A pointer to a Server object
+ */
+static int accept_policy(void *cls, const sockaddr *addr, socklen_t addrlen)
 {
     auto self = (Server*)cls;
     _request(self) = Request();
@@ -148,7 +171,7 @@ void Server::start()
     daemon = MHD_start_daemon(
         MHD_USE_SELECT_INTERNALLY,
         _port,
-        &on_client_connect, this,
+        &accept_policy, this,
         &receive, this,
         MHD_OPTION_NOTIFY_COMPLETED, &request_completed, this, NULL,
         MHD_OPTION_END
@@ -158,7 +181,6 @@ void Server::start()
         throw std::runtime_error("Could not start the server");
 
 }
-
 
 void Server::stop()
 {

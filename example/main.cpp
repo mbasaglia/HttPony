@@ -35,10 +35,10 @@ public:
                   << request.version << ' '
                   << request.method << ' ' << request.url << ' '
                   << request.auth.user << ' ' << request.auth.password
-                  << '\n' << request.body
                   << '\n';
         for ( const auto& head : request.headers )
             std::cout << '\t' << head.name << ' ' << head.value << '\n';
+        std::cout << '\n' << request.body << '\n';
         return muhttpd::Response("Hello, world!\n");
     }
 };

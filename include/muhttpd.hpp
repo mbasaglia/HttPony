@@ -26,6 +26,9 @@
 
 namespace muhttpd {
 
+/**
+ * \brief Header name and value pair
+ */
 struct Header
 {
     Header(std::string name, std::string value)
@@ -36,8 +39,15 @@ struct Header
     std::string value;
 };
 
+/**
+ * \brief Thin wrapper around a vector of Header object prividing
+ * dictionary-like access
+ */
 struct Headers
 {
+    /**
+     * \brief Whether it has a header matching the given name
+     */
     bool has_header(const std::string& name) const
     {
         for ( const auto& header : headers )
@@ -48,6 +58,9 @@ struct Headers
         return false;
     }
 
+    /**
+     * \brief Counts the number of headers matching the given name
+     */
     std::size_t count(const std::string& name) const
     {
         std::size_t n = 0;
@@ -59,6 +72,11 @@ struct Headers
         return n;
     }
 
+    /**
+     * \brief Returns the first occurence of a header with the given name
+     *
+     * If no header is found, returns the empty string
+     */
     std::string operator[](const std::string& name) const
     {
         for ( const auto& header : headers )
@@ -69,6 +87,11 @@ struct Headers
         return "";
     }
 
+    /**
+     * \brief Returns the first occurence of a header with the given name
+     *
+     * If no header is found, a new one is added
+     */
     std::string& operator[](const std::string& name)
     {
         for ( auto& header : headers )
@@ -80,6 +103,9 @@ struct Headers
         return headers.back().value;
     }
 
+    /**
+     * \brief Appends a new header
+     */
     void append(std::string name, std::string value)
     {
         headers.emplace_back(name, value);
@@ -98,9 +124,14 @@ struct Headers
     std::vector<Header> headers;
 };
 
-
+/**
+ * \brief IP address and port
+ */
 struct IPAddress
 {
+    /**
+     * \brief Address type
+     */
     enum class Type
     {
         Invalid,
@@ -118,15 +149,20 @@ struct IPAddress
     Type type = Type::Invalid;
     std::string string;
     uint16_t port = 0;
-
 };
 
+/**
+ * \brief HTTP Authentication credentials
+ */
 struct Auth
 {
     std::string user;
     std::string password;
 };
 
+/**
+ * \brief HTTP request data
+ */
 struct Request
 {
     std::string url;
@@ -138,6 +174,9 @@ struct Request
     Auth        auth;
 };
 
+/**
+ * \brief Response data
+ */
 struct Response
 {
     Response(
@@ -155,6 +194,9 @@ struct Response
     Headers     headers;
 };
 
+/**
+ * \brief Base class for a simple HTTP server
+ */
 class Server
 {
 public:
@@ -168,25 +210,44 @@ public:
         stop();
     }
 
+    /**
+     * \brief Whether the server should accept connections from this address
+     */
     virtual bool accept(const IPAddress& address)
     {
         return true;
     }
 
+    /**
+     * Listening port
+     */
     uint16_t port() const
     {
         return _port;
     }
 
+    /**
+     * \brief Starts the server in a background thread
+     * \throws runtime_error if it cannot be started
+     */
     void start();
 
+    /**
+     * \brief Whether the server has been started
+     */
     bool started() const
     {
         return daemon;
     }
 
+    /**
+     * \brief Stops the background threads
+     */
     void stop();
 
+    /**
+     * \brief Function handling requests
+     */
     virtual Response respond(const Request& request) = 0;
 
 private:
