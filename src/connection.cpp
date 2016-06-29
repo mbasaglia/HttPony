@@ -28,16 +28,17 @@
 
 namespace muhttpd {
 
-/**
- * \brief Gives access to the internal request object
- *
- * This is needed because different bits of information are provided by
- * different callbacks
- */
-Request& _request(Server* sv)
+struct Server::Data
 {
-    return sv->request;
-}
+    Data(Server* owner, uint16_t port)
+        : owner(owner), port(port)
+    {}
+
+    Server* owner;
+    uint16_t port;
+    struct MHD_Daemon* daemon = nullptr;
+    Request request;
+};
 
 static int collect_post(
     void *cls,
@@ -105,9 +106,9 @@ static int receive(
     void **con_cls
 )
 {
-    auto self = (Server*)cls;
+    auto self = (Server::Data*)cls;
 
-    Request& request = _request(self);
+    Request& request = self->request;
 
     if ( request.method.empty() )
         request.method = method;
@@ -158,7 +159,7 @@ static int receive(
     MHD_get_connection_values(connection, MHD_COOKIE_KIND, &collect_headers, &request.cookies);
     MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, &collect_headers, &request.get);
 
-    return send(self->respond(_request(self)), connection);
+    return send(self->owner->respond(self->request), connection);
 }
 
 /**
@@ -172,8 +173,8 @@ static void request_completed(
     MHD_RequestTerminationCode toe
 )
 {
-    auto self = (Server*)cls;
-    _request(self) = Request();
+    auto self = (Server::Data*)cls;
+    self->request = Request();
 }
 
 /**
@@ -214,34 +215,52 @@ static IPAddress address(const sockaddr *addr)
  */
 static int accept_policy(void *cls, const sockaddr *addr, socklen_t addrlen)
 {
-    auto self = (Server*)cls;
-    _request(self) = Request();
-    _request(self).from = address(addr);
-    return self->accept(_request(self).from) ? MHD_YES : MHD_NO;
+    auto self = (Server::Data*)cls;
+    self->request = Request();
+    self->request.from = address(addr);
+    return self->owner->accept(self->request.from) ? MHD_YES : MHD_NO;
+}
+
+Server::Server(uint16_t port)
+    : data(std::make_unique<Server::Data>(this, port))
+{}
+
+Server::~Server()
+{
+    stop();
+}
+
+uint16_t Server::port() const
+{
+    return data->port;
+}
+
+bool Server::started() const
+{
+    return data->daemon;
 }
 
 void Server::start()
 {
-    daemon = MHD_start_daemon(
+    data->daemon = MHD_start_daemon(
         MHD_USE_SELECT_INTERNALLY,
-        _port,
-        &accept_policy, this,
-        &receive, this,
-        MHD_OPTION_NOTIFY_COMPLETED, &request_completed, this, NULL,
+        data->port,
+        &accept_policy, data.get(),
+        &receive, data.get(),
+        MHD_OPTION_NOTIFY_COMPLETED, &request_completed, data.get(), NULL,
         MHD_OPTION_END
     );
 
-    if ( !daemon )
+    if ( !data->daemon )
         throw std::runtime_error("Could not start the server");
-
 }
 
 void Server::stop()
 {
-    if ( daemon )
+    if ( data->daemon )
     {
-        MHD_stop_daemon(daemon);
-        daemon = nullptr;
+        MHD_stop_daemon(data->daemon);
+        data->daemon = nullptr;
     }
 }
 

@@ -23,6 +23,7 @@
 #include <string>
 #include <vector>
 #include <stdexcept>
+#include <memory>
 
 namespace muhttpd {
 
@@ -203,15 +204,9 @@ struct Response
 class Server
 {
 public:
-    explicit Server(uint16_t port)
-        : _port(port)
-    {
-    }
+    explicit Server(uint16_t port);
 
-    ~Server()
-    {
-        stop();
-    }
+    ~Server();
 
     /**
      * \brief Whether the server should accept connections from this address
@@ -222,12 +217,9 @@ public:
     }
 
     /**
-     * Listening port
+     * \brief Listening port
      */
-    uint16_t port() const
-    {
-        return _port;
-    }
+    uint16_t port() const;
 
     /**
      * \brief Starts the server in a background thread
@@ -238,10 +230,7 @@ public:
     /**
      * \brief Whether the server has been started
      */
-    bool started() const
-    {
-        return daemon;
-    }
+    bool started() const;
 
     /**
      * \brief Stops the background threads
@@ -253,12 +242,9 @@ public:
      */
     virtual Response respond(const Request& request) = 0;
 
+    struct Data;
 private:
-    uint16_t _port;
-    struct MHD_Daemon* daemon = nullptr;
-    Request request;
-
-    friend Request& _request(Server* sv);
+    std::unique_ptr<Data> data;
 };
 
 } // namespace muhttpd
