@@ -172,6 +172,7 @@ struct Request
     Headers     headers;
     Headers     cookies;
     Headers     get;
+    Headers     post;
     IPAddress   from;
     Auth        auth;
 };

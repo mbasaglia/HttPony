@@ -39,6 +39,25 @@ Request& _request(Server* sv)
     return sv->request;
 }
 
+static int collect_post(
+    void *cls,
+    MHD_ValueKind kind,
+    const char *key,
+    const char *filename,
+    const char *content_type,
+    const char *transfer_encoding,
+    const char *data,
+    uint64_t off,
+    size_t size
+)
+{
+    auto request = reinterpret_cast<Request*>(cls);
+    std::string string_data = std::string(data, data+size);
+    request->post[key] = string_data;
+    return MHD_YES;
+}
+
+
 /**
  * \brief Callback used to retrieve headers
  * \param cls A pointer to a Headers object
@@ -89,10 +108,43 @@ static int receive(
     auto self = (Server*)cls;
 
     Request& request = _request(self);
+
+    if ( request.method.empty() )
+        request.method = method;
+
+    if ( request.method == "POST" )
+    {
+        MHD_PostProcessor* post_processor = (MHD_PostProcessor*)*con_cls;
+
+        if ( !post_processor )
+        {
+            // First call
+            post_processor = MHD_create_post_processor(
+                connection,
+                65536,
+                collect_post,
+                (void*)&request
+            );
+            *con_cls = post_processor;
+            return post_processor ? MHD_YES : MHD_NO;
+        }
+        else if ( *upload_data_size )
+        {
+            // Chunk
+            request.body += std::string(upload_data, upload_data + *upload_data_size);
+            MHD_post_process(post_processor, upload_data, *upload_data_size);
+            *upload_data_size = 0;
+            return MHD_YES;
+        }
+        else
+        {
+            // Last Call
+            MHD_destroy_post_processor(post_processor);
+        }
+    }
+
     request.url = url;
-    request.method = method;
     request.version = version;
-    request.body = std::string(upload_data, upload_data + *upload_data_size);
 
     char* password = nullptr;
     char* user = MHD_basic_auth_get_username_password (connection, &password);
@@ -106,7 +158,7 @@ static int receive(
     MHD_get_connection_values(connection, MHD_COOKIE_KIND, &collect_headers, &request.cookies);
     MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, &collect_headers, &request.get);
 
-    return send(self->respond(request), connection);
+    return send(self->respond(_request(self)), connection);
 }
 
 /**

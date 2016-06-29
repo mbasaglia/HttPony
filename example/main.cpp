@@ -29,6 +29,13 @@ class MyServer : public muhttpd::Server
 public:
     using Server::Server;
 
+    void show_headers(const std::string& title, const muhttpd::Headers& headers)
+    {
+        std::cout << title << ":\n";
+        for ( const auto& head : headers )
+            std::cout << '\t' << head.name << ' ' << head.value << '\n';
+    }
+
     muhttpd::Response respond(const muhttpd::Request& request) override
     {
         std::cout << request.from.string << ' ' << request.from.port << ' '
@@ -37,17 +44,10 @@ public:
                   << request.auth.user << ' ' << request.auth.password
                   << '\n';
 
-        std::cout << "Headers:\n";
-        for ( const auto& head : request.headers )
-            std::cout << '\t' << head.name << ' ' << head.value << '\n';
-
-        std::cout << "Cookies:\n";
-        for ( const auto& head : request.cookies )
-            std::cout << '\t' << head.name << ' ' << head.value << '\n';
-
-        std::cout << "Get:\n";
-        for ( const auto& head : request.get )
-            std::cout << '\t' << head.name << ' ' << head.value << '\n';
+        show_headers("Headers", request.headers);
+        show_headers("Cookies", request.cookies);
+        show_headers("Get", request.get);
+        show_headers("Post", request.post);
 
         std::cout << '\n' << request.body << '\n';
         return muhttpd::Response("Hello, world!\n");
