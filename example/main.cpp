@@ -20,6 +20,7 @@
  */
 
 #include <iostream>
+#include <algorithm>
 
 #include "muhttpd.hpp"
 
@@ -49,7 +50,9 @@ public:
         show_headers("Get", request.get);
         show_headers("Post", request.post);
 
-        std::cout << '\n' << request.body << '\n';
+        std::string body = request.body;
+        std::replace_if(body.begin(), body.end(), [](char c){return c < ' ';}, ' ');
+        std::cout << '\n' << body << '\n';
         return muhttpd::Response("Hello, world!\n");
     }
 };

@@ -31,13 +31,14 @@ namespace muhttpd {
 struct Server::Data
 {
     Data(Server* owner, uint16_t port)
-        : owner(owner), port(port)
+        : owner(owner), port(port), max_request_body(std::string().max_size())
     {}
 
     Server* owner;
     uint16_t port;
     struct MHD_Daemon* daemon = nullptr;
     Request request;
+    std::size_t max_request_body;
 };
 
 static int collect_post(
@@ -113,7 +114,7 @@ static int receive(
     if ( request.method.empty() )
         request.method = method;
 
-    if ( request.method == "POST" )
+    if ( request.method == "POST" && self->max_request_body )
     {
         MHD_PostProcessor* post_processor = (MHD_PostProcessor*)*con_cls;
 
@@ -122,16 +123,24 @@ static int receive(
             // First call
             post_processor = MHD_create_post_processor(
                 connection,
-                65536,
+                Server::post_chunk_size,
                 collect_post,
                 (void*)&request
             );
             *con_cls = post_processor;
-            return post_processor ? MHD_YES : MHD_NO;
+            if ( post_processor )
+                return MHD_YES;
+            self->owner->on_error(Server::ErrorCode::BadBody);
+            return MHD_NO;
         }
         else if ( *upload_data_size )
         {
             // Chunk
+            if ( request.body.size() + *upload_data_size > self->max_request_body )
+            {
+                self->owner->on_error(Server::ErrorCode::BadBody);
+                return MHD_NO;
+            }
             request.body += std::string(upload_data, upload_data + *upload_data_size);
             MHD_post_process(post_processor, upload_data, *upload_data_size);
             *upload_data_size = 0;
@@ -252,7 +261,7 @@ void Server::start()
     );
 
     if ( !data->daemon )
-        throw std::runtime_error("Could not start the server");
+        on_error(ErrorCode::StartupFailure);
 }
 
 void Server::stop()
@@ -262,6 +271,17 @@ void Server::stop()
         MHD_stop_daemon(data->daemon);
         data->daemon = nullptr;
     }
+}
+
+
+std::size_t Server::max_request_body() const
+{
+    return data->max_request_body;
+}
+
+void Server::set_max_request_body(std::size_t size)
+{
+    data->max_request_body = size;
 }
 
 } // namespace muhttpd

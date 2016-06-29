@@ -200,10 +200,18 @@ struct Response
 
 /**
  * \brief Base class for a simple HTTP server
+ * \note It reads POST data in a single buffer instead of streaming it
  */
 class Server
 {
 public:
+    enum class ErrorCode
+    {
+        Unknown,            //< Unspecified error
+        StartupFailure,     //< start() failed
+        BadBody,            //< Could not process a request body
+    };
+
     explicit Server(uint16_t port);
 
     ~Server();
@@ -238,11 +246,26 @@ public:
     void stop();
 
     /**
+     * \brief Maximum size of a request body to be accepted
+     */
+    std::size_t max_request_body() const;
+
+    void set_max_request_body(std::size_t size);
+
+    /**
      * \brief Function handling requests
      */
     virtual Response respond(const Request& request) = 0;
 
+
+    virtual void on_error(ErrorCode error)
+    {
+        if ( error == ErrorCode::StartupFailure )
+            throw std::runtime_error("Could not start the server");
+    }
+
     struct Data;
+    static constexpr unsigned post_chunk_size = 65536;
 private:
     std::unique_ptr<Data> data;
 };
