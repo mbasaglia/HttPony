@@ -24,23 +24,23 @@
 
 #include <microhttpd.h>
 
-#include "muhttpd.hpp"
+#include "server_data.hpp"
 
 
 namespace muhttpd {
 
-struct Server::Data
+class MicroHttpdServerData : public Server::Data
 {
-    Data(Server* owner, uint16_t port)
-        : owner(owner), port(port), max_request_body(std::string().max_size())
-    {}
-
-    Server* owner;
-    uint16_t port;
+public:
+    using Data::Data;
     struct MHD_Daemon* daemon = nullptr;
     Request request;
-    std::size_t max_request_body;
 };
+
+std::unique_ptr<Server::Data> make_data(Server* owner, uint16_t port)
+{
+    return std::make_unique<MicroHttpdServerData>(owner, port);
+}
 
 /**
  * \brief Gathers post key/value pairs
@@ -143,7 +143,7 @@ static int receive(
     void **con_cls
 )
 {
-    auto self = (Server::Data*)cls;
+    auto self = (MicroHttpdServerData*)cls;
 
     Request& request = self->request;
 
@@ -224,7 +224,7 @@ static void request_completed(
     MHD_RequestTerminationCode toe
 )
 {
-    auto self = (Server::Data*)cls;
+    auto self = (MicroHttpdServerData*)cls;
     self->request = Request();
 }
 
@@ -234,32 +234,19 @@ static void request_completed(
  */
 static int accept_policy(void *cls, const sockaddr *addr, socklen_t addrlen)
 {
-    auto self = (Server::Data*)cls;
+    auto self = (MicroHttpdServerData*)cls;
     return self->owner->accept(address(addr)) ? MHD_YES : MHD_NO;
 }
 
-Server::Server(uint16_t port)
-    : data(std::make_unique<Server::Data>(this, port))
-{}
-
-Server::~Server()
-{
-    stop();
-}
-
-uint16_t Server::port() const
-{
-    return data->port;
-}
 
 bool Server::started() const
 {
-    return data->daemon;
+    return ((MicroHttpdServerData*)data.get())->daemon;
 }
 
 void Server::start()
 {
-    data->daemon = MHD_start_daemon(
+    ((MicroHttpdServerData*)data.get())->daemon = MHD_start_daemon(
         MHD_USE_SELECT_INTERNALLY | MHD_USE_DUAL_STACK,
         data->port,
         &accept_policy, data.get(),
@@ -268,181 +255,16 @@ void Server::start()
         MHD_OPTION_END
     );
 
-    if ( !data->daemon )
+    if ( !((MicroHttpdServerData*)data.get())->daemon )
         on_error(ErrorCode::StartupFailure);
 }
 
 void Server::stop()
 {
-    if ( data->daemon )
+    if ( ((MicroHttpdServerData*)data.get())->daemon )
     {
-        MHD_stop_daemon(data->daemon);
-        data->daemon = nullptr;
-    }
-}
-
-
-std::size_t Server::max_request_body() const
-{
-    return data->max_request_body;
-}
-
-void Server::set_max_request_body(std::size_t size)
-{
-    data->max_request_body = size;
-}
-
-void Server::log(
-        const std::string& format,
-        const Request& request,
-        const Response& response,
-        std::ostream& output
-    ) const
-{
-    auto start = format.begin();
-    auto finish = format.begin();
-    while ( start < format.end() )
-    {
-        finish = std::find(start, format.end(), '%');
-        output << std::string(start, finish);
-
-        // No more % (clean exit)
-        if ( finish == format.end() )
-            break;
-
-        start = finish + 1;
-        // stray % at the end
-        if ( start == format.end() )
-            break;
-
-        char label = *start;
-        start++;
-        std::string argument;
-
-        if ( label == '{' )
-        {
-            finish = std::find(start, format.end(), '}');
-            // Unterminated %{
-            if ( finish + 1 >= format.end() )
-                break;
-            argument = std::string(start, finish);
-            start = finish + 1;
-            label = *start;
-            start++;
-        }
-        process_log_format(label, argument, request, response, output);
-
-    }
-    output << std::endl;
-}
-
-
-void Server::process_log_format(
-        char label,
-        const std::string& argument,
-        const Request& request,
-        const Response& response,
-        std::ostream& output
-    ) const
-{
-    // Formats as from the Apache docs, not all formats are supported (Yet)
-    /// \todo Check which ones should use clf
-    switch ( label )
-    {
-        case '%': // Escaped %
-            output << '%';
-            break;
-        case 'h': // Remote host
-        case 'a': // Remote IP-address
-            output << request.from.string;
-            break;
-        case 'A': // Local IP-address
-            // TODO
-            break;
-        case 'B': // Size of response in bytes, excluding HTTP headers.
-            output << response.body.size();
-            break;
-        case 'b': // Size of response in bytes, excluding HTTP headers. In CLF format, i.e. a '-' rather than a 0 when no bytes are sent.
-            output << clf(response.body.size());
-            break;
-        case 'C': // The contents of cookie Foobar in the request sent to the server.
-            output << request.cookies[argument];
-            break;
-        case 'D': // The time taken to serve the request, in microseconds.
-            // TODO
-            break;
-        case 'e': // The contents of the environment variable FOOBAR
-            // TODO
-            break;
-        case 'f': // Filename
-            // TODO
-            break;
-        case 'H': // The request protocol
-            output << request.version;
-            break;
-        case 'i': // The contents of header line in the request sent to the server.
-            /// \todo Handle multiple headers with the same name
-            output << request.headers[argument];
-            break;
-        case 'k': // Number of keepalive requests handled on this connection.
-            // TODO ?
-            output << 0;
-            break;
-        case 'l': // Remote logname
-            // TODO ?
-            output << '-';
-            break;
-        case 'm':
-            output << request.method;
-            break;
-        case 'o': // The contents of header line(s) in the reply.
-            /// \todo Handle multiple headers with the same name
-            output << response.headers[argument];
-            break;
-        case 'p':
-            if ( argument == "remote" )
-                output << request.from.port;
-            else
-                output << data->port;
-            break;
-        case 'P': // The process ID or thread id of the child that serviced the request. Valid formats are pid, tid, and hextid.
-            // TODO ?
-            break;
-        case 'q': // The query string (prepended with a ? if a query string exists, otherwise an empty string)
-            // TODO
-            break;
-        case 'r': // First line of request
-            /// \todo TODO check if this is correct (eg: query string)
-            output << request.version << ' ' << request.method << request.url;
-            break;
-        case 'R': // The handler generating the response (if any).
-            // TODO ?
-            break;
-        case 's': // Status
-            output << int(response.status_code);
-            break;
-        case 't': // The time, in the format given by argument
-            // TODO
-            break;
-        case 'T': // The time taken to serve the request, in a time unit given by argument (default seconds).
-            // TODO
-            break;
-        case 'u': // Remote user (from auth; may be bogus if return status (%s) is 401)
-            output << request.auth.user;
-            break;
-        case 'U': // The URL path requested, not including any query string.
-            output << request.url;
-            break;
-        case 'v': // The canonical ServerName of the server serving the request.
-            // TODO ?
-            break;
-        case 'V': // The server name according to the UseCanonicalName setting.
-            // TODO ?
-            break;
-        case 'X': // Connection status when response is completed. X = aborted before response; + = Maybe keep alive; - = Close after response.
-            // TODO
-            output << '-';
-            break;
+        MHD_stop_daemon(((MicroHttpdServerData*)data.get())->daemon);
+        ((MicroHttpdServerData*)data.get())->daemon = nullptr;
     }
 }
 
