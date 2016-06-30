@@ -259,7 +259,7 @@ bool Server::started() const
 void Server::start()
 {
     data->daemon = MHD_start_daemon(
-        MHD_USE_SELECT_INTERNALLY,
+        MHD_USE_SELECT_INTERNALLY | MHD_USE_DUAL_STACK,
         data->port,
         &accept_policy, data.get(),
         &receive, data.get(),
