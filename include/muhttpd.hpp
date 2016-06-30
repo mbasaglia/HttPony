@@ -24,6 +24,7 @@
 #include <vector>
 #include <stdexcept>
 #include <memory>
+#include <ostream>
 
 namespace muhttpd {
 
@@ -249,7 +250,6 @@ struct Response
         LoopDetected = 508,
         NotExtended = 510,
         NetworkAuthenticationRequired = 511,
-
     };
 
     Response(
@@ -333,11 +333,64 @@ public:
             throw std::runtime_error("Could not start the server");
     }
 
+    /**
+     * \brief Writes a line of log into \p output based on format
+     */
+    void log(const std::string& format, const Request& request, const Response& response, std::ostream& output) const;
+
     struct Data;
     static constexpr unsigned post_chunk_size = 65536;
+
+protected:
+    /**
+     * \brief Writes a single log item into \p output
+     */
+    virtual void process_log_format(
+        char label,
+        const std::string& argument,
+        const Request& request,
+        const Response& response,
+        std::ostream& output
+    ) const;
+
 private:
     std::unique_ptr<Data> data;
 };
+
+template<class T>
+    struct CommonLogFormatItem
+    {
+        template<class... U>
+            CommonLogFormatItem(U&&... args)
+                : value(std::forward<U>(args)...)
+            {}
+        T value;
+    };
+
+template<class T>
+    std::ostream& operator<<(std::ostream& out, const CommonLogFormatItem<T>& clf)
+{
+    if ( clf.value )
+        return out << clf.value;
+    return out << '-';
+}
+
+template<>
+    inline std::ostream& operator<<(std::ostream& out, const CommonLogFormatItem<std::string>& clf)
+{
+    if ( !clf.value.empty() )
+        return out << clf.value;
+    return out << '-';
+}
+
+/**
+ * \brief Streams values as Common Log Format
+ */
+template<class T>
+    CommonLogFormatItem<T> clf(T&& item)
+    {
+        return CommonLogFormatItem<T>(std::forward<T>(item));
+    }
 
 } // namespace muhttpd
 #endif // MU_HTTPD_PP_HPP

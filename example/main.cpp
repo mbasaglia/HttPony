@@ -29,6 +29,7 @@ class MyServer : public muhttpd::Server
 {
 public:
     using Server::Server;
+    std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
 
     void show_headers(const std::string& title, const muhttpd::Headers& headers)
     {
@@ -39,11 +40,9 @@ public:
 
     muhttpd::Response respond(const muhttpd::Request& request) override
     {
-        std::cout << request.from.string << ' ' << request.from.port << ' '
-                  << request.version << ' '
-                  << request.method << ' ' << request.url << ' '
-                  << request.auth.user << ' ' << request.auth.password
-                  << '\n';
+        auto response = muhttpd::Response("Hello, world!\n");
+
+        log(log_format, request, response, std::cout);
 
         show_headers("Headers", request.headers);
         show_headers("Cookies", request.cookies);
@@ -53,7 +52,7 @@ public:
         std::string body = request.body;
         std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
         std::cout << '\n' << body << '\n';
-        return muhttpd::Response("Hello, world!\n");
+        return response;
     }
 };
 
