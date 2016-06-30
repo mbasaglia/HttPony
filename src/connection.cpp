@@ -58,7 +58,7 @@ static int collect_post(
 {
     auto request = reinterpret_cast<Request*>(cls);
     std::string string_data = std::string(data, data+size);
-    request->post[key] = string_data;
+    request->post.append(key, string_data);
     return MHD_YES;
 }
 
@@ -184,6 +184,9 @@ static int receive(
         else
         {
             // Last Call
+            // NOTE: If a urlencoded body doesn't end with \n,
+            // MHD will call the cursor again with the same key as the last
+            // time and empty data...
             MHD_destroy_post_processor(post_processor);
         }
     }

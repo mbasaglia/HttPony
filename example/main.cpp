@@ -51,7 +51,7 @@ public:
         show_headers("Post", request.post);
 
         std::string body = request.body;
-        std::replace_if(body.begin(), body.end(), [](char c){return c < ' ';}, ' ');
+        std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
         std::cout << '\n' << body << '\n';
         return muhttpd::Response("Hello, world!\n");
     }
