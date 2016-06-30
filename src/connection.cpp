@@ -41,6 +41,9 @@ struct Server::Data
     std::size_t max_request_body;
 };
 
+/**
+ * \brief Gathers post key/value pairs
+ */
 static int collect_post(
     void *cls,
     MHD_ValueKind kind,
@@ -59,6 +62,38 @@ static int collect_post(
     return MHD_YES;
 }
 
+
+/**
+ * \brief Populates an IPAddress object from a sockaddr
+ */
+static IPAddress address(const sockaddr *addr)
+{
+    IPAddress result;
+    void* source = nullptr;
+    if ( addr->sa_family == AF_INET )
+    {
+        auto in = (sockaddr_in*)addr;
+        source = &in->sin_addr;
+        result.port = in->sin_port;
+        result.type = IPAddress::Type::IPv4;
+    }
+    else if ( addr->sa_family == AF_INET6 )
+    {
+        auto in = (sockaddr_in6*) addr;
+        source = &in->sin6_addr;
+        result.port = in->sin6_port;
+        result.type = IPAddress::Type::IPv6;
+    }
+    else
+    {
+        return {};
+    }
+
+    char buffer[40];
+    if ( inet_ntop(addr->sa_family, source, buffer, sizeof(buffer)) )
+        result.string = buffer;
+    return result;
+}
 
 /**
  * \brief Callback used to retrieve headers
@@ -168,6 +203,9 @@ static int receive(
     MHD_get_connection_values(connection, MHD_COOKIE_KIND, &collect_headers, &request.cookies);
     MHD_get_connection_values(connection, MHD_GET_ARGUMENT_KIND, &collect_headers, &request.get);
 
+    const sockaddr *addr = MHD_get_connection_info(connection, MHD_CONNECTION_INFO_CLIENT_ADDRESS)->client_addr;
+    self->request.from = address(addr);
+
     return send(self->owner->respond(self->request), connection);
 }
 
@@ -187,47 +225,13 @@ static void request_completed(
 }
 
 /**
- * \brief Populates an IPAddress object from a sockaddr
- */
-static IPAddress address(const sockaddr *addr)
-{
-    IPAddress result;
-    void* source = nullptr;
-    if ( addr->sa_family == AF_INET )
-    {
-        auto in = (sockaddr_in*)addr;
-        source = &in->sin_addr;
-        result.port = in->sin_port;
-        result.type = IPAddress::Type::IPv4;
-    }
-    else if ( addr->sa_family == AF_INET6 )
-    {
-        auto in = (sockaddr_in6*) addr;
-        source = &in->sin6_addr;
-        result.port = in->sin6_port;
-        result.type = IPAddress::Type::IPv6;
-    }
-    else
-    {
-        return {};
-    }
-
-    char buffer[40];
-    if ( inet_ntop(addr->sa_family, source, buffer, sizeof(buffer)) )
-        result.string = buffer;
-    return result;
-}
-
-/**
  * \brief Callback called to determine whether a connection should be accepted
  * \param cls A pointer to a Server object
  */
 static int accept_policy(void *cls, const sockaddr *addr, socklen_t addrlen)
 {
     auto self = (Server::Data*)cls;
-    self->request = Request();
-    self->request.from = address(addr);
-    return self->owner->accept(self->request.from) ? MHD_YES : MHD_NO;
+    return self->owner->accept(address(addr)) ? MHD_YES : MHD_NO;
 }
 
 Server::Server(uint16_t port)
