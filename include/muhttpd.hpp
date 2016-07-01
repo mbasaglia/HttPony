@@ -163,23 +163,6 @@ struct Auth
 };
 
 /**
- * \brief HTTP request data
- */
-struct Request
-{
-    std::string url;
-    std::string method;
-    std::string protocol;
-    std::string body;
-    Headers     headers;
-    Headers     cookies;
-    Headers     get;
-    Headers     post;
-    IPAddress   from;
-    Auth        auth;
-};
-
-/**
  * \brief Response data
  */
 struct Response
@@ -265,6 +248,24 @@ struct Response
     std::string body;
     unsigned    status_code;
     Headers     headers;
+};
+
+/**
+ * \brief HTTP request data
+ */
+struct Request
+{
+    std::string url;
+    std::string method;
+    std::string protocol;
+    std::string body;
+    Headers     headers;
+    Headers     cookies;
+    Headers     get;
+    Headers     post;
+    IPAddress   from;
+    Auth        auth;
+    Response::StatusCode status = Response::OK; //< Could contain errors caused by malformed requests
 };
 
 /**

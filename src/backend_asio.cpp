@@ -25,8 +25,8 @@
 
 #include <boost/asio.hpp>
 
-#include <iostream>
-#include <sstream>
+
+#include "asio_request_parser.hpp"
 
 namespace muhttpd {
 
@@ -47,62 +47,25 @@ public:
     {
         acceptor.async_accept(
             socket,
-            [this](boost::system::error_code ec)
+            [this](boost::system::error_code error_code)
             {
-                if (!acceptor.is_open())
-                {
+                if ( !acceptor.is_open() )
                     return;
-                }
 
-                if ( !ec )
-                {
-                    /// \todo This could spawn async reads (and writes)
-                    boost::system::error_code error;
-
-                    // boost::asio::streambuf buffer_read;
-                    // auto sz = boost::asio::read(socket, buffer_read, error);
-
-                    boost::asio::streambuf buffer_read;
-                    auto buffer = buffer_read.prepare(1024);
-                    auto sz = socket.read_some(boost::asio::buffer(buffer), error);
-
-                    if ( error || sz == 0 )
-                        return;
-
-                    Request request;
-
-                    request.from = IPAddress(
-                        socket.remote_endpoint().address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
-                        socket.remote_endpoint().address().to_string(),
-                        socket.remote_endpoint().port()
-                    );
-
-                    buffer_read.commit(sz);
-                    std::istream buffer_stream(&buffer_read);
-                    buffer_stream >> request.method >> request.url >> request.protocol;
-
-                    std::cout << "BEGIN "
-                        << request.from.string << ' ' << request.from.port
-                        << '\n' << request.method << ' ' <<  request.url << ' ' <<  request.protocol
-                        << "\n===\n";
-                    std::string line;
-                    while ( buffer_stream && buffer_stream.get() != '\n' ); // Ignore all before \n
-                    while ( true )
-                    {
-                        std::getline(buffer_stream, line, '\r');
-                        buffer_stream.ignore(1, '\n');
-                        if ( !buffer_stream )
-                            break;
-                        std::cout << "> " << line << '\n';
-                    }
-                    std::cout << "END\n\n";
-                }
-
-                socket.close();
+                parse_request(error_code);
 
                 accept();
             }
         );
+    }
+
+    void parse_request(boost::system::error_code error_code)
+    {
+        /// \todo This could spawn async reads (and writes)
+        asio::AsioRequestParser parser(std::move(socket));
+        if ( error_code )
+            return;
+        owner->respond(parser.read_request());
     }
 
 };
