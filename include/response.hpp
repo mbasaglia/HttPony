@@ -39,7 +39,9 @@ struct Response
     )
         : body(std::move(body)), status(std::move(status))
     {
+        /// \todo Date
         headers.append("Content-Type", content_type);
+        /// \todo Content length
     }
 
     std::string body;

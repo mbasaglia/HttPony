@@ -55,7 +55,6 @@ public:
         auto buffer = buffer_read.prepare(1024);
         auto sz = socket.read_some(boost::asio::buffer(buffer), error);
 
-
         request = Request();
         status_code = StatusCode::OK;
 
@@ -70,37 +69,13 @@ public:
         buffer_read.commit(sz);
         std::istream buffer_stream(&buffer_read);
 
-        // Read request line
-        buffer_stream >> request.method >> request.url >> request.protocol;
-        skip_line(buffer_stream);
-
-        if ( !request.protocol.valid() )
+        if ( !read_request_line(buffer_stream) || !read_headers(buffer_stream) )
         {
             status_code = StatusCode::BadRequest;
             return;
         }
 
-        // Read headers
-        std::string name, value;
-        while ( buffer_stream && buffer_stream.peek() != '\r' )
-        {
-            std::getline(buffer_stream, name, ':');
-            if ( std::isspace(buffer_stream.peek()) )
-                buffer_stream.ignore(1);
-            std::getline(buffer_stream, value, '\r');
-            buffer_stream.ignore(1, '\n');
-            if ( !buffer_stream )
-            {
-                status_code = StatusCode::BadRequest;
-                return;
-            }
-            /// \todo validate header name/value
-            request.headers.append(name, value);
-        }
-        skip_line(buffer_stream);
-
-        // Read body
-        /// \todo Read body (if needed) checking content-length and stuff
+        /// \todo If the body has already been sent handle it here
     }
 
     static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
@@ -134,6 +109,13 @@ public:
         boost::asio::write(socket, buffer_write);
     }
 
+    void read_body()
+    {
+        /// \todo Read body checking content-length and stuff
+        /// \todo Parse urlencoded and multipart/form-data into request.post
+        /// \todo Functionality to read it asyncronously
+    }
+
     Request request;
     Response response;
     StatusCode status_code = StatusCode::OK;
@@ -146,6 +128,62 @@ private:
     {
         while ( buffer_stream && buffer_stream.get() != '\n' );
     }
+
+    bool read_request_line(std::istream& buffer_stream)
+    {
+        buffer_stream >> request.method >> request.url >> request.protocol;
+        skip_line(buffer_stream);
+
+        return request.protocol.valid() && buffer_stream;
+    }
+
+    bool read_headers(std::istream& buffer_stream)
+    {
+        std::string name, value;
+        while ( buffer_stream && buffer_stream.peek() != '\r' )
+        {
+            if ( !read_header_name(buffer_stream, name) )
+                return false;
+
+            std::getline(buffer_stream, value, '\r');
+            buffer_stream.ignore(1, '\n');
+
+            if ( !buffer_stream )
+            {
+                status_code = StatusCode::BadRequest;
+                return false;
+            }
+            /// \todo validate header name/value
+            request.headers.append(name, value);
+        }
+
+        skip_line(buffer_stream);
+
+        return true;
+    }
+
+    bool read_header_name(std::istream& buffer_stream, std::string& name)
+    {
+        name.clear();
+        while ( true )
+        {
+            auto c = buffer_stream.get();
+            if ( c == std::char_traits<char>::eof() || c == '\r' )
+            {
+                status_code = StatusCode::BadRequest;
+                return false;
+            }
+            if ( c == ':' )
+                break;
+            name += c;
+        }
+
+        if ( std::isspace(buffer_stream.peek()) )
+            buffer_stream.ignore(1);
+
+        return true;
+    }
+
 };
 
 } // namespace muhttpd
