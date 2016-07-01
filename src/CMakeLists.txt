@@ -17,15 +17,12 @@ set(LIBRARY_NAME muhttpdpp) # repeated otherwise kdevelop messes up
 
 set(SOURCES
 server.cpp
+status.cpp
+logging.cpp
 )
 
-set(SOURCES ${SOURCES} backend_asio.cpp)
-# set(SOURCES ${SOURCES} backend_microhttpd.cpp)
 
 add_library(${LIBRARY_NAME} ${SOURCES})
-
-# # TODO: CMake find for this
-# target_link_libraries(${LIBRARY_NAME} microhttpd)
 
 
 find_package (Boost COMPONENTS system thread REQUIRED)

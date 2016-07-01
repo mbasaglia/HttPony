@@ -38,21 +38,22 @@ public:
             std::cout << '\t' << head.name << ' ' << head.value << '\n';
     }
 
-    muhttpd::Response respond(const muhttpd::Request& request) override
+    void respond(muhttpd::ClientConnection& connection) override
     {
-        auto response = muhttpd::Response("Hello, world!\n");
+        connection.response = muhttpd::Response("Hello, world!\n");
 
-        log(log_format, request, response, std::cout);
+        log(log_format, connection, std::cout);
 
-        show_headers("Headers", request.headers);
-        show_headers("Cookies", request.cookies);
-        show_headers("Get", request.get);
-        show_headers("Post", request.post);
+        show_headers("Headers", connection.request.headers);
+        show_headers("Cookies", connection.request.cookies);
+        show_headers("Get", connection.request.get);
+        show_headers("Post", connection.request.post);
 
-        std::string body = request.body;
+        std::string body = connection.request.body;
         std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
         std::cout << '\n' << body << '\n';
-        return response;
+
+        connection.send_response();
     }
 };
 

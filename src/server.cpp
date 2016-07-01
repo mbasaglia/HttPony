@@ -18,19 +18,63 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include<algorithm>
+#include <thread>
 
-#include <arpa/inet.h>
-
-#include <microhttpd.h>
-
-#include "server_data.hpp"
+#include "server.hpp"
+#include "logging.hpp"
 
 
 namespace muhttpd {
 
+class Server::Data
+{
+public:
+    Data(Server* owner, IPAddress listen)
+        : owner(owner), listen(listen), max_request_body(std::string().max_size())
+    {}
+
+    virtual ~Data(){}
+
+    Server* owner;
+    IPAddress listen;
+    std::size_t max_request_body;
+
+    boost::asio::io_service             io_service;
+    boost::asio::ip::tcp::socket        socket{io_service};
+    boost::asio::ip::tcp::acceptor      acceptor{io_service};
+
+    std::thread thread;
+
+    void accept()
+    {
+        acceptor.async_accept(
+            socket,
+            [this](boost::system::error_code error_code)
+            {
+                if ( !acceptor.is_open() )
+                    return;
+
+                parse_request(error_code);
+
+                accept();
+            }
+        );
+    }
+
+    void parse_request(boost::system::error_code error_code)
+    {
+        /// \todo This could spawn async reads (and writes)
+        ClientConnection connection(std::move(socket), owner);
+        if ( error_code )
+            connection.status_code = StatusCode::BadRequest;
+        else
+            connection.read_request();
+        owner->respond(connection);
+    }
+};
+
 Server::Server(IPAddress listen)
-    : data(make_data(this, listen))
+    : data(std::make_unique<Data>(this, listen))
 {}
 
 Server::Server(uint16_t port)
@@ -57,56 +101,10 @@ void Server::set_max_request_body(std::size_t size)
     data->max_request_body = size;
 }
 
-void Server::log(
-        const std::string& format,
-        const Request& request,
-        const Response& response,
-        std::ostream& output
-    ) const
-{
-    auto start = format.begin();
-    auto finish = format.begin();
-    while ( start < format.end() )
-    {
-        finish = std::find(start, format.end(), '%');
-        output << std::string(start, finish);
-
-        // No more % (clean exit)
-        if ( finish == format.end() )
-            break;
-
-        start = finish + 1;
-        // stray % at the end
-        if ( start == format.end() )
-            break;
-
-        char label = *start;
-        start++;
-        std::string argument;
-
-        if ( label == '{' )
-        {
-            finish = std::find(start, format.end(), '}');
-            // Unterminated %{
-            if ( finish + 1 >= format.end() )
-                break;
-            argument = std::string(start, finish);
-            start = finish + 1;
-            label = *start;
-            start++;
-        }
-        process_log_format(label, argument, request, response, output);
-
-    }
-    output << std::endl;
-}
-
-
 void Server::process_log_format(
         char label,
         const std::string& argument,
-        const Request& request,
-        const Response& response,
+        const ClientConnection& connection,
         std::ostream& output
     ) const
 {
@@ -119,19 +117,19 @@ void Server::process_log_format(
             break;
         case 'h': // Remote host
         case 'a': // Remote IP-address
-            output << request.from.string;
+            output << connection.request.from.string;
             break;
         case 'A': // Local IP-address
             // TODO
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
-            output << response.body.size();
+            output << connection.response.body.size();
             break;
         case 'b': // Size of response in bytes, excluding HTTP headers. In CLF format, i.e. a '-' rather than a 0 when no bytes are sent.
-            output << clf(response.body.size());
+            output << clf(connection.response.body.size());
             break;
         case 'C': // The contents of cookie Foobar in the request sent to the server.
-            output << request.cookies[argument];
+            output << connection.request.cookies[argument];
             break;
         case 'D': // The time taken to serve the request, in microseconds.
             // TODO
@@ -143,11 +141,11 @@ void Server::process_log_format(
             // TODO
             break;
         case 'H': // The request protocol
-            output << request.protocol;
+            output << connection.request.protocol;
             break;
         case 'i': // The contents of header line in the request sent to the server.
             /// \todo Handle multiple headers with the same name
-            output << request.headers[argument];
+            output << connection.request.headers[argument];
             break;
         case 'k': // Number of keepalive requests handled on this connection.
             // TODO ?
@@ -158,15 +156,15 @@ void Server::process_log_format(
             output << '-';
             break;
         case 'm':
-            output << request.method;
+            output << connection.request.method;
             break;
         case 'o': // The contents of header line(s) in the reply.
             /// \todo Handle multiple headers with the same name
-            output << response.headers[argument];
+            output << connection.response.headers[argument];
             break;
         case 'p':
             if ( argument == "remote" )
-                output << request.from.port;
+                output << connection.request.from.port;
             else
                 output << data->listen.port;
             break;
@@ -178,13 +176,13 @@ void Server::process_log_format(
             break;
         case 'r': // First line of request
             /// \todo TODO check if this is correct (eg: query string)
-            output << request.method << ' ' << request.url << ' ' << request.protocol;
+            output << connection.request.method << ' ' << connection.request.url << ' ' << connection.request.protocol;
             break;
         case 'R': // The handler generating the response (if any).
             // TODO ?
             break;
         case 's': // Status
-            output << int(response.status_code);
+            output << connection.response.status.code;
             break;
         case 't': // The time, in the format given by argument
             // TODO
@@ -193,10 +191,10 @@ void Server::process_log_format(
             // TODO
             break;
         case 'u': // Remote user (from auth; may be bogus if return status (%s) is 401)
-            output << request.auth.user;
+            output << connection.request.auth.user;
             break;
         case 'U': // The URL path requested, not including any query string.
-            output << request.url;
+            output << connection.request.url;
             break;
         case 'v': // The canonical ServerName of the server serving the request.
             // TODO ?
@@ -208,6 +206,40 @@ void Server::process_log_format(
             // TODO
             output << '-';
             break;
+    }
+}
+
+
+bool Server::started() const
+{
+    return data->thread.joinable();
+}
+
+void Server::start()
+{
+    boost::asio::ip::tcp::resolver resolver(data->io_service);
+    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve({
+        data->listen.string,
+        std::to_string(data->listen.port)
+    });
+    data->acceptor.open(endpoint.protocol());
+    data->acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+    data->acceptor.bind(endpoint);
+    data->acceptor.listen();
+    data->thread = std::thread([this](){
+        data->accept();
+        data->io_service.run();
+    });
+}
+
+void Server::stop()
+{
+    if ( started() )
+    {
+        /// \todo Needs locking?
+        data->acceptor.close();
+        data->io_service.stop();
+        data->thread.join();
     }
 }
 

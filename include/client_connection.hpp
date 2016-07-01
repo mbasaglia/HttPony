@@ -18,32 +18,33 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_ASIO_REQUEST_PARSER_HPP
-#define MUHTTPD_ASIO_REQUEST_PARSER_HPP
+#ifndef MUHTTPD_CLIENT_CONNECTION_HPP
+#define MUHTTPD_CLIENT_CONNECTION_HPP
 
 #include <boost/asio.hpp>
 
-#include "muhttpd.hpp"
+#include "request.hpp"
+#include "response.hpp"
 
 #include <iostream>
 
 namespace muhttpd {
-namespace asio {
 
+class Server;
 
-class AsioRequestParser
+class ClientConnection
 {
 public:
-    AsioRequestParser(boost::asio::ip::tcp::socket socket)
-        : socket(std::move(socket))
+    ClientConnection(boost::asio::ip::tcp::socket socket, Server* server)
+        : socket(std::move(socket)), server(server)
     {}
 
-    ~AsioRequestParser()
+    ~ClientConnection()
     {
         socket.close();
     }
 
-    Request read_request()
+    void read_request()
     {
         boost::system::error_code error;
 
@@ -55,13 +56,15 @@ public:
         auto sz = socket.read_some(boost::asio::buffer(buffer), error);
 
 
-        Request request;
+        request = Request();
+        status_code = StatusCode::OK;
+
         request.from = endpoint_to_ip(socket.remote_endpoint());
 
         if ( error || sz == 0 )
         {
-            request.status = Response::BadRequest;
-            return request;
+            status_code = StatusCode::BadRequest;
+            return ;
         }
 
         buffer_read.commit(sz);
@@ -83,7 +86,6 @@ public:
             std::cout << "> " << line << '\n';
         }
         std::cout << "END\n\n";
-        return request;
     }
 
     static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
@@ -95,12 +97,22 @@ public:
         );
     }
 
-private:
+    bool ok() const
+    {
+        return status_code == StatusCode::OK;
+    }
+
+    void send_response()
+    {
+        // TODO
+    }
+
+    Request request;
+    Response response;
+    StatusCode status_code = StatusCode::OK;
     boost::asio::ip::tcp::socket socket;
+    Server* server;
 };
 
-
-
-} // namespace asio
 } // namespace muhttpd
-#endif // MUHTTPD_ASIO_REQUEST_PARSER_HPP
+#endif // MUHTTPD_CLIENT_CONNECTION_HPP

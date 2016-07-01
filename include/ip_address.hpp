@@ -18,28 +18,40 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MuHTTPD_SERVER_DATA_HPP
-#define MuHTTPD_SERVER_DATA_HPP
+#ifndef MUHTTPD_IP_ADDRESS_HPP
+#define MUHTTPD_IP_ADDRESS_HPP
 
-#include "muhttpd.hpp"
+#include <string>
+#include <cstdint>
 
 namespace muhttpd {
 
-class Server::Data
+/**
+ * \brief IP address and port
+ */
+struct IPAddress
 {
-public:
-    Data(Server* owner, IPAddress listen)
-        : owner(owner), listen(listen), max_request_body(std::string().max_size())
+    /**
+     * \brief Address type
+     */
+    enum class Type
+    {
+        Invalid,
+        IPv4 = 4,
+        IPv6 = 6,
+    };
+
+    IPAddress() = default;
+
+    IPAddress(Type type, std::string string, uint16_t port)
+        : type(type), string(std::move(string)), port(port)
     {}
 
-    virtual ~Data(){}
 
-    Server* owner;
-    IPAddress listen;
-    std::size_t max_request_body;
+    Type type = Type::Invalid;
+    std::string string;
+    uint16_t port = 0;
 };
 
-std::unique_ptr<Server::Data> make_data(Server* owner, IPAddress listen);
-
 } // namespace muhttpd
-#endif // MuHTTPD_SERVER_DATA_HPP
+#endif // MUHTTPD_IP_ADDRESS_HPP
