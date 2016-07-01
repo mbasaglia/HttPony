@@ -178,7 +178,7 @@ void Server::process_log_format(
             break;
         case 'r': // First line of request
             /// \todo TODO check if this is correct (eg: query string)
-            output << request.protocol << ' ' << request.method << request.url;
+            output << request.method << ' ' << request.url << ' ' << request.protocol;
             break;
         case 'R': // The handler generating the response (if any).
             // TODO ?
