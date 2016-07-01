@@ -178,7 +178,7 @@ private:
             name += c;
         }
 
-        if ( std::isspace(buffer_stream.peek()) )
+        while ( std::isspace(buffer_stream.peek()) )
             buffer_stream.ignore(1);
 
         return true;
