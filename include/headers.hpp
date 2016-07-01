@@ -24,6 +24,8 @@
 #include <string>
 #include <vector>
 
+#include <melanolib/string/simple_stringutils.hpp>
+
 namespace muhttpd {
 
 /**
@@ -40,11 +42,23 @@ struct Header
 };
 
 /**
+ * \brief Case-insensitive string comparator class
+ */
+struct ICaseComparator
+{
+    bool operator()(const std::string& a, const std::string& b) const
+    {
+        return melanolib::string::icase_equal(a, b);
+    }
+};
+
+/**
  * \brief Thin wrapper around a vector of Header object prividing
  * dictionary-like access
- * \todo Case-insensitive
+ * \todo Hide the vector and implement the container concept
  */
-struct Headers
+template<class Comparator = std::equal_to<std::string>>
+    struct OrderedMultimap
 {
     /**
      * \brief Whether it has a header matching the given name
@@ -53,7 +67,7 @@ struct Headers
     {
         for ( const auto& header : headers )
         {
-            if ( header.name == name )
+            if ( Comparator()(header.name, name) )
                 return true;
         }
         return false;
@@ -67,7 +81,7 @@ struct Headers
         std::size_t n = 0;
         for ( const auto& header : headers )
         {
-            if ( header.name == name )
+            if ( Comparator()(header.name, name) )
                 n++;
         }
         return n;
@@ -90,7 +104,7 @@ struct Headers
     {
         for ( const auto& header : headers )
         {
-            if ( header.name == name )
+            if ( Comparator()(header.name, name) )
                 return header.value;
         }
         return "";
@@ -105,7 +119,7 @@ struct Headers
     {
         for ( auto& header : headers )
         {
-            if ( header.name == name )
+            if ( Comparator()(header.name, name) )
                 return header.value;
         }
         headers.push_back({name, ""});
@@ -132,6 +146,9 @@ struct Headers
 
     std::vector<Header> headers;
 };
+
+using Headers = OrderedMultimap<ICaseComparator>;
+using DataMap = OrderedMultimap<>;
 
 } // namespace muhttpd
 #endif // MUHTTPD_HEADERS_HPP

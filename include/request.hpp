@@ -48,9 +48,9 @@ struct Request
     Protocol    protocol;
     std::string body;
     Headers     headers;
-    Headers     cookies;
-    Headers     get;
-    Headers     post;
+    DataMap     cookies;
+    DataMap     get;
+    DataMap     post;
     IPAddress   from;
     Auth        auth;
 };

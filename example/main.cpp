@@ -31,7 +31,8 @@ public:
     using Server::Server;
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
 
-    void show_headers(const std::string& title, const muhttpd::Headers& headers)
+    template<class Map>
+        void show_headers(const std::string& title, const Map& headers)
     {
         std::cout << title << ":\n";
         for ( const auto& head : headers )

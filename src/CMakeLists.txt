@@ -22,10 +22,9 @@ logging.cpp
 client_connection.cpp
 )
 
-
 add_library(${LIBRARY_NAME} ${SOURCES})
 
 
 find_package (Boost COMPONENTS system thread REQUIRED)
 target_link_libraries(${LIBRARY_NAME} ${Boost_LIBRARIES})
-include_directories (${Boost_INCLUDE_DIRS})
+include_directories(${Boost_INCLUDE_DIRS})

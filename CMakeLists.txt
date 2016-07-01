@@ -48,6 +48,8 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     endif()
 endif()
 
+
+include_directories("lib/Melanolib/include/")
 include_directories(include)
 add_subdirectory(src lib)
 
