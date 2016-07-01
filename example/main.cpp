@@ -40,7 +40,17 @@ public:
 
     void respond(muhttpd::ClientConnection& connection) override
     {
-        connection.response = muhttpd::Response("Hello, world!\n");
+        connection.read_body();
+
+        if ( connection.ok() )
+        {
+            connection.response = muhttpd::Response("Hello, world!\n");
+        }
+        else
+        {
+            muhttpd::Status status(connection.status_code);
+            connection.response = muhttpd::Response(status.message + '\n', "text/plain", status);
+        }
 
         log(log_format, connection, std::cout);
 

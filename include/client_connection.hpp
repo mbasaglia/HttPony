@@ -32,16 +32,43 @@ namespace muhttpd {
 
 class Server;
 
+
+struct NetworkInputStream
+{
+
+    explicit NetworkInputStream(boost::asio::ip::tcp::socket socket)
+        : socket(std::move(socket))
+    {
+    }
+
+    std::size_t read_some(std::size_t size, boost::system::error_code& error)
+    {
+        /// \todo timeout
+        auto prev_size = buffer.size();
+        if ( size <= prev_size )
+            return size;
+        size -= prev_size;
+        auto in_buffer = buffer.prepare(size);
+        auto read_size = socket.read_some(boost::asio::buffer(in_buffer), error);
+        buffer.commit(read_size);
+        return read_size + prev_size;
+    }
+
+    boost::asio::ip::tcp::socket socket;
+    boost::asio::streambuf buffer;
+    std::istream stream{&buffer};
+};
+
 class ClientConnection
 {
 public:
     ClientConnection(boost::asio::ip::tcp::socket socket, Server* server)
-        : socket(std::move(socket)), server(server)
+        : input(std::move(socket)), server(server)
     {}
 
     ~ClientConnection()
     {
-        socket.close();
+        input.socket.close();
     }
 
     void read_request()
@@ -51,14 +78,14 @@ public:
         // boost::asio::streambuf buffer_read;
         // auto sz = boost::asio::read(socket, buffer_read, error);
 
-        boost::asio::streambuf buffer_read;
-        auto buffer = buffer_read.prepare(1024);
-        auto sz = socket.read_some(boost::asio::buffer(buffer), error);
+        /// \todo Avoid magic number, keep reading if needed
+        auto sz = input.read_some(1024, error);
 
         request = Request();
         status_code = StatusCode::OK;
 
-        request.from = endpoint_to_ip(socket.remote_endpoint());
+        request.from = endpoint_to_ip(input.socket.remote_endpoint());
+
 
         if ( error || sz == 0 )
         {
@@ -66,14 +93,13 @@ public:
             return;
         }
 
-        buffer_read.commit(sz);
-        std::istream buffer_stream(&buffer_read);
-
-        if ( !read_request_line(buffer_stream) || !read_headers(buffer_stream) )
+        if ( !read_request_line(input.stream) || !read_headers(input.stream) )
         {
             status_code = StatusCode::BadRequest;
             return;
         }
+
+        status_code = StatusCode::OK;
 
         /// \todo If the body has already been sent handle it here
     }
@@ -106,20 +132,18 @@ public:
 
         buffer_stream << response.body;
 
-        boost::asio::write(socket, buffer_write);
+        boost::asio::write(input.socket, buffer_write);
     }
 
-    void read_body()
-    {
-        /// \todo Read body checking content-length and stuff
-        /// \todo Parse urlencoded and multipart/form-data into request.post
-        /// \todo Functionality to read it asyncronously
-    }
+    /**
+     * \brief Reads the request body into the request object
+     */
+    void read_body(std::size_t max_size = 0);
 
     Request request;
     Response response;
     StatusCode status_code = StatusCode::OK;
-    boost::asio::ip::tcp::socket socket;
+    NetworkInputStream input;
     Server* server;
 
 private:
@@ -231,6 +255,46 @@ private:
         return true;
     }
 
+};
+
+
+/**
+ * \brief Gives access to the request body from a connection object
+ */
+class BodyStream
+{
+public:
+    explicit BodyStream(ClientConnection& connection, std::size_t max_size = 0);
+
+    bool ok()
+    {
+        return _ok && connection->input.stream.good();
+    }
+
+    std::size_t content_length() const
+    {
+        return _content_length;
+    }
+
+    std::string read_all()
+    {
+        std::string all(_content_length, ' ');
+        connection->input.stream.read(&all[0], _content_length);
+        all.resize(connection->input.stream.gcount());
+        return all;
+    }
+
+    template<class T>
+    friend BodyStream& operator>>(BodyStream& bs, T& obj)
+    {
+        bs.connection->input.stream >> obj;
+        return bs;
+    }
+
+private:
+    bool _ok = false;
+    std::size_t _content_length = 0;
+    ClientConnection* connection;
 };
 
 } // namespace muhttpd

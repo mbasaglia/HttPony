@@ -19,6 +19,7 @@ set(SOURCES
 server.cpp
 status.cpp
 logging.cpp
+client_connection.cpp
 )
 
 

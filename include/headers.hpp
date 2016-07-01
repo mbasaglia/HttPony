@@ -74,11 +74,19 @@ struct Headers
     }
 
     /**
+     * \see get()
+     */
+    std::string operator[](const std::string& name) const
+    {
+        return get(name);
+    }
+
+    /**
      * \brief Returns the first occurence of a header with the given name
      *
      * If no header is found, returns the empty string
      */
-    std::string operator[](const std::string& name) const
+    std::string get(const std::string& name) const
     {
         for ( const auto& header : headers )
         {
