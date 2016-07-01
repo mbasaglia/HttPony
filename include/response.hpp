@@ -23,6 +23,7 @@
 
 #include "status.hpp"
 #include "headers.hpp"
+#include "protocol.hpp"
 
 namespace muhttpd {
 
@@ -44,6 +45,7 @@ struct Response
     std::string body;
     Status      status;
     Headers     headers;
+    Protocol    protocol = Protocol("HTTP", 1, 1);
 };
 
 } // namespace muhttpd

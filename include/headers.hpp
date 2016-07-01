@@ -42,6 +42,7 @@ struct Header
 /**
  * \brief Thin wrapper around a vector of Header object prividing
  * dictionary-like access
+ * \todo Case-insensitive
  */
 struct Headers
 {

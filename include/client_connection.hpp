@@ -21,12 +21,12 @@
 #ifndef MUHTTPD_CLIENT_CONNECTION_HPP
 #define MUHTTPD_CLIENT_CONNECTION_HPP
 
+#include <iostream>
+
 #include <boost/asio.hpp>
 
 #include "request.hpp"
 #include "response.hpp"
-
-#include <iostream>
 
 namespace muhttpd {
 
@@ -64,28 +64,43 @@ public:
         if ( error || sz == 0 )
         {
             status_code = StatusCode::BadRequest;
-            return ;
+            return;
         }
 
         buffer_read.commit(sz);
         std::istream buffer_stream(&buffer_read);
-        buffer_stream >> request.method >> request.url >> request.protocol;
 
-        std::cout << "BEGIN "
-            << request.from.string << ' ' << request.from.port
-            << '\n' << request.method << ' ' <<  request.url << ' ' <<  request.protocol
-            << "\n===\n";
-        std::string line;
-        while ( buffer_stream && buffer_stream.get() != '\n' ); // Ignore all before \n
-        while ( true )
+        // Read request line
+        buffer_stream >> request.method >> request.url >> request.protocol;
+        skip_line(buffer_stream);
+
+        if ( !request.protocol.valid() )
         {
-            std::getline(buffer_stream, line, '\r');
+            status_code = StatusCode::BadRequest;
+            return;
+        }
+
+        // Read headers
+        std::string name, value;
+        while ( buffer_stream && buffer_stream.peek() != '\r' )
+        {
+            std::getline(buffer_stream, name, ':');
+            if ( std::isspace(buffer_stream.peek()) )
+                buffer_stream.ignore(1);
+            std::getline(buffer_stream, value, '\r');
             buffer_stream.ignore(1, '\n');
             if ( !buffer_stream )
-                break;
-            std::cout << "> " << line << '\n';
+            {
+                status_code = StatusCode::BadRequest;
+                return;
+            }
+            /// \todo validate header name/value
+            request.headers.append(name, value);
         }
-        std::cout << "END\n\n";
+        skip_line(buffer_stream);
+
+        // Read body
+        /// \todo Read body (if needed) checking content-length and stuff
     }
 
     static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
@@ -104,7 +119,19 @@ public:
 
     void send_response()
     {
-        // TODO
+        boost::asio::streambuf buffer_write;
+        std::ostream buffer_stream(&buffer_write);
+        buffer_stream << response.protocol << ' '
+                      << response.status.code << ' '
+                      << response.status.message << "\r\n";
+
+        for ( const auto& header : response.headers )
+            buffer_stream << header.name << ": " << header.value << "\r\n";
+        buffer_stream << "\r\n";
+
+        buffer_stream << response.body;
+
+        boost::asio::write(socket, buffer_write);
     }
 
     Request request;
@@ -112,6 +139,13 @@ public:
     StatusCode status_code = StatusCode::OK;
     boost::asio::ip::tcp::socket socket;
     Server* server;
+
+private:
+    // Ignore all before \n
+    void skip_line(std::istream& buffer_stream)
+    {
+        while ( buffer_stream && buffer_stream.get() != '\n' );
+    }
 };
 
 } // namespace muhttpd

@@ -23,6 +23,7 @@
 
 #include "ip_address.hpp"
 #include "headers.hpp"
+#include "protocol.hpp"
 
 namespace muhttpd {
 
@@ -44,7 +45,7 @@ struct Request
 {
     std::string url;
     std::string method;
-    std::string protocol;
+    Protocol    protocol;
     std::string body;
     Headers     headers;
     Headers     cookies;
