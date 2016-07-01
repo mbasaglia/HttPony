@@ -28,18 +28,18 @@ namespace muhttpd {
 class Server::Data
 {
 public:
-    Data(Server* owner, uint16_t port)
-        : owner(owner), port(port), max_request_body(std::string().max_size())
+    Data(Server* owner, IPAddress listen)
+        : owner(owner), listen(listen), max_request_body(std::string().max_size())
     {}
 
     virtual ~Data(){}
 
     Server* owner;
-    uint16_t port;
+    IPAddress listen;
     std::size_t max_request_body;
 };
 
-std::unique_ptr<Server::Data> make_data(Server* owner, uint16_t port);
+std::unique_ptr<Server::Data> make_data(Server* owner, IPAddress listen);
 
 } // namespace muhttpd
 #endif // MuHTTPD_SERVER_DATA_HPP

@@ -193,7 +193,7 @@ static int receive(
     }
 
     request.url = url;
-    request.version = version;
+    request.protocol = version;
 
     char* password = nullptr;
     char* user = MHD_basic_auth_get_username_password (connection, &password);

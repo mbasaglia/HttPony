@@ -169,7 +169,7 @@ struct Request
 {
     std::string url;
     std::string method;
-    std::string version;
+    std::string protocol;
     std::string body;
     Headers     headers;
     Headers     cookies;
@@ -281,7 +281,8 @@ public:
         BadBody,            //< Could not process a request body
     };
 
-    explicit Server(uint16_t port);
+    explicit Server(IPAddress listen);
+    explicit Server(uint16_t listen_port);
 
     ~Server();
 
@@ -294,9 +295,9 @@ public:
     }
 
     /**
-     * \brief Listening port
+     * \brief Listening address
      */
-    uint16_t port() const;
+    IPAddress listen_address() const;
 
     /**
      * \brief Starts the server in a background thread

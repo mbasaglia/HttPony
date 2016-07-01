@@ -29,8 +29,12 @@
 
 namespace muhttpd {
 
+Server::Server(IPAddress listen)
+    : data(make_data(this, listen))
+{}
+
 Server::Server(uint16_t port)
-    : data(make_data(this, port))
+    : Server(IPAddress(IPAddress::Type::IPv4, "0.0.0.0", port))
 {}
 
 Server::~Server()
@@ -38,9 +42,9 @@ Server::~Server()
     stop();
 }
 
-uint16_t Server::port() const
+IPAddress Server::listen_address() const
 {
-    return data->port;
+    return data->listen;
 }
 
 std::size_t Server::max_request_body() const
@@ -139,7 +143,7 @@ void Server::process_log_format(
             // TODO
             break;
         case 'H': // The request protocol
-            output << request.version;
+            output << request.protocol;
             break;
         case 'i': // The contents of header line in the request sent to the server.
             /// \todo Handle multiple headers with the same name
@@ -164,7 +168,7 @@ void Server::process_log_format(
             if ( argument == "remote" )
                 output << request.from.port;
             else
-                output << data->port;
+                output << data->listen.port;
             break;
         case 'P': // The process ID or thread id of the child that serviced the request. Valid formats are pid, tid, and hextid.
             // TODO ?
@@ -174,7 +178,7 @@ void Server::process_log_format(
             break;
         case 'r': // First line of request
             /// \todo TODO check if this is correct (eg: query string)
-            output << request.version << ' ' << request.method << request.url;
+            output << request.protocol << ' ' << request.method << request.url;
             break;
         case 'R': // The handler generating the response (if any).
             // TODO ?
