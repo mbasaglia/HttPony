@@ -142,18 +142,29 @@ private:
         std::string name, value;
         while ( buffer_stream && buffer_stream.peek() != '\r' )
         {
+            // Discard deprecated header folding
+            if ( std::isspace(buffer_stream.peek()) )
+                return false;
+
             if ( !read_header_name(buffer_stream, name) )
                 return false;
 
-            std::getline(buffer_stream, value, '\r');
-            buffer_stream.ignore(1, '\n');
+            if ( buffer_stream.peek() == '"' )
+            {
+                read_quoted_header_value(buffer_stream, value);
+            }
+            else
+            {
+                std::getline(buffer_stream, value, '\r');
+                buffer_stream.ignore(1, '\n');
+            }
+            /// \todo Read header comments
 
             if ( !buffer_stream )
             {
-                status_code = StatusCode::BadRequest;
                 return false;
             }
-            /// \todo validate header name/value
+            /// \todo validate header name
             request.headers.append(name, value);
         }
 
@@ -170,7 +181,6 @@ private:
             auto c = buffer_stream.get();
             if ( c == std::char_traits<char>::eof() || c == '\r' )
             {
-                status_code = StatusCode::BadRequest;
                 return false;
             }
             if ( c == ':' )
@@ -180,6 +190,43 @@ private:
 
         while ( std::isspace(buffer_stream.peek()) )
             buffer_stream.ignore(1);
+
+        return true;
+    }
+
+    bool read_quoted_header_value(std::istream& buffer_stream, std::string& value)
+    {
+        buffer_stream.ignore(1, '"');
+        value.clear();
+        bool last_slash = false;
+        while ( true )
+        {
+            auto c = buffer_stream.get();
+            if ( c == std::char_traits<char>::eof() || c == '\r' || c == '\n' )
+            {
+                return false;
+            }
+
+            if ( !last_slash )
+            {
+                if ( c == '"'  )
+                    break;
+                if ( c == '\\' )
+                {
+                    last_slash = true;
+                    continue;
+                }
+            }
+            else
+            {
+                last_slash = false;
+            }
+
+            value += c;
+
+        }
+
+        skip_line(buffer_stream);
 
         return true;
     }
