@@ -128,9 +128,18 @@ public:
 
         for ( const auto& header : response.headers )
             buffer_stream << header.name << ": " << header.value << "\r\n";
+
+        if ( response.body )
+        {
+            buffer_stream << "Content-Type" << ": " << response.body->mime_type << "\r\n";
+            buffer_stream << "Content-Length" << ": " << response.body->data.size() << "\r\n";
+        }
+
+
         buffer_stream << "\r\n";
 
-        buffer_stream << response.body;
+        if ( response.body )
+            buffer_stream << response.body->data;
 
         boost::asio::write(input.socket, buffer_write);
     }

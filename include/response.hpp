@@ -24,6 +24,7 @@
 #include "status.hpp"
 #include "headers.hpp"
 #include "protocol.hpp"
+#include "content.hpp"
 
 namespace muhttpd {
 
@@ -32,19 +33,17 @@ namespace muhttpd {
  */
 struct Response
 {
-    Response(
-        std::string body = "",
-        const std::string& content_type = "text/plain",
-        Status status = Status()
-    )
+    Response(Body body, Status status = Status())
         : body(std::move(body)), status(std::move(status))
     {
         /// \todo Date
-        headers.append("Content-Type", content_type);
-        /// \todo Content length
     }
 
-    std::string body;
+    Response(Status status = Status())
+        : Response(Body(), std::move(status))
+    {}
+
+    Body        body;
     Status      status;
     Headers     headers;
     Protocol    protocol = Protocol("HTTP", 1, 1);

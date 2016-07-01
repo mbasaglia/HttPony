@@ -45,12 +45,17 @@ public:
 
         if ( connection.ok() )
         {
-            connection.response = muhttpd::Response("Hello, world!\n");
+            connection.response = muhttpd::Response(
+                muhttpd::Content::text("Hello, world!\n")
+            );
         }
         else
         {
             muhttpd::Status status(connection.status_code);
-            connection.response = muhttpd::Response(status.message + '\n', "text/plain", status);
+            connection.response = muhttpd::Response(
+                muhttpd::Content::text(status.message + '\n'),
+                status
+            );
         }
 
         log(log_format, connection, std::cout);
@@ -60,9 +65,12 @@ public:
         show_headers("Get", connection.request.get);
         show_headers("Post", connection.request.post);
 
-        std::string body = connection.request.body;
-        std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
-        std::cout << '\n' << body << '\n';
+        if ( connection.request.body )
+        {
+            std::string body = connection.request.body->data;
+            std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
+            std::cout << '\n' << body << '\n';
+        }
 
         connection.send_response();
     }

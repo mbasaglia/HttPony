@@ -123,10 +123,10 @@ void Server::process_log_format(
             // TODO
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
-            output << connection.response.body.size();
+            output << connection.response.body.content_length();
             break;
         case 'b': // Size of response in bytes, excluding HTTP headers. In CLF format, i.e. a '-' rather than a 0 when no bytes are sent.
-            output << clf(connection.response.body.size());
+            output << clf(connection.response.body.content_length());
             break;
         case 'C': // The contents of cookie Foobar in the request sent to the server.
             output << connection.request.cookies[argument];
