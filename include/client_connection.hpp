@@ -43,7 +43,8 @@ public:
         : input(std::move(socket)), server(server)
     {
 
-        request.from = endpoint_to_ip(input.socket().remote_endpoint());
+        request.from = remote = endpoint_to_ip(input.socket().remote_endpoint());
+        local = endpoint_to_ip(input.socket().local_endpoint());
     }
 
     ~ClientConnection()
@@ -54,11 +55,14 @@ public:
     /**
      * \brief Reads request data from the socket
      *
-     * Sets \c status_code to an error code if the request is malformed
+     * Sets \c status to an error code if the request is malformed
      */
     void read_request()
     {
         boost::system::error_code error;
+
+        request = Request();
+        request.from = remote;
 
         // boost::asio::streambuf buffer_read;
         // auto sz = boost::asio::read(socket, buffer_read, error);
@@ -66,7 +70,7 @@ public:
         /// \todo Avoid magic number, keep reading if needed
         auto sz = input.read_some(1024, error);
 
-        status_code = StatusCode::BadRequest;
+        status = StatusCode::BadRequest;
 
         if ( error || sz == 0 )
             return;
@@ -83,11 +87,11 @@ public:
         }
         else if ( input.size() )
         {
-            status_code = StatusCode::LengthRequired;
+            status = StatusCode::LengthRequired;
             return;
         }
 
-        status_code = StatusCode::OK;
+        status = StatusCode::OK;
     }
 
     /**
@@ -95,7 +99,7 @@ public:
      */
     bool ok() const
     {
-        return status_code == StatusCode::OK;
+        return status == StatusCode::OK;
     }
 
     /**
@@ -146,7 +150,9 @@ public:
 
     Request request;
     Response response;
-    StatusCode status_code = StatusCode::OK;
+    IPAddress local;
+    IPAddress remote;
+    Status status = StatusCode::OK;
     NetworkBuffer input;
     Server* const server;
 

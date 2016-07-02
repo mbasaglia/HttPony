@@ -111,7 +111,6 @@ Status::Status(unsigned code, std::string message)
 {
 }
 
-
 StatusType Status::type() const
 {
     if ( code >= 600 )
@@ -127,6 +126,11 @@ StatusType Status::type() const
     if ( code >= 100 )
         return StatusType::Informational;
     return StatusType::Invalid;
+}
+
+bool Status::is_error() const
+{
+    return code < 100 || code >= 400;
 }
 
 } // namespace muhttpd

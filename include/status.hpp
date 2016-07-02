@@ -120,7 +120,9 @@ struct Status
     Status(StatusCode status = StatusCode::OK);
     Status(unsigned code, std::string message);
     explicit Status(unsigned code);
+
     StatusType type() const;
+    bool is_error() const;
 };
 
 inline bool operator==(const Status& status, StatusCode code)

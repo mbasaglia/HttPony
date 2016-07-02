@@ -26,9 +26,8 @@
 
 namespace muhttpd {
 
-class Server::Data
+struct Server::Data
 {
-public:
     Data(Server* owner, IPAddress listen)
         : owner(owner), listen(listen), max_request_body(std::string().max_size())
     {}
@@ -66,7 +65,7 @@ public:
         /// \todo This could spawn async reads (and writes)
         ClientConnection connection(std::move(socket), owner);
         if ( error_code )
-            connection.status_code = StatusCode::BadRequest;
+            connection.status = StatusCode::BadRequest;
         else
             connection.read_request();
         owner->respond(connection);
@@ -120,7 +119,7 @@ void Server::process_log_format(
             output << connection.request.from.string;
             break;
         case 'A': // Local IP-address
-            // TODO
+            output << connection.local.string;
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
             output << connection.response.body.content_length();
@@ -151,8 +150,7 @@ void Server::process_log_format(
             // TODO ?
             output << 0;
             break;
-        case 'l': // Remote logname
-            // TODO ?
+        case 'l': // Remote logname (something to do with Apache modules)
             output << '-';
             break;
         case 'm':
@@ -165,7 +163,9 @@ void Server::process_log_format(
         case 'p':
             if ( argument == "remote" )
                 output << connection.request.from.port;
-            else
+            else if ( argument == "local" )
+                output << connection.local.port;
+            else // canonical
                 output << data->listen.port;
             break;
         case 'P': // The process ID or thread id of the child that serviced the request. Valid formats are pid, tid, and hextid.
@@ -203,8 +203,8 @@ void Server::process_log_format(
             // TODO ?
             break;
         case 'X': // Connection status when response is completed. X = aborted before response; + = Maybe keep alive; - = Close after response.
-            // TODO
-            output << '-';
+            // TODO keep alive?
+            output << (connection.status.is_error() ? 'X' : '-');
             break;
     }
 }

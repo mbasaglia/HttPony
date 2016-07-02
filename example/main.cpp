@@ -45,7 +45,7 @@ public:
 
         std::string body = connection.request.body.read_all();
         if ( connection.request.body.error() )
-            connection.status_code = muhttpd::StatusCode::BadRequest;
+            connection.status = muhttpd::StatusCode::BadRequest;
 
         if ( connection.ok() )
         {
@@ -53,7 +53,7 @@ public:
         }
         else
         {
-            connection.response.status = connection.status_code;
+            connection.response.status = connection.status;
             connection.response.body << connection.response.status.message << '\n';
         }
 
