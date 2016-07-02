@@ -27,6 +27,9 @@
 
 namespace muhttpd {
 
+/**
+ * \brief Network protocol and version
+ */
 struct Protocol
 {
     Protocol(std::string name,  unsigned version_major, unsigned version_minor)

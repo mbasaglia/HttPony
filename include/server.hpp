@@ -36,25 +36,11 @@ namespace muhttpd {
 class Server
 {
 public:
-    enum class ErrorCode
-    {
-        Unknown,            //< Unspecified error
-        StartupFailure,     //< start() failed
-        BadBody,            //< Could not process a request body
-    };
 
     explicit Server(IPAddress listen);
     explicit Server(uint16_t listen_port);
 
     ~Server();
-
-    /**
-     * \brief Whether the server should accept connections from this address
-     */
-    virtual bool accept(const IPAddress& address)
-    {
-        return true;
-    }
 
     /**
      * \brief Listening address
@@ -89,15 +75,6 @@ public:
      */
     virtual void respond(ClientConnection& connection) = 0;
 
-
-    virtual void on_error(ErrorCode error)
-    {
-        if ( error == ErrorCode::StartupFailure )
-            throw std::runtime_error("Could not start the server");
-    }
-
-    struct Data;
-
     /**
      * \brief Writes a single log item into \p output
      */
@@ -109,6 +86,7 @@ public:
     ) const;
 
 private:
+    struct Data;
     std::unique_ptr<Data> data;
 };
 

@@ -25,7 +25,9 @@
 
 namespace muhttpd {
 
-
+/**
+ * \brief Names for all common status codes
+ */
 enum class StatusCode
 {
     Continue = 100,
@@ -94,6 +96,9 @@ enum class StatusCode
     NetworkAuthenticationRequired = 511,
 };
 
+/**
+ * \brief Type of a status code
+ */
 enum class StatusType
 {
     Invalid       = 0,
@@ -104,6 +109,9 @@ enum class StatusType
     ServerError   = 500,
 };
 
+/**
+ * \brief A response status
+ */
 struct Status
 {
     unsigned code;

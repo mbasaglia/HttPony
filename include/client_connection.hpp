@@ -33,6 +33,9 @@ namespace muhttpd {
 
 class Server;
 
+/**
+ * \brief Represents a single connection to a client for a request/response interaction
+ */
 class ClientConnection
 {
 public:
@@ -48,6 +51,11 @@ public:
         input.socket().close();
     }
 
+    /**
+     * \brief Reads request data from the socket
+     *
+     * Sets \c status_code to an error code if the request is malformed
+     */
     void read_request()
     {
         boost::system::error_code error;
@@ -82,15 +90,9 @@ public:
         status_code = StatusCode::OK;
     }
 
-    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
-    {
-        return IPAddress(
-            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
-            endpoint.address().to_string(),
-            endpoint.port()
-        );
-    }
-
+    /**
+     * \brief Whether the status represents a successful read
+     */
     bool ok() const
     {
         return status_code == StatusCode::OK;
@@ -114,6 +116,9 @@ public:
         }
     }
 
+    /**
+     * \brief Sends the response to the socket
+     */
     void send_response()
     {
         boost::asio::streambuf buffer_write;
@@ -143,15 +148,33 @@ public:
     Response response;
     StatusCode status_code = StatusCode::OK;
     NetworkBuffer input;
-    Server* server;
+    Server* const server;
 
 private:
-    // Ignore all before \n
+    /**
+     * \brief Converts a boost endpoint to an IPAddress object
+     */
+    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
+    {
+        return IPAddress(
+            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
+            endpoint.address().to_string(),
+            endpoint.port()
+        );
+    }
+
+    /**
+     * \brief Ignores all before "\n"
+     */
     void skip_line(std::istream& buffer_stream)
     {
         while ( buffer_stream && buffer_stream.get() != '\n' );
     }
 
+    /**
+     * \brief Reads the request line (GET /url HTTP/1.1)
+     * \returns \b true on success
+     */
     bool read_request_line(std::istream& buffer_stream)
     {
         buffer_stream >> request.method >> request.url >> request.protocol;
@@ -160,6 +183,10 @@ private:
         return request.protocol.valid() && buffer_stream;
     }
 
+    /**
+     * \brief Reads all headers and the empty line following them
+     * \returns \b true on success
+     */
     bool read_headers(std::istream& buffer_stream)
     {
         std::string name, value;
@@ -196,6 +223,10 @@ private:
         return true;
     }
 
+    /**
+     * \brief Reads a header name and the following colon, including optional spaces
+     * \returns \b true on success
+     */
     bool read_header_name(std::istream& buffer_stream, std::string& name)
     {
         name.clear();
@@ -217,6 +248,10 @@ private:
         return true;
     }
 
+    /**
+     * \brief Reads a "quoted" header value
+     * \returns \b true on success
+     */
     bool read_quoted_header_value(std::istream& buffer_stream, std::string& value)
     {
         buffer_stream.ignore(1, '"');

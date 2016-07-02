@@ -209,7 +209,6 @@ void Server::process_log_format(
     }
 }
 
-
 bool Server::started() const
 {
     return data->thread.joinable();

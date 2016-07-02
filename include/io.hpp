@@ -28,7 +28,9 @@
 
 namespace muhttpd {
 
-
+/**
+ * \brief Stream buffer linked to a socket for reading
+ */
 struct NetworkBuffer : boost::asio::streambuf
 {
     explicit NetworkBuffer(boost::asio::ip::tcp::socket socket)
@@ -112,7 +114,7 @@ private:
 };
 
 /**
- * \brief Gives access to the request body from a connection object
+ * \brief Reads an incoming message payload fro m a network buffer
  */
 class NetworkInputStream : std::istream
 {
@@ -181,6 +183,9 @@ private:
     boost::system::error_code _error;
 };
 
+/**
+ * \brief Writes an outgoing message payload
+ */
 class NetworkOutputStream: public std::ostream
 {
 public:
@@ -219,6 +224,9 @@ public:
         rdbuf(nullptr);
     }
 
+    /**
+     * \brief Whether there is some data to send (which might have 0 length) or no data at all
+     */
     bool has_data()
     {
         return rdbuf() && !_content_type.empty();
@@ -234,6 +242,9 @@ public:
         return _content_type;
     }
 
+    /**
+     * \brief Writes the payload to a socket
+     */
     void net_write(boost::asio::ip::tcp::socket& socket)
     {
         if ( has_data() )
