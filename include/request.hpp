@@ -22,7 +22,6 @@
 #define HTTPONY_REQUEST_HPP
 
 #include "ip_address.hpp"
-#include "headers.hpp"
 #include "protocol.hpp"
 #include "io.hpp"
 #include "uri.hpp"

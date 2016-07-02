@@ -23,7 +23,6 @@
 
 #include <melanolib/utils/c++-compat.hpp>
 #include "status.hpp"
-#include "headers.hpp"
 #include "protocol.hpp"
 #include "io.hpp"
 

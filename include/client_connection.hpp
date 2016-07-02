@@ -21,13 +21,8 @@
 #ifndef HTTPONY_CLIENT_CONNECTION_HPP
 #define HTTPONY_CLIENT_CONNECTION_HPP
 
-#include <iostream>
-
-#include <boost/asio.hpp>
-
 #include "request.hpp"
 #include "response.hpp"
-#include "io.hpp"
 
 namespace httpony {
 
