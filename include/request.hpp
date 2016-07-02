@@ -21,10 +21,13 @@
 #ifndef MUHTTPD_REQUEST_HPP
 #define MUHTTPD_REQUEST_HPP
 
+#include <melanolib/utils/c++-compat.hpp>
+
 #include "ip_address.hpp"
 #include "headers.hpp"
 #include "protocol.hpp"
 #include "content.hpp"
+#include "io.hpp"
 
 namespace muhttpd {
 
@@ -47,13 +50,15 @@ struct Request
     std::string url;
     std::string method;
     Protocol    protocol;
-    Body        body;
     Headers     headers;
     DataMap     cookies;
     DataMap     get;
     DataMap     post;
     IPAddress   from;
     Auth        auth;
+
+    /// \todo Parse urlencoded and multipart/form-data into request.post
+    melanolib::Optional<NetworkInputStream> body;
 };
 
 } // namespace muhttpd

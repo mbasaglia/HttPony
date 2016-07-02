@@ -27,93 +27,21 @@
 
 #include "request.hpp"
 #include "response.hpp"
+#include "io.hpp"
 
 namespace muhttpd {
 
 class Server;
-
-
-struct NetworkBuffer : boost::asio::streambuf
-{
-    explicit NetworkBuffer(boost::asio::ip::tcp::socket socket)
-        : _socket(std::move(socket))
-    {
-    }
-
-    /**
-     * \brief Reads up to size from the socket
-     */
-    std::size_t read_some(std::size_t size, boost::system::error_code& error)
-    {
-        /// \todo timeout
-        auto prev_size = this->size();
-        if ( size <= prev_size )
-            return size;
-        size -= prev_size;
-
-        auto in_buffer = prepare(size);
-        auto read_size = _socket.read_some(boost::asio::buffer(in_buffer), error);
-        commit(read_size);
-
-        return read_size + prev_size;
-    }
-
-    /**
-     * \brief Expect at least \p byte_count to be available in the socket
-     */
-    void expect_input(std::size_t byte_count)
-    {
-        _expected_input = byte_count;
-    }
-
-    std::size_t expected_input() const
-    {
-        return _expected_input;
-    }
-
-    boost::asio::ip::tcp::socket& socket()
-    {
-        return _socket;
-    }
-
-    boost::system::error_code error() const
-    {
-        return _error;
-    }
-
-protected:
-    int_type underflow() override
-    {
-        int_type ret = boost::asio::streambuf::underflow();
-        if ( ret == traits_type::eof() && _expected_input > 0 )
-        {
-            auto read_size = read_some(_expected_input, _error);
-
-            if ( read_size <= _expected_input )
-                _expected_input -= read_size;
-            else
-                /// \todo This should trigger a bad request
-                _error = boost::system::errc::make_error_code(
-                    boost::system::errc::file_too_large
-                );
-
-            ret = boost::asio::streambuf::underflow();
-        }
-        return ret;
-    }
-
-private:
-    boost::asio::ip::tcp::socket _socket;
-    std::size_t _expected_input = 0;
-    boost::system::error_code _error;
-};
 
 class ClientConnection
 {
 public:
     ClientConnection(boost::asio::ip::tcp::socket socket, Server* server)
         : input(std::move(socket)), server(server)
-    {}
+    {
+
+        request.from = endpoint_to_ip(input.socket().remote_endpoint());
+    }
 
     ~ClientConnection()
     {
@@ -130,29 +58,24 @@ public:
         /// \todo Avoid magic number, keep reading if needed
         auto sz = input.read_some(1024, error);
 
-        request = Request();
-        status_code = StatusCode::OK;
-
-        request.from = endpoint_to_ip(input.socket().remote_endpoint());
-
+        status_code = StatusCode::BadRequest;
 
         if ( error || sz == 0 )
-        {
-            status_code = StatusCode::BadRequest;
             return;
-        }
 
         std::istream stream(&input);
 
         if ( !read_request_line(stream) || !read_headers(stream) )
-        {
-            status_code = StatusCode::BadRequest;
             return;
+
+        if ( request.headers.has_header("Content-Length") )
+        {
+            request.body.emplace(input, request.headers);
+            if ( !*request.body )
+                return;
         }
 
         status_code = StatusCode::OK;
-
-        /// \todo If the body has already been sent handle it here
     }
 
     static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
@@ -195,10 +118,6 @@ public:
         boost::asio::write(input.socket(), buffer_write);
     }
 
-    /**
-     * \brief Reads the request body into the request object
-     */
-    void read_body(std::size_t max_size = 0);
 
     Request request;
     Response response;
@@ -317,52 +236,6 @@ private:
 
 };
 
-/**
- * \brief Gives access to the request body from a connection object
- */
-class NetworkInputStream : std::istream
-{
-public:
-    explicit NetworkInputStream(ClientConnection& connection, std::size_t max_size = 0);
-
-    NetworkInputStream()
-        : std::istream(nullptr)
-    {}
-
-    bool ok() const
-    {
-        return _ok && good();
-    }
-
-    explicit operator bool() const
-    {
-        return _ok && !fail();
-    }
-
-    std::size_t content_length() const
-    {
-        return _content_length;
-    }
-
-    std::string read_all()
-    {
-        std::string all(_content_length, ' ');
-        read(&all[0], _content_length);
-        all.resize(gcount());
-        return all;
-    }
-
-
-    std::string content_type() const
-    {
-        return _content_type;
-    }
-
-private:
-    bool _ok = false;
-    std::size_t _content_length = 0;
-    std::string _content_type;
-};
 
 } // namespace muhttpd
 #endif // MUHTTPD_CLIENT_CONNECTION_HPP

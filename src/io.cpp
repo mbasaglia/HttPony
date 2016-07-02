@@ -20,9 +20,35 @@
  *
  */
 
-#include "client_connection.hpp"
+#include "io.hpp"
 
 namespace muhttpd {
+
+
+NetworkInputStream::NetworkInputStream(
+    NetworkBuffer& buffer, const Headers& headers)
+    : std::istream(&buffer)
+{
+    /// \todo handle Transfer-Encoding
+    /// \todo Functionality to read it asyncronously
+    std::string length = headers.get("Content-Length");
+    std::string content_type = headers.get("Content-Type");
+
+    if ( length.empty() || !std::isdigit(length[0]) || content_type.empty() )
+    {
+        _error = boost::system::errc::make_error_code(
+            boost::system::errc::bad_message
+        );
+        return;
+    }
+
+    _content_length = std::stoul(length);
+    _content_type = std::move(content_type);
+
+    buffer.expect_input(_content_length);
+
+    _error = boost::system::error_code();
+}
 
 
 } // namespace muhttpd

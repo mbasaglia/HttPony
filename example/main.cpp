@@ -41,8 +41,6 @@ public:
 
     void respond(muhttpd::ClientConnection& connection) override
     {
-        connection.read_body();
-
         if ( connection.ok() )
         {
             connection.response = muhttpd::Response(
@@ -67,7 +65,7 @@ public:
 
         if ( connection.request.body )
         {
-            std::string body = connection.request.body->data;
+            std::string body = connection.request.body->read_all();
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
         }

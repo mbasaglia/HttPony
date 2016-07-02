@@ -20,6 +20,7 @@ server.cpp
 status.cpp
 logging.cpp
 client_connection.cpp
+io.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})
