@@ -66,3 +66,8 @@ find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
     create_doxygen_target(doc)
 endif(DOXYGEN_FOUND)
+
+# Tests
+set(LCOV_SOURCE_BASE_DIR "${CMAKE_SOURCE_DIR}/src")
+include(cmake/testing.cmake)
+add_subdirectory(test)
