@@ -18,12 +18,13 @@ cmake_policy(SET CMP0009 NEW)
 set(NICE_NAME HttPony)
 project(${NICE_NAME} CXX)
 set(PROJECT_VERSION 0.1)
+set(PROJECT_DESCRIPTION "A C++ HTTP Server library")
 string(TOLOWER ${NICE_NAME} LIBRARY_NAME)
 
+include(cmake/misc.cmake)
+
 # C++ Standard
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+use_cxx_standard(14)
 
 # Debug flags
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic -Werror")
@@ -55,3 +56,13 @@ add_subdirectory(src lib)
 add_subdirectory(lib/Melanolib/src EXCLUDE_FROM_ALL)
 
 add_subdirectory(example)
+
+# Find all sources for documentation and stuff
+set(ALL_SOURCE_DIRECTORIES src include)
+
+find_sources(ALL_SOURCES *.cpp *.hpp)
+message(STATUS "xxx ${ALL_SOURCES}")
+find_package(Doxygen QUIET)
+if(DOXYGEN_FOUND)
+    create_doxygen_target(doc)
+endif(DOXYGEN_FOUND)
