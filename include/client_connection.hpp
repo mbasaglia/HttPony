@@ -33,30 +33,79 @@ namespace muhttpd {
 class Server;
 
 
-struct NetworkInputStream
+struct NetworkBuffer : boost::asio::streambuf
 {
-
-    explicit NetworkInputStream(boost::asio::ip::tcp::socket socket)
-        : socket(std::move(socket))
+    explicit NetworkBuffer(boost::asio::ip::tcp::socket socket)
+        : _socket(std::move(socket))
     {
     }
 
+    /**
+     * \brief Reads up to size from the socket
+     */
     std::size_t read_some(std::size_t size, boost::system::error_code& error)
     {
         /// \todo timeout
-        auto prev_size = buffer.size();
+        auto prev_size = this->size();
         if ( size <= prev_size )
             return size;
         size -= prev_size;
-        auto in_buffer = buffer.prepare(size);
-        auto read_size = socket.read_some(boost::asio::buffer(in_buffer), error);
-        buffer.commit(read_size);
+
+        auto in_buffer = prepare(size);
+        auto read_size = _socket.read_some(boost::asio::buffer(in_buffer), error);
+        commit(read_size);
+
         return read_size + prev_size;
     }
 
-    boost::asio::ip::tcp::socket socket;
-    boost::asio::streambuf buffer;
-    std::istream stream{&buffer};
+    /**
+     * \brief Expect at least \p byte_count to be available in the socket
+     */
+    void expect_input(std::size_t byte_count)
+    {
+        _expected_input = byte_count;
+    }
+
+    std::size_t expected_input() const
+    {
+        return _expected_input;
+    }
+
+    boost::asio::ip::tcp::socket& socket()
+    {
+        return _socket;
+    }
+
+    boost::system::error_code error() const
+    {
+        return _error;
+    }
+
+protected:
+    int_type underflow() override
+    {
+        int_type ret = boost::asio::streambuf::underflow();
+        if ( ret == traits_type::eof() && _expected_input > 0 )
+        {
+            auto read_size = read_some(_expected_input, _error);
+
+            if ( read_size <= _expected_input )
+                _expected_input -= read_size;
+            else
+                /// \todo This should trigger a bad request
+                _error = boost::system::errc::make_error_code(
+                    boost::system::errc::file_too_large
+                );
+
+            ret = boost::asio::streambuf::underflow();
+        }
+        return ret;
+    }
+
+private:
+    boost::asio::ip::tcp::socket _socket;
+    std::size_t _expected_input = 0;
+    boost::system::error_code _error;
 };
 
 class ClientConnection
@@ -68,7 +117,7 @@ public:
 
     ~ClientConnection()
     {
-        input.socket.close();
+        input.socket().close();
     }
 
     void read_request()
@@ -84,7 +133,7 @@ public:
         request = Request();
         status_code = StatusCode::OK;
 
-        request.from = endpoint_to_ip(input.socket.remote_endpoint());
+        request.from = endpoint_to_ip(input.socket().remote_endpoint());
 
 
         if ( error || sz == 0 )
@@ -93,7 +142,9 @@ public:
             return;
         }
 
-        if ( !read_request_line(input.stream) || !read_headers(input.stream) )
+        std::istream stream(&input);
+
+        if ( !read_request_line(stream) || !read_headers(stream) )
         {
             status_code = StatusCode::BadRequest;
             return;
@@ -141,7 +192,7 @@ public:
         if ( response.body )
             buffer_stream << response.body->data;
 
-        boost::asio::write(input.socket, buffer_write);
+        boost::asio::write(input.socket(), buffer_write);
     }
 
     /**
@@ -152,7 +203,7 @@ public:
     Request request;
     Response response;
     StatusCode status_code = StatusCode::OK;
-    NetworkInputStream input;
+    NetworkBuffer input;
     Server* server;
 
 private:
@@ -266,18 +317,26 @@ private:
 
 };
 
-
 /**
  * \brief Gives access to the request body from a connection object
  */
-class BodyStream
+class NetworkInputStream : std::istream
 {
 public:
-    explicit BodyStream(ClientConnection& connection, std::size_t max_size = 0);
+    explicit NetworkInputStream(ClientConnection& connection, std::size_t max_size = 0);
 
-    bool ok()
+    NetworkInputStream()
+        : std::istream(nullptr)
+    {}
+
+    bool ok() const
     {
-        return _ok && connection->input.stream.good();
+        return _ok && good();
+    }
+
+    explicit operator bool() const
+    {
+        return _ok && !fail();
     }
 
     std::size_t content_length() const
@@ -288,22 +347,21 @@ public:
     std::string read_all()
     {
         std::string all(_content_length, ' ');
-        connection->input.stream.read(&all[0], _content_length);
-        all.resize(connection->input.stream.gcount());
+        read(&all[0], _content_length);
+        all.resize(gcount());
         return all;
     }
 
-    template<class T>
-    friend BodyStream& operator>>(BodyStream& bs, T& obj)
+
+    std::string content_type() const
     {
-        bs.connection->input.stream >> obj;
-        return bs;
+        return _content_type;
     }
 
 private:
     bool _ok = false;
     std::size_t _content_length = 0;
-    ClientConnection* connection;
+    std::string _content_type;
 };
 
 } // namespace muhttpd
