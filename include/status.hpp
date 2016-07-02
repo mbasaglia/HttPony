@@ -94,6 +94,16 @@ enum class StatusCode
     NetworkAuthenticationRequired = 511,
 };
 
+enum class StatusType
+{
+    Invalid       = 0,
+    Informational = 100,
+    Success       = 200,
+    Redirection   = 300,
+    ClientError   = 400,
+    ServerError   = 500,
+};
+
 struct Status
 {
     unsigned code;
@@ -102,7 +112,23 @@ struct Status
     Status(StatusCode status = StatusCode::OK);
     Status(unsigned code, std::string message);
     explicit Status(unsigned code);
+    StatusType type() const;
 };
+
+inline bool operator==(const Status& status, StatusCode code)
+{
+    return status.code == unsigned(code);
+}
+
+inline bool operator==(StatusCode code, const Status& status)
+{
+    return status.code == unsigned(code);
+}
+
+inline bool operator==(const Status& a, const Status& b)
+{
+    return a.code == b.code;
+}
 
 } // namespace muhttpd
 #endif // MUHTTPD_STATUS_HPP

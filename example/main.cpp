@@ -43,6 +43,10 @@ public:
     {
         connection.response.body.start_data("text/plain");
 
+        std::string body = connection.request.body.read_all();
+        if ( connection.request.body.error() )
+            connection.status_code = muhttpd::StatusCode::BadRequest;
+
         if ( connection.ok() )
         {
             connection.response.body << "Hello, world!\n";
@@ -62,11 +66,11 @@ public:
 
         if ( connection.request.body.has_data() )
         {
-            std::string body = connection.request.body.read_all();
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
         }
 
+        connection.clean_response_body();
         connection.send_response();
     }
 };

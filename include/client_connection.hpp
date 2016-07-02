@@ -70,9 +70,13 @@ public:
 
         if ( request.headers.has_header("Content-Length") )
         {
-            request.body.get_data(input, request.headers);
-            if ( !request.body )
+            if ( !request.body.get_data(input, request.headers) )
                 return;
+        }
+        else if ( input.size() )
+        {
+            status_code = StatusCode::LengthRequired;
+            return;
         }
 
         status_code = StatusCode::OK;
@@ -90,6 +94,24 @@ public:
     bool ok() const
     {
         return status_code == StatusCode::OK;
+    }
+
+    /**
+     * \brief Removes the response body when required by HTTP
+     */
+    void clean_response_body()
+    {
+        if ( response.body.has_data() )
+        {
+            if ( response.status.type() == StatusType::Informational ||
+                response.status == StatusCode::NoContent ||
+                response.status == StatusCode::NotModified ||
+                ( response.status == StatusCode::OK && request.method == "CONNECT" )
+            )
+            {
+                response.body.stop_data();
+            }
+        }
     }
 
     void send_response()

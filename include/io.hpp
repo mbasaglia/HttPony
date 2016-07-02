@@ -94,6 +94,13 @@ protected:
                 );
 
             ret = boost::asio::streambuf::underflow();
+
+            if ( ret == traits_type::eof() && _expected_input > 0 )
+            {
+                _error = boost::system::errc::make_error_code(
+                    boost::system::errc::message_size
+                );
+            }
         }
         return ret;
     }
@@ -125,6 +132,10 @@ public:
 
     boost::system::error_code error() const
     {
+        if ( fail() )
+            return boost::system::errc::make_error_code(
+            boost::system::errc::bad_message
+        );
         return _error;
     }
 
@@ -147,7 +158,14 @@ public:
     {
         std::string all(_content_length, ' ');
         read(&all[0], _content_length);
-        all.resize(gcount());
+        /// \todo if possible set a low-level failbit when the streambuf finds an error
+        if ( std::size_t(gcount()) != _content_length )
+        {
+            _error = boost::system::errc::make_error_code(
+                boost::system::errc::message_size
+            );
+            all.resize(gcount());
+        }
         return all;
     }
 
