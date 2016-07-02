@@ -31,6 +31,13 @@ struct Uri
 
     Uri(const std::string& uri);
     Uri() = default;
+    Uri(
+        std::string scheme,
+        std::string authority,
+        std::vector<std::string> path,
+        DataMap query,
+        std::string fragment
+    );
 
     std::string full() const;
 
@@ -48,6 +55,11 @@ struct Uri
      * \brief URI equivalence
      */
     bool operator==(const Uri& oth) const;
+
+    bool operator!=(const Uri& oth) const
+    {
+        return !(*this == oth);
+    }
 };
 
 std::string urlencode(const std::string& input, bool plus_spaces = false);

@@ -61,3 +61,73 @@ BOOST_AUTO_TEST_CASE( test_build_query_string )
     BOOST_CHECK( build_query_string(DataMap({{"2+2", "4"}}))                    == "2%2B2=4"        );
     BOOST_CHECK( build_query_string(DataMap({{"q", "hello world"}}))            == "q=hello+world"  );
 }
+
+BOOST_AUTO_TEST_CASE( test_uri_cmp )
+{
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) == Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) );
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) != Uri({"a", "b", {"c"}, {{"d", "e"}}, "X"}) );
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) != Uri({"a", "b", {"c"}, {{"d", "X"}}, "f"}) );
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) != Uri({"a", "b", {"X"}, {{"d", "e"}}, "f"}) );
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) != Uri({"a", "X", {"c"}, {{"d", "e"}}, "f"}) );
+    BOOST_CHECK( Uri({"a", "b", {"c"}, {{"d", "e"}}, "f"}) != Uri({"X", "b", {"c"}, {{"d", "e"}}, "f"}) );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_ctor_scheme )
+{
+    BOOST_CHECK( Uri("foo:") == Uri({"foo", "", {}, {}, ""}) );
+
+    BOOST_CHECK( Uri("foo://bar") == Uri({"foo", "bar", {}, {}, ""}) );
+    BOOST_CHECK( Uri("foo:/bar") == Uri({"foo", "", {"bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("foo:?bar") == Uri({"foo", "", {}, {{"bar", ""}}, ""}) );
+    BOOST_CHECK( Uri("foo:#bar") == Uri({"foo", "", {}, {}, "bar"}) );
+
+    BOOST_CHECK( Uri("foo://a/b?c=d#e") == Uri({"foo", "a", {"b"}, {{"c", "d"}}, "e"}) );
+
+    BOOST_CHECK( Uri("//a/b?c=d#e") == Uri({"", "a", {"b"}, {{"c", "d"}}, "e"}) );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_ctor_authority )
+{
+    BOOST_CHECK( Uri("//foo") == Uri({"", "foo", {}, {}, ""}) );
+
+    BOOST_CHECK( Uri("//foo/bar") == Uri({"", "foo", {"bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("//foo?bar") == Uri({"", "foo", {}, {{"bar", ""}}, ""}) );
+    BOOST_CHECK( Uri("//foo#bar") == Uri({"", "foo", {}, {}, "bar"}) );
+
+    BOOST_CHECK( Uri("a:/b?c=d#e") == Uri({"a", "", {"b"}, {{"c", "d"}}, "e"}) );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_ctor_path )
+{
+    BOOST_CHECK( Uri("/foo") == Uri({"", "", {"foo"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo/bar") == Uri({"", "", {"foo", "bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo/bar/") == Uri({"", "", {"foo", "bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo//bar") == Uri({"", "", {"foo", "bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo/./bar") == Uri({"", "", {"foo", "bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo/../bar") == Uri({"", "", {"bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("/foo/../../../bar") == Uri({"", "", {"bar"}, {}, ""}) );
+    BOOST_CHECK( Uri("foo") == Uri({"", "", {"foo"}, {}, ""}) );
+
+    BOOST_CHECK( Uri("/foo?bar") == Uri({"", "", {"foo"}, {{"bar", ""}}, ""}) );
+    BOOST_CHECK( Uri("/foo#bar") == Uri({"", "", {"foo"}, {}, "bar"}) );
+
+    BOOST_CHECK( Uri("a://b?c=d#e") == Uri({"a", "b", {}, {{"c", "d"}}, "e"}) );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_ctor_query )
+{
+    BOOST_CHECK( Uri("?foo") == Uri({"", "", {}, {{"foo", ""}}, ""}) );
+    BOOST_CHECK( Uri("?foo=bar") == Uri({"", "", {}, {{"foo", "bar"}}, ""}) );
+    BOOST_CHECK( Uri("?foo&bar") == Uri({"", "", {}, {{"foo", ""}, {"bar", ""}}, ""}) );
+
+    BOOST_CHECK( Uri("?foo#bar") == Uri({"", "", {}, {{"foo", ""}}, "bar"}) );
+
+    BOOST_CHECK( Uri("a://b/c/d#e") == Uri({"a", "b", {"c", "d"}, {}, "e"}) );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_ctor_fragment )
+{
+    BOOST_CHECK( Uri("#foo") == Uri({"", "", {}, {}, "foo"}) );
+
+    BOOST_CHECK( Uri("a://b/c?d=e") == Uri({"a", "b", {"c"}, {{"d", "e"}}, ""}) );
+}

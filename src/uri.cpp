@@ -32,7 +32,7 @@ namespace httpony {
 Uri::Uri(const std::string& uri)
 {
     static const std::regex uri_regex(
-        R"(^(?:([a-zA-Z][-a-zA-Z.+]*):)?(?://([^/]*))?(/?[^?]*)(?:\?([^#]*))(?:#(.*))?$)",
+        R"(^(?:([a-zA-Z][-a-zA-Z.+]*):)?(?://([^/?#]*))?(/?[^?#]*)(?:\?([^#]*))?(?:#(.*))?$)",
         std::regex::ECMAScript|std::regex::optimize
     );
     std::smatch match;
@@ -44,7 +44,7 @@ Uri::Uri(const std::string& uri)
         auto segments = melanolib::string::char_split(match[3], '/');
         for ( auto& segment : segments )
         {
-            if ( segment == ".." )
+            if ( segment == ".." && ! path.empty() )
                 path.pop_back();
             else if ( segment != "." )
                 path.push_back(urldecode(segment));
@@ -55,6 +55,19 @@ Uri::Uri(const std::string& uri)
         fragment = urldecode(match[5]);
     }
 }
+
+Uri::Uri(
+    std::string scheme,
+    std::string authority,
+    std::vector<std::string> path,
+    DataMap query,
+    std::string fragment
+) : scheme(std::move(scheme)),
+    authority(std::move(authority)),
+    path(std::move(path)),
+    query(std::move(query)),
+    fragment(std::move(fragment))
+{}
 
 std::string Uri::full() const
 {
@@ -96,7 +109,7 @@ std::string Uri::path_string() const
 
 std::string Uri::query_string(bool question_mark) const
 {
-    return build_query_string(query);
+    return build_query_string(query, question_mark);
 }
 
 
