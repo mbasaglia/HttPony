@@ -25,21 +25,29 @@
 namespace muhttpd {
 
 
-NetworkInputStream::NetworkInputStream(
-    NetworkBuffer& buffer, const Headers& headers)
+NetworkInputStream::NetworkInputStream(NetworkBuffer& buffer, const Headers& headers)
     : std::istream(&buffer)
 {
+    get_data(buffer, headers);
+}
+
+bool NetworkInputStream::get_data(NetworkBuffer& buffer, const Headers& headers)
+{
+    rdbuf(&buffer);
+
     /// \todo handle Transfer-Encoding
-    /// \todo Functionality to read it asyncronously
     std::string length = headers.get("Content-Length");
     std::string content_type = headers.get("Content-Type");
 
     if ( length.empty() || !std::isdigit(length[0]) || content_type.empty() )
     {
+        _content_length = 0;
+        _content_type = "";
+        rdbuf(nullptr);
         _error = boost::system::errc::make_error_code(
             boost::system::errc::bad_message
         );
-        return;
+        return false;
     }
 
     _content_length = std::stoul(length);
@@ -48,7 +56,9 @@ NetworkInputStream::NetworkInputStream(
     buffer.expect_input(_content_length);
 
     _error = boost::system::error_code();
+    return true;
 }
+
 
 
 } // namespace muhttpd

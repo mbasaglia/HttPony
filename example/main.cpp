@@ -41,19 +41,16 @@ public:
 
     void respond(muhttpd::ClientConnection& connection) override
     {
+        connection.response.body.start_data("text/plain");
+
         if ( connection.ok() )
         {
-            connection.response = muhttpd::Response(
-                muhttpd::Content::text("Hello, world!\n")
-            );
+            connection.response.body << "Hello, world!\n";
         }
         else
         {
-            muhttpd::Status status(connection.status_code);
-            connection.response = muhttpd::Response(
-                muhttpd::Content::text(status.message + '\n'),
-                status
-            );
+            connection.response.status = connection.status_code;
+            connection.response.body << connection.response.status.message << '\n';
         }
 
         log(log_format, connection, std::cout);
@@ -63,9 +60,9 @@ public:
         show_headers("Get", connection.request.get);
         show_headers("Post", connection.request.post);
 
-        if ( connection.request.body )
+        if ( connection.request.body.has_data() )
         {
-            std::string body = connection.request.body->read_all();
+            std::string body = connection.request.body.read_all();
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
         }

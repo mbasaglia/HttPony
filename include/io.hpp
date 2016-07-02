@@ -111,16 +111,17 @@ class NetworkInputStream : std::istream
 {
 public:
     explicit NetworkInputStream(NetworkBuffer& buffer, const Headers& headers);
-//     NetworkInputStream(NetworkInputStream&& other) = default;
-//     NetworkInputStream& operator=(NetworkInputStream&& other) = default;
 
-//     NetworkInputStream()
-//         : std::istream(nullptr)
-//     {
-//         _error = boost::system::errc::make_error_code(
-//             boost::system::errc::no_message
-//         );
-//     }
+    NetworkInputStream()
+        : std::istream(nullptr)
+    {}
+
+    bool get_data(NetworkBuffer& buffer, const Headers& headers);
+
+    bool has_data() const
+    {
+        return !_error && rdbuf();
+    }
 
     boost::system::error_code error() const
     {
@@ -160,6 +161,70 @@ private:
     std::size_t _content_length = 0;
     std::string _content_type;
     boost::system::error_code _error;
+};
+
+class NetworkOutputStream: public std::ostream
+{
+public:
+    explicit NetworkOutputStream(std::string content_type)
+        : std::ostream(&buffer), _content_type(std::move(content_type))
+    {
+    }
+
+    NetworkOutputStream()
+        : std::ostream(nullptr)
+    {
+    }
+
+    ~NetworkOutputStream()
+    {
+        flush();
+        rdbuf(nullptr);
+    }
+
+    /**
+     * \brief Sets up the stream to contain data in the specified encoding
+     */
+    void start_data(const std::string& content_type)
+    {
+        rdbuf(&buffer);
+        _content_type = content_type;
+    }
+
+    /**
+     * \brief Removes all data from the stream, call start() to re-introduce it
+     */
+    void stop_data()
+    {
+        flush();
+        buffer.consume(buffer.size());
+        rdbuf(nullptr);
+    }
+
+    bool has_data()
+    {
+        return rdbuf() && !_content_type.empty();
+    }
+
+    std::size_t content_length() const
+    {
+        return buffer.size();
+    }
+
+    std::string content_type() const
+    {
+        return _content_type;
+    }
+
+    void net_write(boost::asio::ip::tcp::socket& socket)
+    {
+        if ( has_data() )
+            boost::asio::write(socket, buffer);
+    }
+
+private:
+    boost::asio::streambuf buffer;
+    std::string _content_type;
 };
 
 } // namespace muhttpd

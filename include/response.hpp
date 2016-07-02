@@ -21,10 +21,11 @@
 #ifndef MUHTTPD_RESPONSE_HPP
 #define MUHTTPD_RESPONSE_HPP
 
+#include <melanolib/utils/c++-compat.hpp>
 #include "status.hpp"
 #include "headers.hpp"
 #include "protocol.hpp"
-#include "content.hpp"
+#include "io.hpp"
 
 namespace muhttpd {
 
@@ -33,17 +34,20 @@ namespace muhttpd {
  */
 struct Response
 {
-    Response(Body body, Status status = Status())
-        : body(std::move(body)), status(std::move(status))
+    explicit Response(std::string content_type, Status status = Status())
+        : body(std::move(content_type)),
+          status(std::move(status))
     {
         /// \todo Date
     }
 
     Response(Status status = Status())
-        : Response(Body(), std::move(status))
-    {}
+        : status(std::move(status))
+    {
 
-    Body        body;
+    }
+
+    NetworkOutputStream body;
     Status      status;
     Headers     headers;
     Protocol    protocol = Protocol("HTTP", 1, 1);

@@ -70,8 +70,8 @@ public:
 
         if ( request.headers.has_header("Content-Length") )
         {
-            request.body.emplace(input, request.headers);
-            if ( !*request.body )
+            request.body.get_data(input, request.headers);
+            if ( !request.body )
                 return;
         }
 
@@ -103,19 +103,17 @@ public:
         for ( const auto& header : response.headers )
             buffer_stream << header.name << ": " << header.value << "\r\n";
 
-        if ( response.body )
+        if ( response.body.has_data() )
         {
-            buffer_stream << "Content-Type" << ": " << response.body->mime_type << "\r\n";
-            buffer_stream << "Content-Length" << ": " << response.body->data.size() << "\r\n";
+            buffer_stream << "Content-Type" << ": " << response.body.content_type() << "\r\n";
+            buffer_stream << "Content-Length" << ": " << response.body.content_length() << "\r\n";
         }
 
-
         buffer_stream << "\r\n";
-
-        if ( response.body )
-            buffer_stream << response.body->data;
-
         boost::asio::write(input.socket(), buffer_write);
+
+        if ( response.body.has_data() )
+            response.body.net_write(input.socket());
     }
 
 
