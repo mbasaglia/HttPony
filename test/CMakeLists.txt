@@ -49,6 +49,7 @@ if (BUILD_TESTING)
     set(CMAKE_AUTOMOC ON)
 
     melanotest(test_uri)
-    target_link_libraries(test_uri melanolib_string)
+    target_link_libraries(test_uri melano_stringutils)
+    target_link_libraries(test_uri httpony)
 
 endif()

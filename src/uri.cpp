@@ -81,7 +81,7 @@ bool Uri::operator==(const Uri& oth) const
     return scheme == oth.scheme &&
            authority == oth.authority &&
            std::equal(path.begin(), path.end(), oth.path.begin(), oth.path.end()) &&
-           std::equal(query.begin(), query.end(), oth.query.begin(), oth.query.end()) &&
+           query == oth.query &&
            fragment == oth.fragment
     ;
 }
@@ -187,7 +187,7 @@ DataMap parse_query_string(const std::string& str)
             input.get_until([](char c){ return c == '&' || c == '='; })
         );
         if ( input.peek_back() == '=' )
-            value = urldecode(input.get_line('&'));
+            value = urldecode(input.get_line('&'), true);
         result.append(name, value);
     }
 
@@ -212,7 +212,7 @@ std::string build_query_string(const DataMap& headers, bool question_mark)
 
         result += urlencode(header.name);
         if ( !header.value.empty() )
-            result += '=' + urlencode(header.value);
+            result += '=' + urlencode(header.value, true);
     }
 
     return result;

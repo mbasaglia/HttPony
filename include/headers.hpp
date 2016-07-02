@@ -38,11 +38,6 @@ struct Header
         : name(std::move(name)), value(std::move(value))
     {}
 
-    bool operator==(const Header& oth) const
-    {
-        return name == oth.name && value == oth.value;
-    }
-
     std::string name;
     std::string value;
 };
@@ -66,6 +61,17 @@ struct ICaseComparator
 template<class Comparator = std::equal_to<std::string>>
     struct OrderedMultimap
 {
+
+    OrderedMultimap(std::vector<Header> data)
+        : headers(std::move(data))
+    {}
+
+    OrderedMultimap(std::initializer_list<Header> data)
+        : headers(data)
+    {}
+
+    OrderedMultimap(){}
+
     /**
      * \brief Whether it has a header matching the given name
      */
@@ -148,6 +154,15 @@ template<class Comparator = std::equal_to<std::string>>
     auto end() const
     {
         return headers.end();
+    }
+
+    bool operator==(const OrderedMultimap& oth) const
+    {
+        return std::equal(begin(), end(), oth.begin(), oth.end(),
+            [](const Header& a, const Header& b) {
+                return Comparator()(a.name, b.name) && a.value == b.value;
+            }
+        );
     }
 
     std::vector<Header> headers;
