@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_REQUEST_HPP
-#define MUHTTPD_REQUEST_HPP
+#ifndef HTTPONY_REQUEST_HPP
+#define HTTPONY_REQUEST_HPP
 
 #include "ip_address.hpp"
 #include "headers.hpp"
@@ -27,7 +27,7 @@
 #include "io.hpp"
 #include "uri.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 
 /**
@@ -59,5 +59,5 @@ struct Request
     NetworkInputStream body;
 };
 
-} // namespace muhttpd
-#endif // MUHTTPD_REQUEST_HPP
+} // namespace httpony
+#endif // HTTPONY_REQUEST_HPP

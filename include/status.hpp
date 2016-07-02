@@ -18,12 +18,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_STATUS_HPP
-#define MUHTTPD_STATUS_HPP
+#ifndef HTTPONY_STATUS_HPP
+#define HTTPONY_STATUS_HPP
 
 #include <string>
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Names for all common status codes
@@ -140,5 +140,5 @@ inline bool operator==(const Status& a, const Status& b)
     return a.code == b.code;
 }
 
-} // namespace muhttpd
-#endif // MUHTTPD_STATUS_HPP
+} // namespace httpony
+#endif // HTTPONY_STATUS_HPP

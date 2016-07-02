@@ -18,15 +18,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_HEADERS_HPP
-#define MUHTTPD_HEADERS_HPP
+#ifndef HTTPONY_HEADERS_HPP
+#define HTTPONY_HEADERS_HPP
 
 #include <string>
 #include <vector>
 
 #include <melanolib/string/simple_stringutils.hpp>
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Header name and value pair
@@ -155,5 +155,5 @@ template<class Comparator = std::equal_to<std::string>>
 using Headers = OrderedMultimap<ICaseComparator>;
 using DataMap = OrderedMultimap<>;
 
-} // namespace muhttpd
-#endif // MUHTTPD_HEADERS_HPP
+} // namespace httpony
+#endif // HTTPONY_HEADERS_HPP

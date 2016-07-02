@@ -23,7 +23,7 @@
 #include "logging.hpp"
 #include "server.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 void log(
         const std::string& format,
@@ -68,4 +68,4 @@ void log(
     output << std::endl;
 }
 
-} // namespace muhttpd
+} // namespace httpony

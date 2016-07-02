@@ -14,7 +14,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-set(LIBRARY_NAME muhttpdpp) # repeated otherwise kdevelop messes up
+set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 set(EXECUTABLE_NAME ${LIBRARY_NAME}_example)
 
 set(SOURCES

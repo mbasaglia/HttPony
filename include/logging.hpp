@@ -18,12 +18,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_LOGGING_HPP
-#define MUHTTPD_LOGGING_HPP
+#ifndef HTTPONY_LOGGING_HPP
+#define HTTPONY_LOGGING_HPP
 
 #include "client_connection.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 
 /**
@@ -66,5 +66,5 @@ template<class T>
         return CommonLogFormatItem<T>(std::forward<T>(item));
     }
 
-} // namespace muhttpd
-#endif // MUHTTPD_LOGGING_HPP
+} // namespace httpony
+#endif // HTTPONY_LOGGING_HPP

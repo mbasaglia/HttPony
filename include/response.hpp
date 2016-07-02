@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_RESPONSE_HPP
-#define MUHTTPD_RESPONSE_HPP
+#ifndef HTTPONY_RESPONSE_HPP
+#define HTTPONY_RESPONSE_HPP
 
 #include <melanolib/utils/c++-compat.hpp>
 #include "status.hpp"
@@ -27,7 +27,7 @@
 #include "protocol.hpp"
 #include "io.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Response data
@@ -53,5 +53,5 @@ struct Response
     Protocol    protocol = Protocol("HTTP", 1, 1);
 };
 
-} // namespace muhttpd
-#endif // MUHTTPD_RESPONSE_HPP
+} // namespace httpony
+#endif // HTTPONY_RESPONSE_HPP

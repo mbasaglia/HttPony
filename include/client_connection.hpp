@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_CLIENT_CONNECTION_HPP
-#define MUHTTPD_CLIENT_CONNECTION_HPP
+#ifndef HTTPONY_CLIENT_CONNECTION_HPP
+#define HTTPONY_CLIENT_CONNECTION_HPP
 
 #include <iostream>
 
@@ -29,7 +29,7 @@
 #include "response.hpp"
 #include "io.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 class Server;
 
@@ -301,5 +301,5 @@ private:
 };
 
 
-} // namespace muhttpd
-#endif // MUHTTPD_CLIENT_CONNECTION_HPP
+} // namespace httpony
+#endif // HTTPONY_CLIENT_CONNECTION_HPP

@@ -18,10 +18,10 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MU_HTTPD_PP_HPP
-#define MU_HTTPD_PP_HPP
+#ifndef HTTPONY_HPP
+#define HTTPONY_HPP
 
 #include "server.hpp"
 #include "logging.hpp"
 
-#endif // MU_HTTPD_PP_HPP
+#endif // HTTPONY_HPP

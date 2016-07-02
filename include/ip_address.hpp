@@ -18,13 +18,13 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_IP_ADDRESS_HPP
-#define MUHTTPD_IP_ADDRESS_HPP
+#ifndef HTTPONY_IP_ADDRESS_HPP
+#define HTTPONY_IP_ADDRESS_HPP
 
 #include <string>
 #include <cstdint>
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief IP address and port
@@ -53,5 +53,5 @@ struct IPAddress
     uint16_t port = 0;
 };
 
-} // namespace muhttpd
-#endif // MUHTTPD_IP_ADDRESS_HPP
+} // namespace httpony
+#endif // HTTPONY_IP_ADDRESS_HPP

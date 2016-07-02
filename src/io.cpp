@@ -22,7 +22,7 @@
 
 #include "io.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 
 NetworkInputStream::NetworkInputStream(NetworkBuffer& buffer, const Headers& headers)
@@ -61,4 +61,4 @@ bool NetworkInputStream::get_data(NetworkBuffer& buffer, const Headers& headers)
 
 
 
-} // namespace muhttpd
+} // namespace httpony

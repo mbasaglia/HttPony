@@ -18,12 +18,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_URI_HPP
-#define MUHTTPD_URI_HPP
+#ifndef HTTPONY_URI_HPP
+#define HTTPONY_URI_HPP
 
 #include "headers.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 struct Uri
 {
@@ -56,5 +56,5 @@ DataMap parse_query_string(const std::string& str);
 
 std::string build_query_string(const DataMap& headers, bool question_mark = false);
 
-} // namespace muhttpd
-#endif // MUHTTPD_URI_HPP
+} // namespace httpony
+#endif // HTTPONY_URI_HPP

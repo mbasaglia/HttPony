@@ -27,7 +27,7 @@
 #include <melanolib/string/stringutils.hpp>
 #include <melanolib/string/quickstream.hpp>
 
-namespace muhttpd {
+namespace httpony {
 
 
 Uri::Uri(const std::string& uri)
@@ -219,4 +219,4 @@ std::string build_query_string(const DataMap& headers, bool question_mark)
     return result;
 }
 
-} // namespace muhttpd
+} // namespace httpony

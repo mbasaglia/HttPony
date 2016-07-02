@@ -18,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_SERVER_HPP
-#define MUHTTPD_SERVER_HPP
+#ifndef HTTPONY_SERVER_HPP
+#define HTTPONY_SERVER_HPP
 
 #include <stdexcept>
 #include <memory>
@@ -27,7 +27,7 @@
 
 #include "client_connection.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Base class for a simple HTTP server
@@ -90,5 +90,5 @@ private:
     std::unique_ptr<Data> data;
 };
 
-} // namespace muhttpd
-#endif // MUHTTPD_SERVER_HPP
+} // namespace httpony
+#endif // HTTPONY_SERVER_HPP

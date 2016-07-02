@@ -23,7 +23,7 @@
 #include "status.hpp"
 #include <map>
 
-namespace muhttpd {
+namespace httpony {
 
 static const std::map<unsigned, const char*> names = {
     {100, "Continue"},
@@ -133,4 +133,4 @@ bool Status::is_error() const
     return code < 100 || code >= 400;
 }
 
-} // namespace muhttpd
+} // namespace httpony

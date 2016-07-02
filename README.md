@@ -1,7 +1,7 @@
-MuHttpdpp
-=========
+HttPony
+=======
 
-A modern C++ wrapper around [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/).
+A modern C++ HTTP server library
 
 
 License
@@ -19,7 +19,7 @@ Mattia Basaglia <mattia.basaglia@gmail.com>
 Sources
 -------
 
-https://github.com/mbasaglia/MuHttpdpp
+https://github.com/mbasaglia/HttPony
 
 
 Installing
@@ -28,8 +28,8 @@ Installing
 Dependencies
 ------------
 
-* [libmicrohttpd](https://www.gnu.org/software/libmicrohttpd/)
-* POSIX C Library (TODO: Make it portable)
+* [Melanolib](https://github.com/mbasaglia/Melanolib) (Included as a sub-module)
+* [Boost ASIO](http://boost.org)
 
 
 Building

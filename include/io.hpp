@@ -18,15 +18,15 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_IO_HPP
-#define MUHTTPD_IO_HPP
+#ifndef HTTPONY_IO_HPP
+#define HTTPONY_IO_HPP
 
 #include <iostream>
 #include <boost/asio.hpp>
 
 #include "headers.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Stream buffer linked to a socket for reading
@@ -256,5 +256,5 @@ private:
     std::string _content_type;
 };
 
-} // namespace muhttpd
-#endif // MUHTTPD_IO_HPP
+} // namespace httpony
+#endif // HTTPONY_IO_HPP

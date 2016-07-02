@@ -22,10 +22,10 @@
 #include <iostream>
 #include <algorithm>
 
-#include "muhttpd.hpp"
+#include "httpony.hpp"
 
 
-class MyServer : public muhttpd::Server
+class MyServer : public httpony::Server
 {
 public:
     using Server::Server;
@@ -39,7 +39,7 @@ public:
             std::cout << '\t' << head.name << ' ' << head.value << '\n';
     }
 
-    void respond(muhttpd::ClientConnection& connection) override
+    void respond(httpony::ClientConnection& connection) override
     {
         connection.response.body.start_data("text/plain");
 
@@ -49,7 +49,7 @@ public:
         {
                 body = connection.request.body.read_all();
             if ( connection.request.body.error() )
-                connection.status = muhttpd::StatusCode::BadRequest;
+                connection.status = httpony::StatusCode::BadRequest;
         }
 
         if ( connection.ok() )

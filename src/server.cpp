@@ -24,7 +24,7 @@
 #include "logging.hpp"
 
 
-namespace muhttpd {
+namespace httpony {
 
 struct Server::Data
 {
@@ -242,4 +242,4 @@ void Server::stop()
     }
 }
 
-} // namespace muhttpd
+} // namespace httpony

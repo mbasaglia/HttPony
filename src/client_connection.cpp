@@ -22,7 +22,7 @@
 
 #include "client_connection.hpp"
 
-namespace muhttpd {
+namespace httpony {
 
 
-} // namespace muhttpd
+} // namespace httpony

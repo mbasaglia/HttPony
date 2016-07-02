@@ -18,14 +18,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_PROTOCOL_HPP
-#define MUHTTPD_PROTOCOL_HPP
+#ifndef HTTPONY_PROTOCOL_HPP
+#define HTTPONY_PROTOCOL_HPP
 
 #include <string>
 #include <cctype>
 #include <iostream>
 
-namespace muhttpd {
+namespace httpony {
 
 /**
  * \brief Network protocol and version
@@ -79,5 +79,5 @@ inline std::istream& operator>>(std::istream& is, Protocol& protocol)
     return is;
 }
 
-} // namespace muhttpd
-#endif // MUHTTPD_PROTOCOL_HPP
+} // namespace httpony
+#endif // HTTPONY_PROTOCOL_HPP
