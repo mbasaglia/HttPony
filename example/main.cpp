@@ -43,9 +43,14 @@ public:
     {
         connection.response.body.start_data("text/plain");
 
-        std::string body = connection.request.body.read_all();
-        if ( connection.request.body.error() )
-            connection.status = muhttpd::StatusCode::BadRequest;
+        std::string body;
+
+        if ( connection.request.body.has_data() )
+        {
+                body = connection.request.body.read_all();
+            if ( connection.request.body.error() )
+                connection.status = muhttpd::StatusCode::BadRequest;
+        }
 
         if ( connection.ok() )
         {

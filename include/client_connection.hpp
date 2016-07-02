@@ -183,7 +183,10 @@ private:
      */
     bool read_request_line(std::istream& buffer_stream)
     {
-        buffer_stream >> request.method >> request.url >> request.protocol;
+        std::string uri;
+        buffer_stream >> request.method >> uri >> request.protocol;
+        request.url = uri;
+        request.get = request.url.query;
         skip_line(buffer_stream);
 
         return request.protocol.valid() && buffer_stream;

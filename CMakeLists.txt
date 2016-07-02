@@ -52,5 +52,6 @@ endif()
 include_directories("lib/Melanolib/include/")
 include_directories(include)
 add_subdirectory(src lib)
+add_subdirectory(lib/Melanolib/src EXCLUDE_FROM_ALL)
 
 add_subdirectory(example)

@@ -18,46 +18,43 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef MUHTTPD_REQUEST_HPP
-#define MUHTTPD_REQUEST_HPP
+#ifndef MUHTTPD_URI_HPP
+#define MUHTTPD_URI_HPP
 
-#include "ip_address.hpp"
 #include "headers.hpp"
-#include "protocol.hpp"
-#include "io.hpp"
-#include "uri.hpp"
 
 namespace muhttpd {
 
-
-/**
- * \brief HTTP Authentication credentials
- */
-struct Auth
+struct Uri
 {
-    std::string user;
-    std::string password;
+
+    Uri(const std::string& uri);
+    Uri() = default;
+
+    std::string full() const;
+
+    std::string path_string() const;
+
+    std::string query_string(bool question_mark = false) const;
+
+    std::string scheme;
+    std::string authority;
+    std::vector<std::string> path;
+    DataMap query;
+    std::string fragment;
+
+    /**
+     * \brief URI equivalence
+     */
+    bool operator==(const Uri& oth) const;
 };
 
+std::string urlencode(const std::string& input, bool plus_spaces = false);
+std::string urldecode(const std::string& input, bool plus_spaces = false);
 
-/**
- * \brief HTTP request data
- */
-struct Request
-{
-    Uri         url;
-    std::string method;
-    Protocol    protocol;
-    Headers     headers;
-    DataMap     cookies;
-    DataMap     get;
-    DataMap     post;
-    IPAddress   from;
-    Auth        auth;
+DataMap parse_query_string(const std::string& str);
 
-    /// \todo Parse urlencoded and multipart/form-data into request.post
-    NetworkInputStream body;
-};
+std::string build_query_string(const DataMap& headers, bool question_mark = false);
 
 } // namespace muhttpd
-#endif // MUHTTPD_REQUEST_HPP
+#endif // MUHTTPD_URI_HPP

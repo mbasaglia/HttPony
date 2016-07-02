@@ -37,6 +37,11 @@ struct Header
         : name(std::move(name)), value(std::move(value))
     {}
 
+    bool operator==(const Header& oth) const
+    {
+        return name == oth.name && value == oth.value;
+    }
+
     std::string name;
     std::string value;
 };
