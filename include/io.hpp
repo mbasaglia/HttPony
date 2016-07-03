@@ -228,7 +228,7 @@ public:
     /**
      * \brief Whether there is some data to send (which might have 0 length) or no data at all
      */
-    bool has_data()
+    bool has_data() const
     {
         return rdbuf() && _content_type.valid();
     }

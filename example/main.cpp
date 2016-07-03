@@ -41,13 +41,19 @@ public:
 
     void respond(httpony::ClientConnection& connection) override
     {
+        if ( connection.status == httpony::StatusCode::Continue )
+        {
+            connection.send_response(connection.status);
+            connection.status = httpony::StatusCode::OK;
+        }
+
         connection.response.body.start_data("text/plain");
 
         std::string body;
 
         if ( connection.request.body.has_data() )
         {
-                body = connection.request.body.read_all();
+            body = connection.request.body.read_all();
             if ( connection.request.body.error() )
                 connection.status = httpony::StatusCode::BadRequest;
         }
@@ -73,6 +79,11 @@ public:
         {
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
+        }
+
+        if ( connection.response.protocol == httpony::Protocol("HTTP", 1, 1) )
+        {
+            connection.response.headers["Connection"] = "close";
         }
 
         connection.clean_response_body();

@@ -81,10 +81,20 @@ public:
         }
     }
 
+    void send_response(Response& resp);
+
+    void send_response(Response&& resp)
+    {
+        send_response(resp);
+    }
+
     /**
      * \brief Sends the response to the socket
      */
-    void send_response();
+    void send_response()
+    {
+        send_response(response);
+    }
 
 
     Request request;

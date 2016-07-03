@@ -52,6 +52,12 @@ void ClientConnection::read_request()
     {
         if ( !request.body.get_data(input, request.headers) )
             return;
+
+        if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.get("Expect") == "100-continue" )
+        {
+            status = StatusCode::Continue;
+            return;
+        }
     }
     else if ( input.size() )
     {
@@ -59,10 +65,16 @@ void ClientConnection::read_request()
         return;
     }
 
+    if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.has_header("Expect") )
+    {
+        status = StatusCode::ExpectationFailed;
+        return;
+    }
+
     status = StatusCode::OK;
 }
 
-void ClientConnection::send_response()
+void ClientConnection::send_response(Response& response)
 {
     boost::asio::streambuf buffer_write;
     std::ostream buffer_stream(&buffer_write);
@@ -77,12 +89,6 @@ void ClientConnection::send_response()
     {
         buffer_stream << "Content-Type" << ": " << response.body.content_type() << "\r\n";
         buffer_stream << "Content-Length" << ": " << response.body.content_length() << "\r\n";
-    }
-
-    if ( response.protocol == Protocol("HTTP", 1, 1) )
-    {
-        /// \todo Support persistent connections
-        buffer_stream << "Connection: close\r\n";
     }
 
     buffer_stream << "\r\n";
