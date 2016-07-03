@@ -156,6 +156,17 @@ private:
      */
     bool read_quoted_header_value(std::istream& buffer_stream, std::string& value);
 
+    void write_header(std::ostream& stream, const Header& header)
+    {
+        write_header(stream, header.name, header.value);
+    }
+
+    template<class String, class Value>
+        void write_header(std::ostream& stream, String&& name, Value&& value)
+    {
+        stream << std::forward<String>(name) << ": " << std::forward<Value>(value) << "\r\n";
+    }
+
 };
 
 

@@ -33,4 +33,4 @@ target_link_libraries(${LIBRARY_NAME} ${Boost_LIBRARIES})
 include_directories(${Boost_INCLUDE_DIRS})
 
 
-target_link_libraries(${LIBRARY_NAME} melano_stringutils)
+target_link_libraries(${LIBRARY_NAME} melano_stringutils melano_time)

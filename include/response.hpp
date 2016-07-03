@@ -23,6 +23,8 @@
 #define HTTPONY_RESPONSE_HPP
 
 #include <melanolib/utils/c++-compat.hpp>
+#include <melanolib/time/date_time.hpp>
+
 #include "status.hpp"
 #include "protocol.hpp"
 #include "io.hpp"
@@ -51,6 +53,7 @@ struct Response
     Status      status;
     Headers     headers;
     Protocol    protocol = Protocol("HTTP", 1, 1);
+    melanolib::time::DateTime date;
 };
 
 } // namespace httpony

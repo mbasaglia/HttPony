@@ -21,6 +21,8 @@
 
 #include <thread>
 
+#include <melanolib/time/time_string.hpp>
+
 #include "server.hpp"
 #include "logging.hpp"
 
@@ -132,7 +134,9 @@ void Server::process_log_format(
             output << connection.request.cookies[argument];
             break;
         case 'D': // The time taken to serve the request, in microseconds.
-            // TODO
+            std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
+                connection.response.date - connection.request.received_date
+            ).count();
             break;
         case 'e': // The contents of the environment variable FOOBAR
             // TODO
@@ -176,7 +180,6 @@ void Server::process_log_format(
             output << connection.request.url.query_string(true);
             break;
         case 'r': // First line of request
-            /// \todo TODO check if this is correct (eg: query string)
             output << connection.request.method << ' ' << connection.request.url.full() << ' ' << connection.request.protocol;
             break;
         case 'R': // The handler generating the response (if any).
@@ -186,11 +189,20 @@ void Server::process_log_format(
             output << connection.response.status.code;
             break;
         case 't': // The time, in the format given by argument
-            // TODO
+            output << melanolib::time::strftime(melanolib::time::DateTime(), argument);
             break;
         case 'T': // The time taken to serve the request, in a time unit given by argument (default seconds).
-            // TODO
+        {
+            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(
+                connection.response.date - connection.request.received_date
+            ).count();
+            if ( argument == "ms" )
+                microseconds /= 1000;
+            else if ( argument != "us" )
+                microseconds /= 1'000'000;
+            output << microseconds;
             break;
+        }
         case 'u': // Remote user (from auth; may be bogus if return status (%s) is 401)
             output << connection.request.auth.user;
             break;

@@ -21,6 +21,8 @@
 
 #include "client_connection.hpp"
 
+#include <melanolib/time/time_string.hpp>
+
 namespace httpony {
 
 void ClientConnection::read_request()
@@ -29,9 +31,6 @@ void ClientConnection::read_request()
 
     request = Request();
     request.from = remote;
-
-    // boost::asio::streambuf buffer_read;
-    // auto sz = boost::asio::read(socket, buffer_read, error);
 
     /// \todo Avoid magic number, keep reading if needed
     auto sz = input.read_some(1024, error);
@@ -83,12 +82,13 @@ void ClientConnection::send_response(Response& response)
                     << response.status.message << "\r\n";
 
     for ( const auto& header : response.headers )
-        buffer_stream << header.name << ": " << header.value << "\r\n";
+        write_header(buffer_stream, header);
 
+    write_header(buffer_stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
     if ( response.body.has_data() )
     {
-        buffer_stream << "Content-Type" << ": " << response.body.content_type() << "\r\n";
-        buffer_stream << "Content-Length" << ": " << response.body.content_length() << "\r\n";
+        write_header(buffer_stream, "Content-Type", response.body.content_type());
+        write_header(buffer_stream, "Content-Length", response.body.content_length());
     }
 
     buffer_stream << "\r\n";

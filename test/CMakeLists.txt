@@ -46,12 +46,12 @@ if (BUILD_TESTING)
         add_dependencies(tests_compile ${test_name})
     endfunction(melanotest)
 
+    set(COMMON_LIBRARIES httpony melano_stringutils melano_time)
+
     melanotest(test_uri)
-    target_link_libraries(test_uri melano_stringutils)
-    target_link_libraries(test_uri httpony)
+    target_link_libraries(test_uri ${COMMON_LIBRARIES})
 
     melanotest(test_mime_type)
-    target_link_libraries(test_uri melano_stringutils)
-    target_link_libraries(test_uri httpony)
+    target_link_libraries(test_uri ${COMMON_LIBRARIES})
 
 endif()

@@ -22,6 +22,8 @@
 #ifndef HTTPONY_REQUEST_HPP
 #define HTTPONY_REQUEST_HPP
 
+#include <melanolib/time/date_time.hpp>
+
 #include "ip_address.hpp"
 #include "protocol.hpp"
 #include "io.hpp"
@@ -57,6 +59,8 @@ struct Request
 
     /// \todo Parse urlencoded and multipart/form-data into request.post
     NetworkInputStream body;
+
+    melanolib::time::DateTime received_date;
 };
 
 } // namespace httpony
