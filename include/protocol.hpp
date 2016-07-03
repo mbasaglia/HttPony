@@ -65,6 +65,11 @@ struct Protocol
     std::string name;
     unsigned version_major = 0;
     unsigned version_minor = 0;
+
+    bool operator==(const Protocol& oth) const
+    {
+        return name == oth.name && version_major == oth.version_major && version_minor == oth.version_minor;
+    }
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Protocol& protocol)
