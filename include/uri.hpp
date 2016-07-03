@@ -33,6 +33,9 @@ namespace httpony {
 struct Uri
 {
 
+    Uri(const char* uri)
+        : Uri(std::string(uri))
+    {}
     Uri(const std::string& uri);
     Uri() = default;
     Uri(

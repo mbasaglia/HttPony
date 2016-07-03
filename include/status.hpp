@@ -45,6 +45,7 @@ enum class StatusCode
     Multi = 207,
     AlreadyReported = 208,
     IMUsed = 226,
+
     MultipleChoices = 300,
     MovedPermanently = 301,
     Found = 302,

@@ -28,6 +28,7 @@
 #include "status.hpp"
 #include "protocol.hpp"
 #include "io.hpp"
+#include "uri.hpp"
 
 namespace httpony {
 
@@ -54,6 +55,13 @@ struct Response
     Headers     headers;
     Protocol    protocol = Protocol("HTTP", 1, 1);
     melanolib::time::DateTime date;
+
+    static Response redirect(const Uri& location, Status status = StatusCode::Found)
+    {
+        Response response(status);
+        response.headers["Location"] = location.full();
+        return response;
+    }
 };
 
 } // namespace httpony
