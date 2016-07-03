@@ -131,3 +131,39 @@ BOOST_AUTO_TEST_CASE( test_uri_ctor_fragment )
 
     BOOST_CHECK( Uri("a://b/c?d=e") == Uri({"a", "b", {"c"}, {{"d", "e"}}, ""}) );
 }
+
+BOOST_AUTO_TEST_CASE( test_uri_path_string )
+{
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path_string() == "" );
+    BOOST_CHECK( Uri({"", "", {"foo"}, {}, ""}).path_string() == "/foo" );
+    BOOST_CHECK( Uri({"", "", {"foo", "bar"}, {}, ""}).path_string() == "/foo/bar" );
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path_string() == "" );
+    BOOST_CHECK( Uri({"", "", {"f o"}, {}, ""}).path_string() == "/f%20o" );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_query_string )
+{
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).query_string() == "" );
+    BOOST_CHECK( Uri({"", "", {}, {{"foo", "bar"}}, ""}).query_string() == "foo=bar" );
+    BOOST_CHECK( Uri({"", "", {}, {{"foo", "bar"}}, ""}).query_string(true) == "?foo=bar" );
+    BOOST_CHECK( Uri({"", "", {}, {{"foo", "b r"}}, ""}).query_string(true) == "?foo=b+r" );
+}
+
+BOOST_AUTO_TEST_CASE( test_uri_full )
+{
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).full() == "" );
+
+    BOOST_CHECK( Uri({"foo", "", {}, {}, ""}).full() == "foo:" );
+    BOOST_CHECK( Uri({"", "foo", {}, {}, ""}).full() == "//foo" );
+    BOOST_CHECK( Uri({"", "", {"foo"}, {}, ""}).full() == "/foo" );
+    BOOST_CHECK( Uri({"", "", {}, {{"foo", ""}}, ""}).full() == "?foo" );
+    BOOST_CHECK( Uri({"", "", {}, {}, "foo"}).full() == "#foo" );
+
+    BOOST_CHECK( Uri({"scheme", "authority", {"path"}, {{"query", ""}}, "fragment"}).full() == "scheme://authority/path?query#fragment" );
+
+    BOOST_CHECK( Uri({"", "authority", {"path"}, {{"query", ""}}, "fragment"}).full() == "//authority/path?query#fragment" );
+    BOOST_CHECK( Uri({"scheme", "", {"path"}, {{"query", ""}}, "fragment"}).full() == "scheme:/path?query#fragment" );
+    BOOST_CHECK( Uri({"scheme", "authority", {}, {{"query", ""}}, "fragment"}).full() == "scheme://authority?query#fragment" );
+    BOOST_CHECK( Uri({"scheme", "authority", {"path"}, {}, "fragment"}).full() == "scheme://authority/path#fragment" );
+    BOOST_CHECK( Uri({"scheme", "authority", {"path"}, {{"query", ""}}, ""}).full() == "scheme://authority/path?query" );
+}

@@ -16,6 +16,7 @@
 #
 include(CTest)
 
+set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fsanitize=address --coverage -O0 -fno-inline")
 
 # Boost
@@ -44,9 +45,6 @@ if (BUILD_TESTING)
         add_test (NAME ${test_name} COMMAND ${test_name})
         add_dependencies(tests_compile ${test_name})
     endfunction(melanotest)
-
-    find_package(Qt5Widgets REQUIRED)
-    set(CMAKE_AUTOMOC ON)
 
     melanotest(test_uri)
     target_link_libraries(test_uri melano_stringutils)

@@ -28,7 +28,7 @@ include(cmake/misc.cmake)
 use_cxx_standard(14)
 
 # Debug flags
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic -Werror")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -pedantic -Werror --coverage")
 
 # Enable Debug by default, can be changed with -D CMAKE_BUILD_TYPE=Release
 if(CMAKE_BUILD_TYPE STREQUAL "")
@@ -70,5 +70,6 @@ endif(DOXYGEN_FOUND)
 
 # Tests
 set(LCOV_SOURCE_BASE_DIR "${CMAKE_SOURCE_DIR}/src")
+set(LCOV_REMOVE_PATTERN "lib/*.cpp" "lib/*.hpp" "test_*.cpp")
 include(cmake/testing.cmake)
 add_subdirectory(test)

@@ -26,6 +26,10 @@
 
 namespace httpony {
 
+/**
+ * \brief Uniform resource identifier
+ * \see http://www.faqs.org/rfcs/rfc3986.html
+ */
 struct Uri
 {
 
