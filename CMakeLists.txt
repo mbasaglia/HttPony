@@ -62,6 +62,7 @@ add_subdirectory(example)
 set(ALL_SOURCE_DIRECTORIES src include)
 
 find_sources(ALL_SOURCES *.cpp *.hpp)
+set(DOXYGEN_FOUND ON)
 find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
     create_doxygen_target(doc)

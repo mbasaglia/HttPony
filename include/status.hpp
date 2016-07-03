@@ -112,6 +112,7 @@ enum class StatusType
 
 /**
  * \brief A response status
+ * \see https://tools.ietf.org/html/rfc7231#section-6
  */
 struct Status
 {

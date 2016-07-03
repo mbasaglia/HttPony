@@ -31,6 +31,15 @@ class Server;
 
 /**
  * \brief Represents a single connection to a client for a request/response interaction
+ *
+ * Implements most of the HTTP protocol in parsing requests and sending responses.
+ *
+ * Server implementation must still generate valid responses that conform to the
+ * semantics as described by the protocol, this class will simply format the
+ * response correctly and add headers whose value can be determined by the
+ * response object.
+ *
+ * \see https://tools.ietf.org/html/rfc7230
  */
 class ClientConnection
 {

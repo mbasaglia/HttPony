@@ -32,11 +32,22 @@ public:
 
     void respond(httpony::ClientConnection& connection) override
     {
-        std::string body = get_body(connection);
+        try
+        {
+            std::string body = get_body(connection);
 
-        create_response(connection);
+            create_response(connection);
 
-        print_info(connection, body);
+            print_info(connection, body);
+        }
+        catch ( const std::exception& )
+        {
+            // Create a server error response if an exception happened
+            // while handling the request
+            connection.response = httpony::Response();
+            connection.status = httpony::StatusCode::InternalServerError;
+            create_response(connection);
+        }
 
         send_response(connection);;
     }

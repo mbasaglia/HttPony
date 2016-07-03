@@ -58,6 +58,16 @@ bool NetworkInputStream::get_data(NetworkBuffer& buffer, const Headers& headers)
     return true;
 }
 
+void NetworkOutputStream::copy_from(NetworkOutputStream& other)
+{
+    other.flush();
+    for ( const auto& buf : other.buffer.data() )
+    {
+        auto data = boost::asio::buffer_cast<const char*>(buf);
+        auto size = boost::asio::buffer_size(buf);
+        write(data, size);
+    }
+}
 
 
 } // namespace httpony

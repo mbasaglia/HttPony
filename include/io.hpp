@@ -195,6 +195,27 @@ public:
     {
     }
 
+    explicit NetworkOutputStream(NetworkOutputStream&& other)
+        : std::ostream(other.rdbuf() ? &buffer : nullptr),
+          _content_type(std::move(other._content_type))
+    {
+        if ( has_data() )
+            copy_from(other);
+    }
+
+    NetworkOutputStream& operator=(NetworkOutputStream&& other)
+    {
+        stop_data();
+        if ( other.has_data() )
+        {
+            rdbuf(other.rdbuf() ? &buffer : nullptr);
+            copy_from(other);
+        }
+        _content_type = std::move(other._content_type);
+        /// \todo Transfer data?
+        return *this;
+    }
+
     NetworkOutputStream()
         : std::ostream(nullptr)
     {
@@ -253,6 +274,8 @@ public:
     }
 
 private:
+    void copy_from(NetworkOutputStream& other);
+
     boost::asio::streambuf buffer;
     MimeType _content_type;
 };
