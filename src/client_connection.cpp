@@ -47,7 +47,7 @@ void ClientConnection::read_request()
     
     response.protocol = request.protocol;
 
-    if ( request.headers.has_header("Content-Length") )
+    if ( request.headers.contains("Content-Length") )
     {
         if ( !request.body.get_data(input, request.headers) )
             return;
@@ -64,7 +64,7 @@ void ClientConnection::read_request()
         return;
     }
 
-    if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.has_header("Expect") )
+    if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.contains("Expect") )
     {
         status = StatusCode::ExpectationFailed;
         return;
@@ -82,7 +82,7 @@ void ClientConnection::send_response(Response& response)
                     << response.status.message << "\r\n";
 
     for ( const auto& header : response.headers )
-        write_header(buffer_stream, header);
+        write_header(buffer_stream, header.first, header.second);
 
     write_header(buffer_stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
     if ( response.body.has_data() )

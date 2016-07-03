@@ -57,8 +57,8 @@ BOOST_AUTO_TEST_CASE( test_getters )
     MimeType mime("text", "plain", {"charset", "utf-8"});
     BOOST_CHECK( mime.type() == "text" );
     BOOST_CHECK( mime.subtype() == "plain" );
-    BOOST_CHECK( mime.parameter().name == "charset" );
-    BOOST_CHECK( mime.parameter().value == "utf-8" );
+    BOOST_CHECK( mime.parameter().first == "charset" );
+    BOOST_CHECK( mime.parameter().second == "utf-8" );
 }
 
 BOOST_AUTO_TEST_CASE( test_stream )
@@ -75,16 +75,16 @@ BOOST_AUTO_TEST_CASE( test_set_parameter )
     MimeType mime("text", "plain");
 
     mime.set_parameter({"charset", "utf-8"});
-    BOOST_CHECK( mime.parameter().name == "charset" );
-    BOOST_CHECK( mime.parameter().value == "utf-8" );
+    BOOST_CHECK( mime.parameter().first == "charset" );
+    BOOST_CHECK( mime.parameter().second == "utf-8" );
 
     mime.set_parameter({"", "utf-8"});
-    BOOST_CHECK( mime.parameter().name == "" );
-    BOOST_CHECK( mime.parameter().value == "" );
+    BOOST_CHECK( mime.parameter().first == "" );
+    BOOST_CHECK( mime.parameter().second == "" );
 
     mime.set_parameter({"charset", ""});
-    BOOST_CHECK( mime.parameter().name == "" );
-    BOOST_CHECK( mime.parameter().value == "" );
+    BOOST_CHECK( mime.parameter().first == "" );
+    BOOST_CHECK( mime.parameter().second == "" );
 }
 
 BOOST_AUTO_TEST_CASE( test_valid )

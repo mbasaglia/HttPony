@@ -207,11 +207,11 @@ DataMap parse_query_string(const std::string& str)
     return result;
 }
 
-std::string build_query_string(const DataMap& headers, bool question_mark)
+std::string build_query_string(const DataMap& data, bool question_mark)
 {
     std::string result;
 
-    for ( const auto& header : headers )
+    for ( const auto& item : data )
     {
         if ( result.empty() )
         {
@@ -223,9 +223,9 @@ std::string build_query_string(const DataMap& headers, bool question_mark)
             result += '&';
         }
 
-        result += urlencode(header.name);
-        if ( !header.value.empty() )
-            result += '=' + urlencode(header.value, true);
+        result += urlencode(item.first);
+        if ( !item.second.empty() )
+            result += '=' + urlencode(item.second, true);
     }
 
     return result;

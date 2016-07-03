@@ -111,11 +111,11 @@ private:
      * \brief Prints out dictionary data
      */
     template<class Map>
-        void show_headers(const std::string& title, const Map& headers) const
+        void show_headers(const std::string& title, const Map& data) const
     {
         std::cout << title << ":\n";
-        for ( const auto& head : headers )
-            std::cout << '\t' << head.name << " : " << head.value << '\n';
+        for ( const auto& item : data )
+            std::cout << '\t' << item.first << " : " << item.second << '\n';
     }
 
     /**

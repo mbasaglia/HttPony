@@ -31,6 +31,8 @@ namespace httpony {
 class MimeType
 {
 public:
+    using Parameter = std::pair<std::string, std::string>;
+
     MimeType(const std::string& string)
     {
         melanolib::string::QuickStream stream(string);
@@ -46,17 +48,17 @@ public:
                 false
             );
 
-            Header parameter;
-            parameter.name = stream.get_line('=');
+            Parameter parameter;
+            parameter.first = stream.get_line('=');
 
             if ( stream.peek() == '"' )
             {
                 stream.ignore(1);
-                parameter.value = stream.get_line('"');
+                parameter.second = stream.get_line('"');
             }
             else
             {
-                parameter.value = stream.get_line();
+                parameter.second = stream.get_line();
             }
 
             set_parameter(parameter);
@@ -66,7 +68,7 @@ public:
 
     MimeType(){}
 
-    MimeType(const std::string& type, const std::string& subtype, const Header& param = {})
+    MimeType(const std::string& type, const std::string& subtype, const Parameter& param = {})
     {
         set_type(type);
         set_subtype(subtype);
@@ -81,7 +83,7 @@ public:
     bool operator==(const MimeType& oth) const
     {
         return _type == oth._type && _subtype == oth._subtype &&
-            _parameter.name == oth._parameter.name && _parameter.value == oth._parameter.value;
+            _parameter.first == oth._parameter.first && _parameter.second == oth._parameter.second;
     }
 
     bool operator!=(const MimeType& oth) const
@@ -99,20 +101,20 @@ public:
         _subtype = melanolib::string::strtolower(subtype);
     }
 
-    void set_parameter(const Header& param)
+    void set_parameter(const Parameter& param)
     {
-        if ( param.name.empty() || param.value.empty() )
+        if ( param.first.empty() || param.second.empty() )
         {
-            _parameter = Header();
+            _parameter = Parameter();
             return;
         }
 
-        _parameter.name = melanolib::string::strtolower(param.name);
+        _parameter.first = melanolib::string::strtolower(param.first);
 
-        if ( _parameter.name == "charset" )
-            _parameter.value = melanolib::string::strtolower(param.value);
+        if ( _parameter.first == "charset" )
+            _parameter.second = melanolib::string::strtolower(param.second);
         else
-            _parameter.value = param.value;
+            _parameter.second = param.second;
     }
 
     std::string type() const
@@ -125,7 +127,7 @@ public:
         return _subtype;
     }
 
-    Header parameter() const
+    Parameter parameter() const
     {
         return _parameter;
     }
@@ -133,15 +135,15 @@ public:
     friend std::ostream& operator<<(std::ostream& os, const MimeType& mime)
     {
         os << mime._type << '/' << mime._subtype;
-        if ( !mime._parameter.name.empty() )
-            os << ';' << mime._parameter.name << '=' << mime._parameter.value;
+        if ( !mime._parameter.first.empty() )
+            os << ';' << mime._parameter.first << '=' << mime._parameter.second;
         return os;
     }
 
 private:
     std::string _type;
     std::string _subtype;
-    Header _parameter;
+    Parameter _parameter;
 };
 
 } // namespace httpony
