@@ -29,45 +29,90 @@ class MyServer : public httpony::Server
 {
 public:
     using Server::Server;
-    std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
-
-    template<class Map>
-        void show_headers(const std::string& title, const Map& headers)
-    {
-        std::cout << title << ":\n";
-        for ( const auto& head : headers )
-            std::cout << '\t' << head.name << ' ' << head.value << '\n';
-    }
 
     void respond(httpony::ClientConnection& connection) override
     {
+        std::string body = get_body(connection);
+
+        create_response(connection);
+
+        print_info(connection, body);
+
+        send_response(connection);;
+    }
+
+private:
+    /**
+     * \brief Returns the whole request body as a string
+     */
+    std::string get_body(httpony::ClientConnection& connection) const
+    {
+        // Handle HTTP/1.1 requests with an Expect: 100-continue header
         if ( connection.status == httpony::StatusCode::Continue )
         {
             connection.send_response(connection.status);
             connection.status = httpony::StatusCode::OK;
         }
 
-        connection.response.body.start_data("text/plain");
-
-        std::string body;
-
+        // Check if we have something to read
         if ( connection.request.body.has_data() )
         {
-            body = connection.request.body.read_all();
+            std::string body = connection.request.body.read_all();
+
+            // Handle read errors (eg: wrong Content-Length)
             if ( connection.request.body.error() )
                 connection.status = httpony::StatusCode::BadRequest;
+
+            return body;
         }
+
+        return "";
+    }
+
+    /**
+     * \brief Sets up the response object
+     */
+    void create_response(httpony::ClientConnection& connection) const
+    {
+        // The response is in plain text
+        connection.response.body.start_data("text/plain");
 
         if ( connection.ok() )
         {
+            // On success, send Hello world
             connection.response.body << "Hello, world!\n";
         }
         else
         {
+            // On failure send the error message
             connection.response.status = connection.status;
             connection.response.body << connection.response.status.message << '\n';
         }
 
+        // We are not going to keep the connection open
+        if ( connection.response.protocol == httpony::Protocol("HTTP", 1, 1) )
+        {
+            connection.response.headers["Connection"] = "close";
+        }
+    }
+
+    /**
+     * \brief Prints out dictionary data
+     */
+    template<class Map>
+        void show_headers(const std::string& title, const Map& headers) const
+    {
+        std::cout << title << ":\n";
+        for ( const auto& head : headers )
+            std::cout << '\t' << head.name << " : " << head.value << '\n';
+    }
+
+    /**
+     * \brief Logs info on the current request/response
+     */
+    void print_info(httpony::ClientConnection& connection, std::string& body) const
+    {
+        std::cout << '\n';
         log(log_format, connection, std::cout);
 
         show_headers("Headers", connection.request.headers);
@@ -80,15 +125,20 @@ public:
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
         }
+    }
 
-        if ( connection.response.protocol == httpony::Protocol("HTTP", 1, 1) )
-        {
-            connection.response.headers["Connection"] = "close";
-        }
-
+    /**
+     * \brief Send the connection to the client
+     */
+    void send_response(httpony::ClientConnection& connection) const
+    {
+        // This removes the response body when mandated by HTTP
         connection.clean_response_body();
         connection.send_response();
     }
+
+
+    std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
 };
 
 int main()
