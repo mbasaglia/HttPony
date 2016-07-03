@@ -154,7 +154,7 @@ public:
             if ( compare.key(item.first, key) )
                 return item.second;
         }
-        data.push_back({key, ""});
+        data.push_back({key, {}});
         return data.back().second;
     }
 

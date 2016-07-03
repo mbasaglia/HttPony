@@ -143,6 +143,8 @@ private:
      */
     void send_response(httpony::ClientConnection& connection) const
     {
+        // Ensure the response isn't cached
+        connection.response.headers["Expires"] = "0";
         // This removes the response body when mandated by HTTP
         connection.clean_response_body();
         connection.send_response();

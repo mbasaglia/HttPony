@@ -81,10 +81,15 @@ void ClientConnection::send_response(Response& response)
                     << response.status.code << ' '
                     << response.status.message << "\r\n";
 
+    write_header(buffer_stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
+
     for ( const auto& header : response.headers )
         write_header(buffer_stream, header.first, header.second);
 
-    write_header(buffer_stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
+    for ( const auto& cookie : response.cookies )
+        write_header(buffer_stream, "Set-Cookie", cookie);
+
+
     if ( response.body.has_data() )
     {
         write_header(buffer_stream, "Content-Type", response.body.content_type());
@@ -124,8 +129,15 @@ bool ClientConnection::read_headers(std::istream& buffer_stream)
         if ( std::isspace(buffer_stream.peek()) )
             return false;
 
-        if ( !read_header_name(buffer_stream, name) )
+        if ( !read_delimited(buffer_stream, name, ':') )
             return false;
+
+        if ( name == "Cookie" )
+        {
+            if ( !read_cookie(buffer_stream) )
+                return false;
+            continue;
+        }
 
         if ( buffer_stream.peek() == '"' )
         {
@@ -151,23 +163,31 @@ bool ClientConnection::read_headers(std::istream& buffer_stream)
     return true;
 }
 
-bool ClientConnection::read_header_name(std::istream& buffer_stream, std::string& name)
+bool ClientConnection::read_delimited(std::istream& stream, std::string& output, char delim, bool at_end)
 {
-    name.clear();
+    output.clear();
     while ( true )
     {
-        auto c = buffer_stream.get();
-        if ( c == std::char_traits<char>::eof() || c == '\r' )
+        auto c = stream.get();
+        if ( c == std::istream::traits_type::eof() || c == '\r' )
         {
-            return false;
+            stream.unget();
+            return at_end;
         }
-        if ( c == ':' )
+        if ( c == delim )
             break;
-        name += c;
+        output += c;
     }
 
-    while ( std::isspace(buffer_stream.peek()) )
-        buffer_stream.ignore(1);
+    while ( true )
+    {
+        auto c = stream.peek();
+        if ( c == '\r' || c == std::istream::traits_type::eof() )
+            return at_end;
+        if ( !std::isspace(c) )
+            break;
+        stream.ignore(1);
+    }
 
     return true;
 }
@@ -205,6 +225,27 @@ bool ClientConnection::read_quoted_header_value(std::istream& buffer_stream, std
     }
 
     skip_line(buffer_stream);
+
+    return true;
+}
+
+bool ClientConnection::read_cookie(std::istream& stream)
+{
+    do
+    {
+        std::string name;
+        if ( !read_delimited(stream, name, '=') )
+            return false;
+
+        std::string value;
+        if ( !read_delimited(stream, value, ';', true) )
+            return false;
+
+        request.cookies.append(name, value);
+    }
+    while ( stream.peek() != '\r' );
+
+    skip_line(stream);
 
     return true;
 }

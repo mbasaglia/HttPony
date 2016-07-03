@@ -145,10 +145,15 @@ private:
     bool read_headers(std::istream& buffer_stream);
 
     /**
-     * \brief Reads a header name and the following colon, including optional spaces
+     * \brief Reads a string delimited by a specific character and ignores following spaces
+     * \param stream Input to read from
+     * \param output Output string
+     * \param delim  Delimiting character
+     * \param at_end Whether the value can be at the end of the line
      * \returns \b true on success
      */
-    bool read_header_name(std::istream& buffer_stream, std::string& name);
+    bool read_delimited(std::istream& stream, std::string& output,
+                        char delim = ':', bool at_end = false);
 
     /**
      * \brief Reads a "quoted" header value
@@ -162,6 +167,7 @@ private:
         stream << std::forward<String>(name) << ": " << std::forward<Value>(value) << "\r\n";
     }
 
+    bool read_cookie(std::istream& stream);
 };
 
 

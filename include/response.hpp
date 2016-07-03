@@ -29,6 +29,7 @@
 #include "protocol.hpp"
 #include "io.hpp"
 #include "uri.hpp"
+#include "cookie.hpp"
 
 namespace httpony {
 
@@ -54,6 +55,7 @@ struct Response
     Status      status;
     Headers     headers;
     Protocol    protocol = Protocol("HTTP", 1, 1);
+    CookieJar   cookies;
     melanolib::time::DateTime date;
 
     static Response redirect(const Uri& location, Status status = StatusCode::Found)
