@@ -50,4 +50,8 @@ if (BUILD_TESTING)
     target_link_libraries(test_uri melano_stringutils)
     target_link_libraries(test_uri httpony)
 
+    melanotest(test_mime_type)
+    target_link_libraries(test_uri melano_stringutils)
+    target_link_libraries(test_uri httpony)
+
 endif()

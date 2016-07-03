@@ -34,6 +34,8 @@ namespace httpony {
  */
 struct Header
 {
+    Header() = default;
+    
     Header(std::string name, std::string value)
         : name(std::move(name)), value(std::move(value))
     {}

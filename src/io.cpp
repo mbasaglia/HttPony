@@ -41,7 +41,7 @@ bool NetworkInputStream::get_data(NetworkBuffer& buffer, const Headers& headers)
     if ( length.empty() || !std::isdigit(length[0]) || content_type.empty() )
     {
         _content_length = 0;
-        _content_type = "";
+        _content_type = {};
         rdbuf(nullptr);
         _error = boost::system::errc::make_error_code(
             boost::system::errc::bad_message

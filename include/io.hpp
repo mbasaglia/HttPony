@@ -25,7 +25,7 @@
 #include <iostream>
 #include <boost/asio.hpp>
 
-#include "headers.hpp"
+#include "mime_type.hpp"
 
 namespace httpony {
 
@@ -173,14 +173,14 @@ public:
     }
 
 
-    std::string content_type() const
+    MimeType content_type() const
     {
         return _content_type;
     }
 
 private:
     std::size_t _content_length = 0;
-    std::string _content_type;
+    MimeType _content_type;
     boost::system::error_code _error;
 };
 
@@ -190,7 +190,7 @@ private:
 class NetworkOutputStream: public std::ostream
 {
 public:
-    explicit NetworkOutputStream(std::string content_type)
+    explicit NetworkOutputStream(MimeType content_type)
         : std::ostream(&buffer), _content_type(std::move(content_type))
     {
     }
@@ -230,7 +230,7 @@ public:
      */
     bool has_data()
     {
-        return rdbuf() && !_content_type.empty();
+        return rdbuf() && _content_type.valid();
     }
 
     std::size_t content_length() const
@@ -238,7 +238,7 @@ public:
         return buffer.size();
     }
 
-    std::string content_type() const
+    MimeType content_type() const
     {
         return _content_type;
     }
@@ -254,7 +254,7 @@ public:
 
 private:
     boost::asio::streambuf buffer;
-    std::string _content_type;
+    MimeType _content_type;
 };
 
 } // namespace httpony

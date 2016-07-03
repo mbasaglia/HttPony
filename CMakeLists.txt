@@ -62,14 +62,13 @@ add_subdirectory(example)
 set(ALL_SOURCE_DIRECTORIES src include)
 
 find_sources(ALL_SOURCES *.cpp *.hpp)
-message(STATUS "xxx ${ALL_SOURCES}")
 find_package(Doxygen QUIET)
 if(DOXYGEN_FOUND)
     create_doxygen_target(doc)
 endif(DOXYGEN_FOUND)
 
 # Tests
-set(LCOV_SOURCE_BASE_DIR "${CMAKE_SOURCE_DIR}/src")
+set(LCOV_SOURCE_BASE_DIR "${CMAKE_SOURCE_DIR}")
 set(LCOV_REMOVE_PATTERN "lib/*.cpp" "lib/*.hpp" "test_*.cpp")
 include(cmake/testing.cmake)
 add_subdirectory(test)
