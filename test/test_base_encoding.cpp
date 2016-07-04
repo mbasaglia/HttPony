@@ -52,3 +52,37 @@ BOOST_AUTO_TEST_CASE( test_base64_encode )
     BOOST_CHECK_EQUAL( Base64('-', '_').encode("~~>~~?"), "fn4-fn4_" );
     BOOST_CHECK_EQUAL( Base64(false).encode("x"), "eA" );
 }
+
+
+BOOST_AUTO_TEST_CASE( test_base64_decode )
+{
+    BOOST_CHECK_EQUAL( Base64().decode("RVVQ"), "EUP" );
+
+    std::string output;
+    BOOST_CHECK( Base64().decode("SGVsbG8h", output) );
+    BOOST_CHECK_EQUAL( output, "Hello!" );
+
+    BOOST_CHECK_EQUAL( Base64().decode("MQ=="), "1" );
+
+    BOOST_CHECK_EQUAL( Base64().decode("eA=="), "x");
+
+    BOOST_CHECK_EQUAL( Base64().decode("SGVsbG8gd29ybGQ="), "Hello world" );
+
+    BOOST_CHECK_EQUAL( Base64().decode("SHR0UG9ueQ=="), "HttPony" );
+
+    BOOST_CHECK_EQUAL( Base64().decode("fn4+fn4/"), "~~>~~?" );
+    BOOST_CHECK_EQUAL( Base64('-', '_').decode("fn4-fn4_"), "~~>~~?" );
+
+    BOOST_CHECK_EQUAL( Base64(false).decode("eA"), "x" );
+
+}
+BOOST_AUTO_TEST_CASE( test_base64_decode_error )
+{
+    std::string output = "Hello";
+
+    BOOST_CHECK( !Base64().decode("...", output) );
+    BOOST_CHECK_EQUAL( output, "" );
+
+    BOOST_CHECK_THROW( Base64().decode("..."), EncodingError );
+
+}

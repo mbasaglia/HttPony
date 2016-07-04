@@ -21,10 +21,18 @@
 
 #include <melanolib/utils/gsl.hpp>
 
+#include <stdexcept>
+
 namespace httpony {
 
 using byte = uint8_t;
 using byte_view = melanolib::gsl::array_view<const byte>;
+
+class EncodingError : public std::runtime_error
+{
+public:
+    using std::runtime_error::runtime_error;
+};
 
 /**
  * \brief Base 64 encoding
@@ -33,6 +41,11 @@ using byte_view = melanolib::gsl::array_view<const byte>;
 class Base64
 {
 public:
+    /**
+     * \param c62 The 62nd character of the base 64 alphabet
+     * \param c63 The 63rd character of the base 64 alphabet
+     * \param pad Whether to ensure data is properly padded
+     */
     Base64(byte c62, byte c63, bool pad = true)
         : c62(c62), c63(c63), pad(pad)
     {}
@@ -57,7 +70,7 @@ public:
     /**
      * \brief Encodes \p input into \p output
      * \param input  String to encode
-     * \param output String holding the result
+     * \param output String to store the result into
      * \return \b true on succees (cannot fail)
      */
     bool encode(const std::string& input, std::string& output) const
@@ -121,6 +134,95 @@ public:
         return true;
     }
 
+    /**
+     * \brief Decodes \p input
+     * \param input A base64-encoded string
+     * \returns The unencoded string
+     * \throws EncodingError if the encoding failed
+     */
+    std::string decode(const std::string& input) const
+    {
+        std::string output;
+        if ( !decode(input, output) )
+            throw EncodingError("Invalid base 64 string");
+        return output;
+    }
+
+    /**
+     * \brief Decodes \p input into \p output
+     * \param input  Base64-encoded string
+     * \param output String to store the result into
+     *
+     * In case of failure \p output will result into an empty string
+     * \return \b true on succees
+     */
+    bool decode(const std::string& input, std::string& output) const
+    {
+        output.clear();
+        output.reserve(input.size() * 3 / 4);
+
+        bool encoded = decode(
+            byte_view(reinterpret_cast<const byte*>(input.data()), input.size()),
+            std::back_inserter(output)
+        );
+
+        if ( !encoded )
+            output.clear();
+
+        return encoded;
+    }
+
+    /**
+     * \brief Decodes \p input into \p output
+     * \param input     View to a base64-encoded byte string
+     * \param output    Output iterator accepting the converted characters
+     * \return \b true on succees
+     */
+    template<class OutputIterator>
+        bool decode(byte_view input, OutputIterator output) const
+    {
+        if ( pad && input.size() % 4 )
+            return false;
+
+        uint32_t group = 0;
+        int count = 0;
+        std::size_t i = 0;
+
+        // Converts groups of 6 base64 sextets into 4 octets
+        for ( ; i < input.size(); i++ )
+        {
+            if ( input[i] == padding )
+            {
+                if ( i < input.size() - 2 )
+                    return false;
+                else
+                    break;
+            }
+
+            uint8_t bout;
+            if ( !decode_6bits(input[i], bout) )
+                return false;
+
+            group = (group << 6) | bout;
+            count++;
+
+            if ( count == 4 )
+            {
+                decode_bits(group, output);
+                group = 0;
+                count = 0;
+            }
+        }
+
+        // Handle padded string
+        if ( count )
+        {
+            decode_bits(group, output, count * 6);
+        }
+
+        return true;
+    }
+
 private:
     /**
      * \brief Converts a 6-bit integer into a Base64-encoded 8-bit character
@@ -150,7 +252,7 @@ private:
      * \pre \p bits <= 32 (Usually should be 24 aka 3 octets)
      */
     template<class OutputIterator>
-        void encode_bits(uint32_t data, OutputIterator output, int bits = 4*6) const
+        void encode_bits(uint32_t data, OutputIterator output, int bits = 24) const
     {
         // Align the most significan bit to a sextet
         if ( bits % 6 )
@@ -169,6 +271,53 @@ private:
             ++output;
         }
     }
+
+    /**
+     * \brief Converts a base64 character into a 6-bit integer
+     * \note It assumes ASCII-compatible character literals and cctype functions
+     * \todo Add melanolib::string::ascii with functions like isdigit etc that
+     *       aren't affected by locales or encodings.
+     */
+    bool decode_6bits(byte data, byte& output) const
+    {
+        if ( data == c63 )
+            output = 63;
+        else if ( data == c62 )
+            output = 62;
+        else if ( std::isdigit(data) )
+            output = data - '0' + 52;
+        else if ( std::islower(data) )
+            output = data - 'a' + 26;
+        else if ( std::isupper(data) )
+            output = data - 'A';
+        else
+            return false;
+        return true;
+    }
+
+    /**
+     * \brief Decodes an integer from base 64
+     * \param data      Integer containing the bits to be converted
+     * \param output    Output iterator accepting the converted characters
+     * \param bits      Number of bits in \p data to be considered
+     * \pre \p bits <= 32 (Usually should be 24 aka 4 sextets)
+     */
+    template<class OutputIterator>
+        void decode_bits(uint32_t data, OutputIterator output, int bits = 24) const
+    {
+        // Align the least significan bit to an octet
+        data >>= bits % 8;
+        bits -= bits % 8;
+
+        // Eats groups of 8 bits from the most significant to the least
+        for ( ;  bits > 0; bits -= 8 )
+        {
+            int shift = bits - 8;
+            *output = (data >> shift) & 0xFF;
+            ++output;
+        }
+    }
+
 
     static const byte padding = '=';
 
