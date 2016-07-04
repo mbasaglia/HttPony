@@ -27,11 +27,29 @@ using byte = uint8_t;
 using byte_view = melanolib::gsl::array_view<const byte>;
 
 /**
+ * \brief Base 64 encoding
  * \see https://tools.ietf.org/html/rfc4648#section-4
  */
 class Base64
 {
 public:
+    /**
+     * \brief Encodes \p input
+     * \returns The Base64-encoded string
+     */
+    std::string encode(const std::string& input)
+    {
+        std::string output;
+        encode(input, output);
+        return output;
+    }
+
+    /**
+     * \brief Encodes \p input into \p output
+     * \param input  String to encode
+     * \param output String holding the result
+     * \return \b true on succees (cannot fail)
+     */
     bool encode(const std::string& input, std::string& output)
     {
         output.clear();
@@ -48,37 +66,54 @@ public:
         return encoded;
     }
 
+    /**
+     * \brief Encodes \p input into \p output
+     * \param input     View to a byte string to encode
+     * \param output    Output iterator accepting the converted characters
+     * \return \b true on succees (cannot fail)
+     */
     template<class OutputIterator>
         bool encode(byte_view input, OutputIterator output)
     {
         uint32_t group = 0;
         int count = 0;
+
+        // Convert groups of 3 octects into 4 sextets
         for ( auto bin : input )
         {
             group = (group << 8) | bin;
             count++;
             if ( count == 3 )
             {
-                if ( !encode_24bits(group, output) )
-                    return false;
+                encode_bits(group, output);
                 group = 0;
                 count = 0;
             }
         }
+
+        // Handle stray octects
         if ( count )
         {
-            if ( !encode_24bits(group, output, count * 8) )
-                return false;
+            // Encode available bits
+            encode_bits(group, output, count * 8);
+
+            // Append padding characters
             for ( int i = count; i < 3; i++ )
             {
                 *output = padding;
                 ++output;
             }
         }
+
         return true;
     }
 
 private:
+    /**
+     * \brief Converts a 6-bit integer into a Base64-encoded 8-bit character
+     * \param data 6-bit integer [0, 64)
+     * \pre data & 0xC0 == 0
+     */
     byte encode_6bits(byte data)
     {
         if ( data < 26 )
@@ -89,14 +124,22 @@ private:
             return '0' + (data - 52);
         if ( data == 62 )
             return '+';
-        if ( data == 63 )
-            return '/';
-        return invalid_byte;
+        // Since is being called masking the lowest 6 bits, it can never be
+        // larger than 63
+        return '/';
     }
 
+    /**
+     * \brief Encodes an integer into Base64
+     * \param data      Integer containing the bits to be converted
+     * \param output    Output iterator accepting the converted characters
+     * \param bits      Number of bits in \p data to be considered
+     * \pre \p bits <= 32 (Usually should be 24 aka 3 octets)
+     */
     template<class OutputIterator>
-        bool encode_24bits(uint32_t data, OutputIterator output, int bits = 4*6)
+        void encode_bits(uint32_t data, OutputIterator output, int bits = 4*6)
     {
+        // Align the most significan bit to a sextet
         if ( bits % 6 )
         {
             int diff = 6 - (bits % 6);
@@ -104,21 +147,17 @@ private:
             bits += diff;
         }
 
+        // Eats groups of 6 bits from the most significant to the least
         for ( ;  bits > 0; bits -= 6 )
         {
             int shift = bits - 6;
             byte bout = encode_6bits((data >> shift) & 0x3F);
-            if ( bout == invalid_byte )
-                return false;
             *output = bout;
             ++output;
         }
-        return true;
     }
 
-    static const byte invalid_byte = 255;
     static const byte padding = '=';
-
 };
 
 } // namespace httpony
