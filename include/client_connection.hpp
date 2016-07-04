@@ -113,6 +113,7 @@ public:
     Status status = StatusCode::OK;
     NetworkBuffer input;
     Server* const server;
+    bool parse_folded_headers = false;
 
 private:
     /**
@@ -154,6 +155,14 @@ private:
      */
     bool read_delimited(std::istream& stream, std::string& output,
                         char delim = ':', bool at_end = false);
+
+    /**
+     * \brief Skips spaces (except \r)
+     * \param stream Input to read from
+     * \param at_end Whether the value can be at the end of the line
+     * \returns \b true on success
+     */
+    bool skip_spaces(std::istream& stream, bool at_end = false);
 
     /**
      * \brief Reads a "quoted" header value

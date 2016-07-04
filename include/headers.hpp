@@ -173,6 +173,12 @@ public:
     auto crbegin() const { return data.crbegin();}
     auto crend() const   { return data.crend();  }
 
+    reference back() { return data.back(); }
+    const_reference back() const { return data.back(); }
+
+    reference front() { return data.front(); }
+    const_reference front() const { return data.front(); }
+
     auto empty() const { return data.empty(); }
     auto size() const { return data.size(); }
     auto max_size() const { return data.max_size(); }

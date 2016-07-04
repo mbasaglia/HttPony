@@ -125,9 +125,25 @@ bool ClientConnection::read_headers(std::istream& buffer_stream)
     std::string name, value;
     while ( buffer_stream && buffer_stream.peek() != '\r' )
     {
-        // Discard deprecated header folding
+        // (obsolete) header folding
+        // it's compliant to either return 400 or parse them
         if ( std::isspace(buffer_stream.peek()) )
-            return false;
+        {
+            if ( !parse_folded_headers )
+                return false;
+
+            if ( !skip_spaces(buffer_stream) || request.headers.empty() )
+                return false;
+
+            std::getline(buffer_stream, value, '\r');
+            buffer_stream.ignore(1, '\n');
+            if ( !buffer_stream )
+            {
+                return false;
+            }
+            request.headers.back().second += ' ' + value;
+            continue;
+        }
 
         if ( !read_delimited(buffer_stream, name, ':') )
             return false;
@@ -179,6 +195,11 @@ bool ClientConnection::read_delimited(std::istream& stream, std::string& output,
         output += c;
     }
 
+    return skip_spaces(stream, at_end);
+}
+
+bool ClientConnection::skip_spaces(std::istream& stream, bool at_end )
+{
     while ( true )
     {
         auto c = stream.peek();
@@ -188,7 +209,6 @@ bool ClientConnection::read_delimited(std::istream& stream, std::string& output,
             break;
         stream.ignore(1);
     }
-
     return true;
 }
 
