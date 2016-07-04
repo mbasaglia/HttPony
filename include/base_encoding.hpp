@@ -33,11 +33,21 @@ using byte_view = melanolib::gsl::array_view<const byte>;
 class Base64
 {
 public:
+    Base64(byte c62, byte c63, bool pad = true)
+        : c62(c62), c63(c63), pad(pad)
+    {}
+
+    explicit Base64(bool pad) : Base64('+', '/', pad)
+    {}
+
+    Base64() : Base64(true)
+    {}
+
     /**
      * \brief Encodes \p input
      * \returns The Base64-encoded string
      */
-    std::string encode(const std::string& input)
+    std::string encode(const std::string& input) const
     {
         std::string output;
         encode(input, output);
@@ -50,7 +60,7 @@ public:
      * \param output String holding the result
      * \return \b true on succees (cannot fail)
      */
-    bool encode(const std::string& input, std::string& output)
+    bool encode(const std::string& input, std::string& output) const
     {
         output.clear();
         output.reserve(input.size() * 4 / 3 + 3);
@@ -73,7 +83,7 @@ public:
      * \return \b true on succees (cannot fail)
      */
     template<class OutputIterator>
-        bool encode(byte_view input, OutputIterator output)
+        bool encode(byte_view input, OutputIterator output) const
     {
         uint32_t group = 0;
         int count = 0;
@@ -98,10 +108,13 @@ public:
             encode_bits(group, output, count * 8);
 
             // Append padding characters
-            for ( int i = count; i < 3; i++ )
+            if ( pad )
             {
-                *output = padding;
-                ++output;
+                for ( int i = count; i < 3; i++ )
+                {
+                    *output = padding;
+                    ++output;
+                }
             }
         }
 
@@ -114,7 +127,7 @@ private:
      * \param data 6-bit integer [0, 64)
      * \pre data & 0xC0 == 0
      */
-    byte encode_6bits(byte data)
+    byte encode_6bits(byte data) const
     {
         if ( data < 26 )
             return 'A' + data;
@@ -123,10 +136,10 @@ private:
         if ( data < 62 )
             return '0' + (data - 52);
         if ( data == 62 )
-            return '+';
+            return c62;
         // Since is being called masking the lowest 6 bits, it can never be
         // larger than 63
-        return '/';
+        return c63;
     }
 
     /**
@@ -137,7 +150,7 @@ private:
      * \pre \p bits <= 32 (Usually should be 24 aka 3 octets)
      */
     template<class OutputIterator>
-        void encode_bits(uint32_t data, OutputIterator output, int bits = 4*6)
+        void encode_bits(uint32_t data, OutputIterator output, int bits = 4*6) const
     {
         // Align the most significan bit to a sextet
         if ( bits % 6 )
@@ -158,6 +171,10 @@ private:
     }
 
     static const byte padding = '=';
+
+    byte c62;
+    byte c63;
+    bool pad;
 };
 
 } // namespace httpony

@@ -47,4 +47,8 @@ BOOST_AUTO_TEST_CASE( test_base64_encode )
 
     BOOST_CHECK( Base64().encode("HttPony", output) );
     BOOST_CHECK_EQUAL( output, "SHR0UG9ueQ==" );
+
+    BOOST_CHECK_EQUAL( Base64().encode("~~>~~?"), "fn4+fn4/" );
+    BOOST_CHECK_EQUAL( Base64('-', '_').encode("~~>~~?"), "fn4-fn4_" );
+    BOOST_CHECK_EQUAL( Base64(false).encode("x"), "eA" );
 }
