@@ -20,6 +20,7 @@
 #define HTTPONY_BASE_ENCODING_HPP
 
 #include <melanolib/utils/gsl.hpp>
+#include <melanolib/string/ascii.hpp>
 
 #include <stdexcept>
 
@@ -274,9 +275,6 @@ private:
 
     /**
      * \brief Converts a base64 character into a 6-bit integer
-     * \note It assumes ASCII-compatible character literals and cctype functions
-     * \todo Add melanolib::string::ascii with functions like isdigit etc that
-     *       aren't affected by locales or encodings.
      */
     bool decode_6bits(byte data, byte& output) const
     {
@@ -284,11 +282,11 @@ private:
             output = 63;
         else if ( data == c62 )
             output = 62;
-        else if ( std::isdigit(data) )
+        else if ( melanolib::string::ascii::is_digit(data) )
             output = data - '0' + 52;
-        else if ( std::islower(data) )
+        else if ( melanolib::string::ascii::is_lower(data) )
             output = data - 'a' + 26;
-        else if ( std::isupper(data) )
+        else if ( melanolib::string::ascii::is_upper(data) )
             output = data - 'A';
         else
             return false;

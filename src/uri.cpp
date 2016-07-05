@@ -25,6 +25,7 @@
 #include <regex>
 #include <melanolib/string/stringutils.hpp>
 #include <melanolib/string/quickstream.hpp>
+#include <melanolib/string/ascii.hpp>
 
 namespace httpony {
 
@@ -112,20 +113,6 @@ std::string Uri::query_string(bool question_mark) const
     return build_query_string(query, question_mark);
 }
 
-
-static char hex_digit(uint8_t digit)
-{
-    return digit > 9 ? digit - 10 + 'A' : digit + '0';
-}
-
-static int get_hex(char ch)
-{
-    return ch > '9' ?
-        ( ch >= 'a' ? ch - 'a' + 10 : ch - 'A' + 10 )
-        : ch - '0'
-    ;
-}
-
 std::string urlencode(const std::string& input, bool plus_spaces)
 {
     std::string output;
@@ -144,8 +131,8 @@ std::string urlencode(const std::string& input, bool plus_spaces)
         else
         {
             output.push_back('%');
-            output.push_back(hex_digit((c & 0xF0) >> 4));
-            output.push_back(hex_digit(c & 0xF));
+            output.push_back(melanolib::string::ascii::hex_digit((c & 0xF0) >> 4));
+            output.push_back(melanolib::string::ascii::hex_digit(c & 0xF));
         }
     }
     return output;
@@ -168,7 +155,10 @@ std::string urldecode(const std::string& input, bool plus_spaces)
                 output.push_back(*it);
                 continue;
             }
-            output.push_back((get_hex(*(it + 1)) << 4) | get_hex(*(it + 2)));
+            output.push_back(
+                (melanolib::string::ascii::get_hex(*(it + 1)) << 4) |
+                melanolib::string::ascii::get_hex(*(it + 2))
+            );
             it += 2;
         }
         else if ( plus_spaces && *it == '+' )
