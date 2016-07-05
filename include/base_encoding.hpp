@@ -102,7 +102,7 @@ public:
     template<class OutputIterator>
         bool encode(byte_view input, OutputIterator output) const
     {
-        uint32_t group = 0;
+        uint64_t group = 0;
         int count = 0;
 
         // Convert u_grp_count groups of u_grp_size bits
@@ -128,7 +128,8 @@ public:
             // Append padding characters
             if ( pad )
             {
-                for ( int i = count; i < u_grp_count; i++ )
+                int remaining = ((u_grp_count * u_grp_size) - (count * u_grp_size)) / e_grp_size;
+                for ( int i = 0; i < remaining; i++ )
                 {
                     *output = padding;
                     ++output;
@@ -200,7 +201,7 @@ public:
         if ( pad && input.size() % e_grp_count )
             return false;
 
-        uint32_t group = 0;
+        uint64_t group = 0;
         int count = 0;
         std::size_t i = 0;
 
@@ -210,7 +211,7 @@ public:
         {
             if ( input[i] == padding )
             {
-                if ( i < input.size() - 2 )
+                if ( i < input.size() - (e_grp_count - 1) )
                     return false;
                 else
                     break;
@@ -275,10 +276,10 @@ private:
      * \param data      Integer containing the bits to be converted
      * \param output    Output iterator accepting the converted characters
      * \param bits      Number of bits in \p data to be considered
-     * \pre \p bits <= 32 (Usually should be e_grp_count * e_grp_size)
+     * \pre \p bits <= 64 (Usually should be e_grp_count * e_grp_size)
      */
     template<class OutputIterator>
-        void encode_bits(uint32_t data, OutputIterator output, int bits) const
+        void encode_bits(uint64_t data, OutputIterator output, int bits) const
     {
         // Align the most significan bit to e_grp_size
         if ( bits % e_grp_size )
@@ -309,10 +310,10 @@ private:
      * \param data      Integer containing the bits to be converted
      * \param output    Output iterator accepting the converted characters
      * \param bits      Number of bits in \p data to be considered
-     * \pre \p bits <= 32 (Usually should be u_grp_count * u_grp_size)
+     * \pre \p bits <= 64 (Usually should be u_grp_count * u_grp_size)
      */
     template<class OutputIterator>
-        void decode_bits(uint32_t data, OutputIterator output, int bits) const
+        void decode_bits(uint64_t data, OutputIterator output, int bits) const
     {
         // Align the least significan bit to u_grp_size
         data >>= bits % u_grp_size;
@@ -398,6 +399,48 @@ private:
 
     byte c62;
     byte c63;
+};
+
+/**
+ * \brief Base 32 encoding
+ * \see https://tools.ietf.org/html/rfc4648#section-6
+ */
+class Base32 : public BaseBase
+{
+public:
+    /**
+     * \param c62 The 62nd character of the base 64 alphabet
+     * \param c63 The 63rd character of the base 64 alphabet
+     * \param pad Whether to ensure data is properly padded
+     */
+    explicit Base32(bool pad)
+        : BaseBase(8, 5, 5, 8, pad, '=', "Base 32")
+    {}
+
+    Base32() : Base32(true)
+    {}
+
+
+private:
+    byte encode_group(byte data) const override
+    {
+        if ( data < 26 )
+            return 'A' + data;
+        return '2' + (data - 26);
+    }
+
+    bool decode_group(byte data, byte& output) const override
+    {
+        if ( data >= '2' && data <= '7' )
+            output = data - '2' + 26;
+        else if ( melanolib::string::ascii::is_lower(data) )
+            output = data - 'a';
+        else if ( melanolib::string::ascii::is_upper(data) )
+            output = data - 'A';
+        else
+            return false;
+        return true;
+    }
 };
 
 } // namespace httpony

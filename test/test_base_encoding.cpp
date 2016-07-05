@@ -76,6 +76,7 @@ BOOST_AUTO_TEST_CASE( test_base64_decode )
     BOOST_CHECK_EQUAL( Base64(false).decode("eA"), "x" );
 
 }
+
 BOOST_AUTO_TEST_CASE( test_base64_decode_error )
 {
     std::string output = "Hello";
@@ -85,4 +86,41 @@ BOOST_AUTO_TEST_CASE( test_base64_decode_error )
 
     BOOST_CHECK_THROW( Base64().decode("..."), EncodingError );
 
+    BOOST_CHECK_THROW( Base64().decode("eA"), EncodingError );
+    BOOST_CHECK_THROW( Base64().decode("eA======"), EncodingError );
+}
+
+BOOST_AUTO_TEST_CASE( test_base32_encode )
+{
+    BOOST_CHECK_EQUAL( Base32().encode("Pony!"), "KBXW46JB" );
+    BOOST_CHECK_EQUAL( Base32().encode("Pony"), "KBXW46I=" );
+    BOOST_CHECK_EQUAL( Base32().encode("Pon"), "KBXW4===" );
+    BOOST_CHECK_EQUAL( Base32().encode("Po"), "KBXQ====" );
+    BOOST_CHECK_EQUAL( Base32().encode("P"), "KA======" );
+    BOOST_CHECK_EQUAL( Base32().encode("HttPony"), "JB2HIUDPNZ4Q====" );
+    BOOST_CHECK_EQUAL( Base32(false).encode("HttPony"), "JB2HIUDPNZ4Q" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base32_decode )
+{
+    BOOST_CHECK_EQUAL( Base32().decode("KBXW46JB"), "Pony!" );
+    BOOST_CHECK_EQUAL( Base32().decode("KBXW46I="), "Pony" );
+    BOOST_CHECK_EQUAL( Base32().decode("KBXW4==="), "Pon" );
+    BOOST_CHECK_EQUAL( Base32().decode("KBXQ===="), "Po" );
+    BOOST_CHECK_EQUAL( Base32().decode("KA======"), "P" );
+    BOOST_CHECK_EQUAL( Base32().decode("JB2HIUDPNZ4Q===="), "HttPony" );
+    BOOST_CHECK_EQUAL( Base32(false).decode("JB2HIUDPNZ4Q"), "HttPony" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base32_decode_error )
+{
+    std::string output = "Hello";
+
+    BOOST_CHECK( !Base32().decode("...", output) );
+    BOOST_CHECK_EQUAL( output, "" );
+
+    BOOST_CHECK_THROW( Base32().decode("..."), EncodingError );
+
+    BOOST_CHECK_THROW( Base32().decode("KA"), EncodingError );
+    BOOST_CHECK_THROW( Base32().decode("KA=========="), EncodingError );
 }
