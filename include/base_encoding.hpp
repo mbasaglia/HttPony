@@ -409,8 +409,6 @@ class Base32 : public BaseBase
 {
 public:
     /**
-     * \param c62 The 62nd character of the base 64 alphabet
-     * \param c63 The 63rd character of the base 64 alphabet
      * \param pad Whether to ensure data is properly padded
      */
     explicit Base32(bool pad)
@@ -437,6 +435,38 @@ private:
             output = data - 'a';
         else if ( melanolib::string::ascii::is_upper(data) )
             output = data - 'A';
+        else
+            return false;
+        return true;
+    }
+};
+
+/**
+ * \brief Base 32 hex encoding
+ * \see https://tools.ietf.org/html/rfc4648#section-7
+ */
+class Base32Hex : public Base32
+{
+public:
+    using Base32::Base32;
+
+
+private:
+    byte encode_group(byte data) const override
+    {
+        if ( data < 10 )
+            return '0' + data;
+        return 'A' + (data - 10);
+    }
+
+    bool decode_group(byte data, byte& output) const override
+    {
+        if (  data <= '9' )
+            output = data - '0';
+        else if ( melanolib::string::ascii::is_lower(data) && data <= 'v' )
+            output = data - 'a' + 10;
+        else if ( melanolib::string::ascii::is_upper(data) && data <= 'V' )
+            output = data - 'A' + 10;
         else
             return false;
         return true;

@@ -124,3 +124,38 @@ BOOST_AUTO_TEST_CASE( test_base32_decode_error )
     BOOST_CHECK_THROW( Base32().decode("KA"), EncodingError );
     BOOST_CHECK_THROW( Base32().decode("KA=========="), EncodingError );
 }
+
+BOOST_AUTO_TEST_CASE( test_base32hex_encode )
+{
+    BOOST_CHECK_EQUAL( Base32Hex().encode("Pony!"), "A1NMSU91" );
+    BOOST_CHECK_EQUAL( Base32Hex().encode("Pony"), "A1NMSU8=" );
+    BOOST_CHECK_EQUAL( Base32Hex().encode("Pon"), "A1NMS===" );
+    BOOST_CHECK_EQUAL( Base32Hex().encode("Po"), "A1NG====" );
+    BOOST_CHECK_EQUAL( Base32Hex().encode("P"), "A0======" );
+    BOOST_CHECK_EQUAL( Base32Hex().encode("HttPony"), "91Q78K3FDPSG====" );
+    BOOST_CHECK_EQUAL( Base32Hex(false).encode("HttPony"), "91Q78K3FDPSG" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base32hex_decode )
+{
+    BOOST_CHECK_EQUAL( Base32Hex().decode("A1NMSU91"), "Pony!" );
+    BOOST_CHECK_EQUAL( Base32Hex().decode("A1NMSU8="), "Pony" );
+    BOOST_CHECK_EQUAL( Base32Hex().decode("A1NMS==="), "Pon" );
+    BOOST_CHECK_EQUAL( Base32Hex().decode("A1NG===="), "Po" );
+    BOOST_CHECK_EQUAL( Base32Hex().decode("A0======"), "P" );
+    BOOST_CHECK_EQUAL( Base32Hex().decode("91Q78K3FDPSG===="), "HttPony" );
+    BOOST_CHECK_EQUAL( Base32Hex(false).decode("91Q78K3FDPSG"), "HttPony" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base32hex_decode_error )
+{
+    std::string output = "Hello";
+
+    BOOST_CHECK( !Base32Hex().decode("...", output) );
+    BOOST_CHECK_EQUAL( output, "" );
+
+    BOOST_CHECK_THROW( Base32Hex().decode("..."), EncodingError );
+
+    BOOST_CHECK_THROW( Base32Hex().decode("A0"), EncodingError );
+    BOOST_CHECK_THROW( Base32Hex().decode("A0=========="), EncodingError );
+}
