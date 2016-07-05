@@ -37,6 +37,7 @@ public:
 
 /**
  * \brief Base encoding common algorithm
+ * \see https://tools.ietf.org/html/rfc4648
  */
 class BaseBase
 {
