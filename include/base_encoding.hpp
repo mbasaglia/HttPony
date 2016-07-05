@@ -209,7 +209,7 @@ public:
         // into u_grp_count groups of u_grp_size bits
         for ( ; i < input.size(); i++ )
         {
-            if ( input[i] == padding )
+            if ( input[i] == padding && u_grp_size % e_grp_size )
             {
                 if ( i < input.size() - (e_grp_count - 1) )
                     return false;
@@ -445,11 +445,18 @@ private:
  * \brief Base 32 hex encoding
  * \see https://tools.ietf.org/html/rfc4648#section-7
  */
-class Base32Hex : public Base32
+class Base32Hex : public BaseBase
 {
 public:
-    using Base32::Base32;
+    /**
+     * \param pad Whether to ensure data is properly padded
+     */
+    explicit Base32Hex(bool pad)
+        : BaseBase(8, 5, 5, 8, pad, '=', "Base 32 Hex")
+    {}
 
+    Base32Hex() : Base32Hex(true)
+    {}
 
 private:
     byte encode_group(byte data) const override
@@ -470,6 +477,34 @@ private:
         else
             return false;
         return true;
+    }
+};
+
+/**
+ * \brief Base 16 (hex) encoding
+ * \see https://tools.ietf.org/html/rfc4648#section-8
+ */
+class Base16 : public BaseBase
+{
+public:
+    Base16()
+        : BaseBase(8, 1, 4, 2, true, '=', "Base 16")
+    {}
+
+private:
+    byte encode_group(byte data) const override
+    {
+        return melanolib::string::ascii::hex_digit(data);
+    }
+
+    bool decode_group(byte data, byte& output) const override
+    {
+        if ( melanolib::string::ascii::is_xdigit(data) )
+        {
+            output = melanolib::string::ascii::get_hex(data);
+            return true;
+        }
+        return false;
     }
 };
 

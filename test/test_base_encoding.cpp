@@ -159,3 +159,38 @@ BOOST_AUTO_TEST_CASE( test_base32hex_decode_error )
     BOOST_CHECK_THROW( Base32Hex().decode("A0"), EncodingError );
     BOOST_CHECK_THROW( Base32Hex().decode("A0=========="), EncodingError );
 }
+
+BOOST_AUTO_TEST_CASE( test_base16_encode )
+{
+    BOOST_CHECK_EQUAL( Base16().encode(""), "" );
+    BOOST_CHECK_EQUAL( Base16().encode("f"), "66" );
+    BOOST_CHECK_EQUAL( Base16().encode("fo"), "666F" );
+    BOOST_CHECK_EQUAL( Base16().encode("foo"), "666F6F" );
+    BOOST_CHECK_EQUAL( Base16().encode("foob"), "666F6F62" );
+    BOOST_CHECK_EQUAL( Base16().encode("fooba"), "666F6F6261" );
+    BOOST_CHECK_EQUAL( Base16().encode("foobar"), "666F6F626172" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base16_decode )
+{
+    BOOST_CHECK_EQUAL( Base16().decode(""), "" );
+    BOOST_CHECK_EQUAL( Base16().decode("66"), "f" );
+    BOOST_CHECK_EQUAL( Base16().decode("666F"), "fo" );
+    BOOST_CHECK_EQUAL( Base16().decode("666F6F"), "foo" );
+    BOOST_CHECK_EQUAL( Base16().decode("666F6F62"), "foob" );
+    BOOST_CHECK_EQUAL( Base16().decode("666F6F6261"), "fooba" );
+    BOOST_CHECK_EQUAL( Base16().decode("666F6F626172"), "foobar" );
+}
+
+BOOST_AUTO_TEST_CASE( test_base16_decode_error )
+{
+    std::string output = "Hello";
+
+    BOOST_CHECK( !Base16().decode("...", output) );
+    BOOST_CHECK_EQUAL( output, "" );
+
+    BOOST_CHECK_THROW( Base16().decode("..."), EncodingError );
+
+    BOOST_CHECK_THROW( Base16().decode("666"), EncodingError );
+    BOOST_CHECK_THROW( Base16().decode("666="), EncodingError );
+}
