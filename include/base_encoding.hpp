@@ -36,36 +36,39 @@ public:
 };
 
 /**
- * \brief Base 64 encoding
- * \see https://tools.ietf.org/html/rfc4648#section-4
+ * \brief Base encoding common algorithm
  */
-class Base64
+class BaseBase
 {
 public:
     /**
-     * \param c62 The 62nd character of the base 64 alphabet
-     * \param c63 The 63rd character of the base 64 alphabet
-     * \param pad Whether to ensure data is properly padded
+     * \brief Name of the encoding
      */
-    Base64(byte c62, byte c63, bool pad = true)
-        : c62(c62), c63(c63), pad(pad)
-    {}
-
-    explicit Base64(bool pad) : Base64('+', '/', pad)
-    {}
-
-    Base64() : Base64(true)
-    {}
+    std::string name() const
+    {
+        return encoding_name;
+    }
 
     /**
      * \brief Encodes \p input
-     * \returns The Base64-encoded string
+     * \returns The base-encoded string
      */
     std::string encode(const std::string& input) const
     {
         std::string output;
-        encode(input, output);
+        if ( !encode(input, output) )
+            throw EncodingError("Cannot encode to" + name() );
         return output;
+    }
+
+    /**
+     * \brief Size estimate of an output octet string after encoding
+     */
+    std::size_t encoded_size(std::size_t unencoded_size) const
+    {
+        if ( unencoded_size % e_grp_count )
+            unencoded_size += e_grp_count - (unencoded_size % e_grp_count);
+        return unencoded_size * e_grp_count / u_grp_count;
     }
 
     /**
@@ -77,7 +80,7 @@ public:
     bool encode(const std::string& input, std::string& output) const
     {
         output.clear();
-        output.reserve(input.size() * 4 / 3 + 3);
+        output.reserve(encoded_size(input.size()));
 
         bool encoded = encode(
             byte_view(reinterpret_cast<const byte*>(input.data()), input.size()),
@@ -102,14 +105,15 @@ public:
         uint32_t group = 0;
         int count = 0;
 
-        // Convert groups of 3 octects into 4 sextets
+        // Convert u_grp_count groups of u_grp_size bits
+        // into e_grp_count groups of e_grp_size
         for ( auto bin : input )
         {
-            group = (group << 8) | bin;
+            group = (group << u_grp_size) | bin;
             count++;
-            if ( count == 3 )
+            if ( count == u_grp_count )
             {
-                encode_bits(group, output);
+                encode_bits(group, output, u_grp_size * u_grp_count);
                 group = 0;
                 count = 0;
             }
@@ -119,12 +123,12 @@ public:
         if ( count )
         {
             // Encode available bits
-            encode_bits(group, output, count * 8);
+            encode_bits(group, output, count * u_grp_size);
 
             // Append padding characters
             if ( pad )
             {
-                for ( int i = count; i < 3; i++ )
+                for ( int i = count; i < u_grp_count; i++ )
                 {
                     *output = padding;
                     ++output;
@@ -135,9 +139,20 @@ public:
         return true;
     }
 
+
+    /**
+     * \brief Size estimate of an output octet string after decoding
+     */
+    std::size_t decoded_size(std::size_t encoded_size) const
+    {
+        if ( encoded_size % u_grp_count )
+            encoded_size += u_grp_count - (encoded_size % u_grp_count);
+        return encoded_size * u_grp_count / e_grp_count;
+    }
+
     /**
      * \brief Decodes \p input
-     * \param input A base64-encoded string
+     * \param input A base-encoded string
      * \returns The unencoded string
      * \throws EncodingError if the encoding failed
      */
@@ -145,13 +160,13 @@ public:
     {
         std::string output;
         if ( !decode(input, output) )
-            throw EncodingError("Invalid base 64 string");
+            throw EncodingError("Invalid " + name() + " string");
         return output;
     }
 
     /**
      * \brief Decodes \p input into \p output
-     * \param input  Base64-encoded string
+     * \param input  base-encoded string
      * \param output String to store the result into
      *
      * In case of failure \p output will result into an empty string
@@ -160,7 +175,7 @@ public:
     bool decode(const std::string& input, std::string& output) const
     {
         output.clear();
-        output.reserve(input.size() * 3 / 4);
+        output.reserve(decoded_size(input.size()));
 
         bool encoded = decode(
             byte_view(reinterpret_cast<const byte*>(input.data()), input.size()),
@@ -175,21 +190,22 @@ public:
 
     /**
      * \brief Decodes \p input into \p output
-     * \param input     View to a base64-encoded byte string
+     * \param input     View to a base-encoded byte string
      * \param output    Output iterator accepting the converted characters
      * \return \b true on succees
      */
     template<class OutputIterator>
         bool decode(byte_view input, OutputIterator output) const
     {
-        if ( pad && input.size() % 4 )
+        if ( pad && input.size() % e_grp_count )
             return false;
 
         uint32_t group = 0;
         int count = 0;
         std::size_t i = 0;
 
-        // Converts groups of 6 base64 sextets into 4 octets
+        // Converts e_grp_count groups of e_grp_size bits
+        // into u_grp_count groups of u_grp_size bits
         for ( ; i < input.size(); i++ )
         {
             if ( input[i] == padding )
@@ -201,15 +217,15 @@ public:
             }
 
             uint8_t bout;
-            if ( !decode_6bits(input[i], bout) )
+            if ( !decode_group(input[i], bout) )
                 return false;
 
-            group = (group << 6) | bout;
+            group = (group << e_grp_size) | bout;
             count++;
 
-            if ( count == 4 )
+            if ( count == e_grp_count )
             {
-                decode_bits(group, output);
+                decode_bits(group, output, e_grp_count * e_grp_size);
                 group = 0;
                 count = 0;
             }
@@ -218,19 +234,137 @@ public:
         // Handle padded string
         if ( count )
         {
-            decode_bits(group, output, count * 6);
+            decode_bits(group, output, count * e_grp_size);
         }
 
         return true;
     }
 
+protected:
+    explicit BaseBase(
+        int u_grp_size,
+        int u_grp_count,
+        int e_grp_size,
+        int e_grp_count,
+        bool pad,
+        char padding,
+        const char* encoding_name
+    )
+        : u_grp_size(u_grp_size),
+          u_grp_count(u_grp_count),
+          e_grp_size(e_grp_size),
+          e_grp_count(e_grp_count),
+          u2e_bitmask((1 << e_grp_size) - 1),
+          e2u_bitmask((1 << u_grp_size) - 1),
+          pad(pad),
+          padding(padding),
+          encoding_name(encoding_name)
+    {}
+
 private:
+
     /**
-     * \brief Converts a 6-bit integer into a Base64-encoded 8-bit character
-     * \param data 6-bit integer [0, 64)
-     * \pre data & 0xC0 == 0
+     * \brief Converts a e_grp_size-bit integer into a base-encoded 8-bit character
+     * \param data e_grp_size-bit integer [0, 64)
+     * \pre data & u2e_bitmask == data
      */
-    byte encode_6bits(byte data) const
+    virtual byte encode_group(byte data) const = 0;
+
+    /**
+     * \brief Encodes an integer into the base encoding
+     * \param data      Integer containing the bits to be converted
+     * \param output    Output iterator accepting the converted characters
+     * \param bits      Number of bits in \p data to be considered
+     * \pre \p bits <= 32 (Usually should be e_grp_count * e_grp_size)
+     */
+    template<class OutputIterator>
+        void encode_bits(uint32_t data, OutputIterator output, int bits) const
+    {
+        // Align the most significan bit to e_grp_size
+        if ( bits % e_grp_size )
+        {
+            int diff = e_grp_size - (bits % e_grp_size);
+            data <<= diff;
+            bits += diff;
+        }
+
+        // Eats groups of e_grp_size bits from the most significant to the least
+        for ( ;  bits > 0; bits -= e_grp_size )
+        {
+            int shift = bits - e_grp_size;
+            byte bout = encode_group((data >> shift) & u2e_bitmask);
+            *output = bout;
+            ++output;
+        }
+    }
+
+    /**
+     * \brief Converts a base-encoded character into a e_grp_size-bit integer
+     * \returns \b true on success
+     */
+    virtual bool decode_group(byte data, byte& output) const = 0;
+
+    /**
+     * \brief Decodes an integer from base encoding
+     * \param data      Integer containing the bits to be converted
+     * \param output    Output iterator accepting the converted characters
+     * \param bits      Number of bits in \p data to be considered
+     * \pre \p bits <= 32 (Usually should be u_grp_count * u_grp_size)
+     */
+    template<class OutputIterator>
+        void decode_bits(uint32_t data, OutputIterator output, int bits) const
+    {
+        // Align the least significan bit to u_grp_size
+        data >>= bits % u_grp_size;
+        bits -= bits % u_grp_size;
+
+        // Eats groups of u_grp_size bits from the most significant to the least
+        for ( ;  bits > 0; bits -= u_grp_size )
+        {
+            int shift = bits - u_grp_size;
+            *output = (data >> shift) & e2u_bitmask;
+            ++output;
+        }
+    }
+
+    int u_grp_size;         ///< Size in bits of an unencoded group
+    int u_grp_count;        ///< Number of unencoded bit groups to encode
+    int e_grp_size;         ///< Size in bits of an encoded group
+    int e_grp_count;        ///< Number of encoded bit groups
+    uint8_t u2e_bitmask;    ///< Mask extract the least significant e_grp_size bits from an integer (for encoding)
+    uint8_t e2u_bitmask;    ///< Mask extract the least significant u_grp_size bits from an integer (for decoding)
+    bool pad;               ///< Whether it needs padding
+    char padding;           ///< Padding character
+    const char* encoding_name;
+
+};
+
+/**
+ * \brief Base 64 encoding
+ * \see https://tools.ietf.org/html/rfc4648#section-4
+ */
+class Base64 : public BaseBase
+{
+public:
+    /**
+     * \param c62 The 62nd character of the base 64 alphabet
+     * \param c63 The 63rd character of the base 64 alphabet
+     * \param pad Whether to ensure data is properly padded
+     */
+    Base64(byte c62, byte c63, bool pad = true)
+        : BaseBase(8, 3, 6, 4, pad, '=', "Base 64"),
+        c62(c62), c63(c63)
+    {}
+
+    explicit Base64(bool pad) : Base64('+', '/', pad)
+    {}
+
+    Base64() : Base64(true)
+    {}
+
+
+private:
+    byte encode_group(byte data) const override
     {
         if ( data < 26 )
             return 'A' + data;
@@ -245,38 +379,7 @@ private:
         return c63;
     }
 
-    /**
-     * \brief Encodes an integer into Base64
-     * \param data      Integer containing the bits to be converted
-     * \param output    Output iterator accepting the converted characters
-     * \param bits      Number of bits in \p data to be considered
-     * \pre \p bits <= 32 (Usually should be 24 aka 3 octets)
-     */
-    template<class OutputIterator>
-        void encode_bits(uint32_t data, OutputIterator output, int bits = 24) const
-    {
-        // Align the most significan bit to a sextet
-        if ( bits % 6 )
-        {
-            int diff = 6 - (bits % 6);
-            data <<= diff;
-            bits += diff;
-        }
-
-        // Eats groups of 6 bits from the most significant to the least
-        for ( ;  bits > 0; bits -= 6 )
-        {
-            int shift = bits - 6;
-            byte bout = encode_6bits((data >> shift) & 0x3F);
-            *output = bout;
-            ++output;
-        }
-    }
-
-    /**
-     * \brief Converts a base64 character into a 6-bit integer
-     */
-    bool decode_6bits(byte data, byte& output) const
+    bool decode_group(byte data, byte& output) const override
     {
         if ( data == c63 )
             output = 63;
@@ -293,35 +396,8 @@ private:
         return true;
     }
 
-    /**
-     * \brief Decodes an integer from base 64
-     * \param data      Integer containing the bits to be converted
-     * \param output    Output iterator accepting the converted characters
-     * \param bits      Number of bits in \p data to be considered
-     * \pre \p bits <= 32 (Usually should be 24 aka 4 sextets)
-     */
-    template<class OutputIterator>
-        void decode_bits(uint32_t data, OutputIterator output, int bits = 24) const
-    {
-        // Align the least significan bit to an octet
-        data >>= bits % 8;
-        bits -= bits % 8;
-
-        // Eats groups of 8 bits from the most significant to the least
-        for ( ;  bits > 0; bits -= 8 )
-        {
-            int shift = bits - 8;
-            *output = (data >> shift) & 0xFF;
-            ++output;
-        }
-    }
-
-
-    static const byte padding = '=';
-
     byte c62;
     byte c63;
-    bool pad;
 };
 
 } // namespace httpony
