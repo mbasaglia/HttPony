@@ -117,7 +117,7 @@ private:
 /**
  * \brief Reads an incoming message payload fro m a network buffer
  */
-class NetworkInputStream : std::istream
+class NetworkInputStream : public std::istream
 {
 public:
     explicit NetworkInputStream(NetworkBuffer& buffer, const Headers& headers);
@@ -171,7 +171,6 @@ public:
         }
         return all;
     }
-
 
     MimeType content_type() const
     {
