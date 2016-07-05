@@ -113,7 +113,11 @@ public:
     Status status = StatusCode::OK;
     NetworkBuffer input;
     Server* const server;
+    /// Whether to accept (and parse) requests containing folded headers
     bool parse_folded_headers = false;
+    /// Whether to parse Cookie header into request.cookie
+    /// If false, cookies will be accessible as headers
+    bool parse_cookies = true;
 
 private:
     /**

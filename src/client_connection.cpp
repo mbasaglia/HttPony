@@ -148,7 +148,7 @@ bool ClientConnection::read_headers(std::istream& buffer_stream)
         if ( !read_delimited(buffer_stream, name, ':') )
             return false;
 
-        if ( name == "Cookie" )
+        if ( parse_cookies && name == "Cookie" )
         {
             if ( !read_cookie(buffer_stream) )
                 return false;
