@@ -65,6 +65,15 @@ private:
             connection.status = httpony::StatusCode::OK;
         }
 
+        // Parse form data
+        if ( connection.request.can_parse_post() )
+        {
+            if ( !connection.request.parse_post() )
+                connection.status = httpony::StatusCode::BadRequest;
+
+            return "";
+        }
+
         // Check if we have something to read
         if ( connection.request.body.has_data() )
         {

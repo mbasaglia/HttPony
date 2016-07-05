@@ -19,52 +19,33 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTPONY_REQUEST_HPP
-#define HTTPONY_REQUEST_HPP
-
-#include <melanolib/time/date_time.hpp>
-
-#include "ip_address.hpp"
-#include "protocol.hpp"
-#include "io.hpp"
+#include "request.hpp"
 #include "uri.hpp"
 
 namespace httpony {
 
-
-/**
- * \brief HTTP Authentication credentials
- */
-struct Auth
+/// \todo Maybe this could use a parser factory based on mime-type
+bool Request::can_parse_post() const
 {
-    std::string user;
-    std::string password;
-};
+    return body.has_data() &&
+        body.content_type() == MimeType("application/x-www-form-urlencoded")
+    ;
+}
 
-
-/**
- * \brief HTTP request data
- */
-struct Request
+bool Request::parse_post()
 {
-    Uri         url;
-    std::string method;
-    Protocol    protocol;
-    Headers     headers;
-    DataMap     cookies;
-    DataMap     get;
-    DataMap     post;
-    IPAddress   from;
-    Auth        auth;
+    if ( !body.has_data() )
+        return false;
 
-    NetworkInputStream body;
+    /// \todo Parse urlencoded and multipart/form-data into request.post
+    if ( body.content_type() == MimeType("application/x-www-form-urlencoded") )
+    {
+        post = parse_query_string(body.read_all());
+        return true;
+    }
 
-    melanolib::time::DateTime received_date;
+    return false;
+}
 
-    bool can_parse_post() const;
-
-    bool parse_post();
-};
 
 } // namespace httpony
-#endif // HTTPONY_REQUEST_HPP

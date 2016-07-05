@@ -23,6 +23,7 @@ logging.cpp
 client_connection.cpp
 io.cpp
 uri.cpp
+request.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})
