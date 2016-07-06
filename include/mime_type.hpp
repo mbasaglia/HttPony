@@ -62,7 +62,6 @@ public:
             }
 
             set_parameter(parameter);
-
         }
     }
 
