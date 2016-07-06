@@ -28,6 +28,14 @@
 #include "response.hpp"
 
 namespace httpony {
+/**
+ * \brief Namespace with utilities that implement the HTTP text-based protocol
+ */
+namespace http {
+/**
+ * \brief Namespace with functions to read HTTP from an input stream
+ */
+namespace read {
 
 enum HttpParserFlag
 {
@@ -42,6 +50,7 @@ enum HttpParserFlag
 
 using HttpParserFlags = unsigned;
 
+
 /**
  * \brief Reads a full request object from the stream
  * \param stream    Input stream
@@ -51,7 +60,7 @@ using HttpParserFlags = unsigned;
  * \note If it returns an error code, it's likely the request contain only
  *       partially parsed data
  */
-Status read_request(std::istream& stream, Request& request, HttpParserFlags flags = ParseDefault);
+Status request(std::istream& stream, Request& request, HttpParserFlags flags = ParseDefault);
 
 /**
  * \brief Parses Cookie: headers
@@ -59,7 +68,7 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
  * \param cookies   Cookie container to update
  * \returns \b true on success
  */
-bool read_cookies(std::istream& stream, httpony::DataMap& cookies);
+bool cookies(std::istream& stream, httpony::DataMap& cookies);
 
 /**
  * \brief Reads a string delimited by a specific character and ignores following spaces
@@ -69,7 +78,7 @@ bool read_cookies(std::istream& stream, httpony::DataMap& cookies);
  * \param at_end Whether the value can be at the end of the line
  * \returns \b true on success
  */
-bool read_delimited(std::istream& stream, std::string& output,
+bool delimited(std::istream& stream, std::string& output,
                     char delim = ':', bool at_end = false);
 
 /**
@@ -92,13 +101,13 @@ void skip_line(std::istream& stream);
  * \param parse_folded  Whether to parse or reject folded headers
  * \returns \b true on success
  */
-bool read_headers(std::istream& stream, httpony::Headers& headers, bool parse_folded = false);
+bool headers(std::istream& stream, httpony::Headers& headers, bool parse_folded = false);
 
 /**
  * \brief Reads a "quoted" header value
  * \returns \b true on success
  */
-bool read_quoted_header_value(std::istream& stream, std::string& value);
+bool quoted_header_value(std::istream& stream, std::string& value);
 
 /**
  * \brief Reads the request line (GET /url HTTP/1.1)
@@ -106,7 +115,10 @@ bool read_quoted_header_value(std::istream& stream, std::string& value);
  * \param request   Request object to update
  * \returns \b true on success
  */
-bool read_request_line(std::istream& stream, Request& request);
+bool request_line(std::istream& stream, Request& request);
 
+
+} // namespace read
+} // namespace http
 } // namespace httpony
 #endif // HTTPONY_HTTP_PARSER_HPP

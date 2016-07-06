@@ -22,7 +22,7 @@
 #ifndef HTTPONY_CLIENT_CONNECTION_HPP
 #define HTTPONY_CLIENT_CONNECTION_HPP
 
-#include "http_parser.hpp"
+#include "http/read.hpp"
 
 namespace httpony {
 
@@ -112,7 +112,7 @@ public:
     Status status = StatusCode::OK;
     NetworkBuffer input;
     Server* const server;
-    HttpParserFlags parse_flags = ParseDefault;
+    http::read::HttpParserFlags parse_flags = http::read::ParseDefault;
 
 private:
     /**
@@ -126,13 +126,6 @@ private:
             endpoint.port()
         );
     }
-
-    template<class String, class Value>
-        void write_header(std::ostream& stream, String&& name, Value&& value)
-    {
-        stream << std::forward<String>(name) << ": " << std::forward<Value>(value) << "\r\n";
-    }
-
 };
 
 

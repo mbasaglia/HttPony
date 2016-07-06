@@ -23,6 +23,8 @@
 
 #include <melanolib/time/time_string.hpp>
 
+#include "http/write.hpp"
+
 namespace httpony {
 
 void ClientConnection::read_request()
@@ -41,7 +43,7 @@ void ClientConnection::read_request()
         return;
 
     std::istream stream(&input);
-    status = httpony::read_request(stream, request, parse_flags);
+    status = http::read::request(stream, request, parse_flags);
     response.protocol = request.protocol;
     request.from = remote;
 }
@@ -49,31 +51,9 @@ void ClientConnection::read_request()
 void ClientConnection::send_response(Response& response)
 {
     boost::asio::streambuf buffer_write;
-    std::ostream buffer_stream(&buffer_write);
-    buffer_stream << response.protocol << ' '
-                    << response.status.code << ' '
-                    << response.status.message << "\r\n";
-
-    write_header(buffer_stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
-
-    for ( const auto& header : response.headers )
-        write_header(buffer_stream, header.first, header.second);
-
-    for ( const auto& cookie : response.cookies )
-        write_header(buffer_stream, "Set-Cookie", cookie);
-
-
-    if ( response.body.has_data() )
-    {
-        write_header(buffer_stream, "Content-Type", response.body.content_type());
-        write_header(buffer_stream, "Content-Length", response.body.content_length());
-    }
-
-    buffer_stream << "\r\n";
+    std::ostream stream(&buffer_write);
+    http::write::response(stream, response);
     boost::asio::write(input.socket(), buffer_write);
-
-    if ( response.body.has_data() )
-        response.body.net_write(input.socket());
 }
 
 } // namespace httpony

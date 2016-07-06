@@ -272,6 +272,15 @@ public:
             boost::asio::write(socket, buffer);
     }
 
+    /**
+     * \brief Writes the payload to a stream
+     */
+    void write_to(std::ostream& output)
+    {
+        if ( has_data() )
+            output << &buffer;
+    }
+
 private:
     void copy_from(NetworkOutputStream& other);
 

@@ -19,18 +19,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "http_parser.hpp"
+#include "http/read.hpp"
 
 namespace httpony {
 
-Status read_request(std::istream& stream, Request& request, HttpParserFlags flags)
+namespace http {
+namespace read {
+
+Status request(std::istream& stream, Request& request, HttpParserFlags flags)
 {
     request = Request();
 
-    if ( !read_request_line(stream, request) )
+    if ( !request_line(stream, request) )
         return StatusCode::BadRequest;
 
-    if ( !read_headers(stream, request.headers, flags & ParseFoldedHeaders) )
+    if ( !headers(stream, request.headers, flags & ParseFoldedHeaders) )
         return StatusCode::BadRequest;
 
     if ( flags & ParseCookies )
@@ -38,7 +41,7 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
         for ( const auto& cookie_header : request.headers.key_range("Cookie") )
         {
             std::istringstream cookie_stream(cookie_header.second);
-            if ( !read_cookies(cookie_stream, request.cookies) )
+            if ( !cookies(cookie_stream, request.cookies) )
                 return StatusCode::BadRequest;
         }
     }
@@ -67,7 +70,7 @@ void skip_line(std::istream& stream)
     while ( stream && stream.get() != '\n' );
 }
 
-bool read_request_line(std::istream& stream, Request& request)
+bool request_line(std::istream& stream, Request& request)
 {
     std::string uri;
     stream >> request.method >> uri >> request.protocol;
@@ -78,7 +81,7 @@ bool read_request_line(std::istream& stream, Request& request)
     return request.protocol.valid() && stream;
 }
 
-bool read_headers(std::istream& stream, Headers& headers, bool parse_folded)
+bool headers(std::istream& stream, Headers& headers, bool parse_folded)
 {
     std::string name, value;
     while ( stream && stream.peek() != '\r' )
@@ -103,12 +106,12 @@ bool read_headers(std::istream& stream, Headers& headers, bool parse_folded)
             continue;
         }
 
-        if ( !read_delimited(stream, name, ':') )
+        if ( !delimited(stream, name, ':') )
             return false;
 
         if ( stream.peek() == '"' )
         {
-            read_quoted_header_value(stream, value);
+            quoted_header_value(stream, value);
         }
         else
         {
@@ -130,7 +133,7 @@ bool read_headers(std::istream& stream, Headers& headers, bool parse_folded)
     return true;
 }
 
-bool read_delimited(std::istream& stream, std::string& output, char delim, bool at_end)
+bool delimited(std::istream& stream, std::string& output, char delim, bool at_end)
 {
     output.clear();
     while ( true )
@@ -163,7 +166,7 @@ bool skip_spaces(std::istream& stream, bool at_end )
     return true;
 }
 
-bool read_quoted_header_value(std::istream& stream, std::string& value)
+bool quoted_header_value(std::istream& stream, std::string& value)
 {
     stream.ignore(1, '"');
     value.clear();
@@ -192,7 +195,6 @@ bool read_quoted_header_value(std::istream& stream, std::string& value)
         }
 
         value += c;
-
     }
 
     skip_line(stream);
@@ -200,16 +202,16 @@ bool read_quoted_header_value(std::istream& stream, std::string& value)
     return true;
 }
 
-bool read_cookies(std::istream& stream, DataMap& cookies)
+bool cookies(std::istream& stream, DataMap& cookies)
 {
     while ( stream.peek() != '\r' && stream.peek() != std::istream::traits_type::eof() )
     {
         std::string name;
-        if ( !read_delimited(stream, name, '=') )
+        if ( !delimited(stream, name, '=') )
             return false;
 
         std::string value;
-        if ( !read_delimited(stream, value, ';', true) )
+        if ( !delimited(stream, value, ';', true) )
             return false;
 
         cookies.append(name, value);
@@ -221,4 +223,6 @@ bool read_cookies(std::istream& stream, DataMap& cookies)
 }
 
 
+} // namespace read
+} // namespace http
 } // namespace httpony
