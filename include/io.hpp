@@ -26,16 +26,18 @@
 #include <boost/asio.hpp>
 
 #include "mime_type.hpp"
+#include "ip_address.hpp"
 
 namespace httpony {
 
 /**
  * \brief Stream buffer linked to a socket for reading
  */
-struct NetworkBuffer : boost::asio::streambuf
+class NetworkInputBuffer : public boost::asio::streambuf
 {
-    explicit NetworkBuffer(boost::asio::ip::tcp::socket socket)
-        : _socket(std::move(socket))
+public:
+    explicit NetworkInputBuffer(boost::asio::ip::tcp::socket& socket)
+        : _socket(socket)
     {
     }
 
@@ -68,11 +70,6 @@ struct NetworkBuffer : boost::asio::streambuf
     std::size_t expected_input() const
     {
         return _expected_input;
-    }
-
-    boost::asio::ip::tcp::socket& socket()
-    {
-        return _socket;
     }
 
     boost::system::error_code error() const
@@ -109,20 +106,80 @@ protected:
     }
 
 private:
-    boost::asio::ip::tcp::socket _socket;
+    boost::asio::ip::tcp::socket& _socket;
     std::size_t _expected_input = 0;
     boost::system::error_code _error;
 };
 
-/**
- * \brief Reads an incoming message payload fro m a network buffer
- */
-class NetworkInputStream : public std::istream
+using NetworkOutputBuffer = boost::asio::streambuf;
+
+class NetworkIO
 {
 public:
-    explicit NetworkInputStream(std::streambuf* buffer, const Headers& headers);
+    explicit NetworkIO(boost::asio::ip::tcp::socket socket)
+        : _socket(std::move(socket)), _input_buffer(_socket)
+    {
+    }
 
-    NetworkInputStream()
+    NetworkInputBuffer& input_buffer()
+    {
+        return _input_buffer;
+    }
+
+    boost::asio::streambuf& output_buffer()
+    {
+        return _output_buffer;
+    }
+
+    void commit_output()
+    {
+        boost::asio::write(_socket, _output_buffer);
+    }
+
+    void close()
+    {
+        _socket.close();
+    }
+
+    IPAddress remote_address() const
+    {
+        return endpoint_to_ip(_socket.remote_endpoint());
+    }
+
+    IPAddress local_address() const
+    {
+        return endpoint_to_ip(_socket.local_endpoint());
+    }
+
+private:
+    /**
+     * \brief Converts a boost endpoint to an IPAddress object
+     */
+    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
+    {
+        return IPAddress(
+            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
+            endpoint.address().to_string(),
+            endpoint.port()
+        );
+    }
+
+    boost::asio::ip::tcp::socket _socket;
+    NetworkInputBuffer  _input_buffer;
+    NetworkOutputBuffer _output_buffer;
+
+};
+
+
+/**
+ * \brief Reads an incoming message payload
+ */
+class InputContentStream : public std::istream
+{
+public:
+    explicit InputContentStream(std::streambuf* buffer, const Headers& headers);
+
+    InputContentStream()
         : std::istream(nullptr)
     {}
 
@@ -186,15 +243,15 @@ private:
 /**
  * \brief Writes an outgoing message payload
  */
-class NetworkOutputStream: public std::ostream
+class OutputContentStream: public std::ostream
 {
 public:
-    explicit NetworkOutputStream(MimeType content_type)
+    explicit OutputContentStream(MimeType content_type)
         : std::ostream(&buffer), _content_type(std::move(content_type))
     {
     }
 
-    explicit NetworkOutputStream(NetworkOutputStream&& other)
+    explicit OutputContentStream(OutputContentStream&& other)
         : std::ostream(other.rdbuf() ? &buffer : nullptr),
           _content_type(std::move(other._content_type))
     {
@@ -202,7 +259,7 @@ public:
             copy_from(other);
     }
 
-    NetworkOutputStream& operator=(NetworkOutputStream&& other)
+    OutputContentStream& operator=(OutputContentStream&& other)
     {
         stop_data();
         if ( other.has_data() )
@@ -215,12 +272,12 @@ public:
         return *this;
     }
 
-    NetworkOutputStream()
+    OutputContentStream()
         : std::ostream(nullptr)
     {
     }
 
-    ~NetworkOutputStream()
+    ~OutputContentStream()
     {
         flush();
         rdbuf(nullptr);
@@ -282,7 +339,7 @@ public:
     }
 
 private:
-    void copy_from(NetworkOutputStream& other);
+    void copy_from(OutputContentStream& other);
 
     boost::asio::streambuf buffer;
     MimeType _content_type;

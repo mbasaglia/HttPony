@@ -32,28 +32,27 @@ void ClientConnection::read_request()
     boost::system::error_code error;
 
     request = Request();
-    request.from = remote;
+    request.from = io.remote_address();
 
     /// \todo Avoid magic number, keep reading if needed
-    auto sz = input.read_some(1024, error);
+    auto sz = io.input_buffer().read_some(1024, error);
 
     status = StatusCode::BadRequest;
 
     if ( error || sz == 0 )
         return;
 
-    std::istream stream(&input);
+    std::istream stream(&io.input_buffer());
     status = http::read::request(stream, request, parse_flags);
     response.protocol = request.protocol;
-    request.from = remote;
+    request.from = io.remote_address();
 }
 
 void ClientConnection::send_response(Response& response)
 {
-    boost::asio::streambuf buffer_write;
-    std::ostream stream(&buffer_write);
+    std::ostream stream(&io.output_buffer());
     http::write::response(stream, response);
-    boost::asio::write(input.socket(), buffer_write);
+    io.commit_output();
 }
 
 } // namespace httpony

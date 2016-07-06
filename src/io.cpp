@@ -24,13 +24,13 @@
 namespace httpony {
 
 
-NetworkInputStream::NetworkInputStream(std::streambuf* buffer, const Headers& headers)
+InputContentStream::InputContentStream(std::streambuf* buffer, const Headers& headers)
     : std::istream(buffer)
 {
     get_data(buffer, headers);
 }
 
-bool NetworkInputStream::get_data(std::streambuf* buffer, const Headers& headers)
+bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers)
 {
     rdbuf(buffer);
 
@@ -53,14 +53,14 @@ bool NetworkInputStream::get_data(std::streambuf* buffer, const Headers& headers
     _content_type = std::move(content_type);
 
     /// \todo Maybe this can go in ClientConnection
-    if ( auto netbuf = dynamic_cast<NetworkBuffer*>(buffer) )
+    if ( auto netbuf = dynamic_cast<NetworkInputBuffer*>(buffer) )
         netbuf->expect_input(_content_length);
 
     _error = boost::system::error_code();
     return true;
 }
 
-void NetworkOutputStream::copy_from(NetworkOutputStream& other)
+void OutputContentStream::copy_from(OutputContentStream& other)
 {
     other.flush();
     for ( const auto& buf : other.buffer.data() )

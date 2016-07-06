@@ -122,7 +122,7 @@ void Server::process_log_format(
             output << connection.request.from.string;
             break;
         case 'A': // Local IP-address
-            output << connection.local.string;
+            output << connection.io.local_address().string;
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
             output << connection.response.body.content_length();
@@ -169,7 +169,7 @@ void Server::process_log_format(
             if ( argument == "remote" )
                 output << connection.request.from.port;
             else if ( argument == "local" )
-                output << connection.local.port;
+                output << connection.io.local_address().port;
             else // canonical
                 output << data->listen.port;
             break;

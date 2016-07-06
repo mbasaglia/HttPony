@@ -44,16 +44,15 @@ class ClientConnection
 {
 public:
     ClientConnection(boost::asio::ip::tcp::socket socket, Server* server)
-        : input(std::move(socket)), server(server)
+        : io(std::move(socket)), server(server)
     {
 
-        request.from = remote = endpoint_to_ip(input.socket().remote_endpoint());
-        local = endpoint_to_ip(input.socket().local_endpoint());
+        request.from = io.remote_address();
     }
 
     ~ClientConnection()
     {
-        input.socket().close();
+        io.close();
     }
 
     /**
@@ -107,25 +106,12 @@ public:
 
     Request request;
     Response response;
-    IPAddress local;
-    IPAddress remote;
     Status status = StatusCode::OK;
-    NetworkBuffer input;
+    NetworkIO io;
     Server* const server;
     http::read::HttpParserFlags parse_flags = http::read::ParseDefault;
 
 private:
-    /**
-     * \brief Converts a boost endpoint to an IPAddress object
-     */
-    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
-    {
-        return IPAddress(
-            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
-            endpoint.address().to_string(),
-            endpoint.port()
-        );
-    }
 };
 
 

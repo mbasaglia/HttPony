@@ -53,7 +53,7 @@ struct Response
 
     }
 
-    NetworkOutputStream body;
+    OutputContentStream body;
     Status      status;
     Headers     headers;
     Protocol    protocol;

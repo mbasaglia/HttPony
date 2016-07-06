@@ -57,7 +57,7 @@ struct Request
     IPAddress   from;
     Auth        auth;
 
-    NetworkInputStream body;
+    InputContentStream body;
 
     melanolib::time::DateTime received_date;
 
