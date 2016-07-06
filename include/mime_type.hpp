@@ -132,6 +132,16 @@ public:
         return _parameter;
     }
 
+    bool matches_type(const std::string& type, const std::string& subtype) const
+    {
+        return _type == type && _subtype == subtype;
+    }
+
+    bool matches_type(const MimeType& other) const
+    {
+        return matches_type(other._type, other._subtype);
+    }
+
     friend std::ostream& operator<<(std::ostream& os, const MimeType& mime)
     {
         os << mime._type << '/' << mime._subtype;

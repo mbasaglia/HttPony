@@ -28,7 +28,7 @@ namespace httpony {
 bool Request::can_parse_post() const
 {
     return body.has_data() &&
-        body.content_type() == MimeType("application/x-www-form-urlencoded")
+        body.content_type().matches_type("application", "x-www-form-urlencoded")
     ;
 }
 
@@ -38,7 +38,7 @@ bool Request::parse_post()
         return false;
 
     /// \todo Parse urlencoded and multipart/form-data into request.post
-    if ( body.content_type() == MimeType("application/x-www-form-urlencoded") )
+    if ( body.content_type().matches_type("application", "x-www-form-urlencoded") )
     {
         post = parse_query_string(body.read_all());
         return true;

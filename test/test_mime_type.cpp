@@ -96,3 +96,13 @@ BOOST_AUTO_TEST_CASE( test_valid )
     BOOST_CHECK( !MimeType().valid() );
 }
 
+BOOST_AUTO_TEST_CASE( test_matches_type )
+{
+    BOOST_CHECK( MimeType("text", "plain", {"charset", "utf-8"}).matches_type("text", "plain") );
+    BOOST_CHECK( MimeType("text", "plain").matches_type("text", "plain") );
+    BOOST_CHECK( !MimeType("text", "css").matches_type("text", "plain") );
+    BOOST_CHECK( !MimeType("application", "xml").matches_type("text", "plain") );
+    BOOST_CHECK( MimeType("text", "plain", {"charset", "utf-8"}).matches_type(MimeType("text", "plain")) );
+    BOOST_CHECK( MimeType("text", "plain", {"charset", "utf-8"}).matches_type(MimeType("text", "plain", {"charset", "ascii"})) );
+}
+
