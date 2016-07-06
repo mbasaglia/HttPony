@@ -29,86 +29,84 @@
 
 namespace httpony {
 
-    enum HttpParserFlag
-    {
-        ParseDefault            = 0x000,
-        /// Whether to accept (and parse) requests containing folded headers
-        ParseFoldedHeaders      = 0x001,
-        /// Whether to parse Cookie header into request.cookie
-        /// If false, cookies will be accessible as headers
-        PreserveCookieHeaders   = 0x002,
-    };
-    using HttpParserFlags = unsigned;
+enum HttpParserFlag
+{
+    /// Whether to accept (and parse) requests containing folded headers
+    ParseFoldedHeaders  = 0x001,
+    /// Whether to parse Cookie header into request.cookie
+    /// If not set, cookies will still be accessible as headers
+    ParseCookies        = 0x002,
 
-    /**
-     * \brief Reads a full request object from the stream
-     * \param stream    Input stream
-     * \param request   Request object to update
-     * \param parse_folded_headers
-     * \return Recommended status code
-     * \note If it returns an error code, it's likely the request contain only
-     *       partially parsed data
-     */
-    Status read_request(std::istream& stream, Request& request, HttpParserFlags flags = ParseDefault);
+    ParseDefault        = ParseCookies,
+};
 
+using HttpParserFlags = unsigned;
 
-    /**
-     * \brief Parses Cookie: headers
-     * \param stream    Input stream
-     * \param cookies   Cookie container to update
-     * \returns \b true on success
-     */
-    bool read_cookies(std::istream& stream, httpony::DataMap& cookies);
+/**
+ * \brief Reads a full request object from the stream
+ * \param stream    Input stream
+ * \param request   Request object to update
+ * \param parse_folded_headers
+ * \return Recommended status code
+ * \note If it returns an error code, it's likely the request contain only
+ *       partially parsed data
+ */
+Status read_request(std::istream& stream, Request& request, HttpParserFlags flags = ParseDefault);
 
-    /**
-     * \brief Reads a string delimited by a specific character and ignores following spaces
-     * \param stream Input to read from
-     * \param output Output string
-     * \param delim  Delimiting character
-     * \param at_end Whether the value can be at the end of the line
-     * \returns \b true on success
-     */
-    bool read_delimited(std::istream& stream, std::string& output,
-                        char delim = ':', bool at_end = false);
+/**
+ * \brief Parses Cookie: headers
+ * \param stream    Input stream
+ * \param cookies   Cookie container to update
+ * \returns \b true on success
+ */
+bool read_cookies(std::istream& stream, httpony::DataMap& cookies);
 
-    /**
-     * \brief Skips spaces (except \r)
-     * \param stream Input to read from
-     * \param at_end Whether the value can be at the end of the line
-     * \returns \b true on success
-     */
-    bool skip_spaces(std::istream& stream, bool at_end = false);
+/**
+ * \brief Reads a string delimited by a specific character and ignores following spaces
+ * \param stream Input to read from
+ * \param output Output string
+ * \param delim  Delimiting character
+ * \param at_end Whether the value can be at the end of the line
+ * \returns \b true on success
+ */
+bool read_delimited(std::istream& stream, std::string& output,
+                    char delim = ':', bool at_end = false);
 
-    /**
-     * \brief Ignores all before "\n"
-     */
-    void skip_line(std::istream& stream);
+/**
+ * \brief Skips spaces (except \r)
+ * \param stream Input to read from
+ * \param at_end Whether the value can be at the end of the line
+ * \returns \b true on success
+ */
+bool skip_spaces(std::istream& stream, bool at_end = false);
 
+/**
+ * \brief Ignores all before "\n"
+ */
+void skip_line(std::istream& stream);
 
-    /**
-     * \brief Reads all headers and the empty line following them
-     * \param stream        Input stream
-     * \param headers       Header container to update
-     * \param parse_folded  Whether to parse or reject folded headers
-     * \param cookies       If not null, it will be filled with cookie headers
-     * \returns \b true on success
-     */
-    bool read_headers(std::istream& stream, httpony::Headers& headers,
-                      bool parse_folded = false, DataMap* cookies = nullptr);
+/**
+ * \brief Reads all headers and the empty line following them
+ * \param stream        Input stream
+ * \param headers       Header container to update
+ * \param parse_folded  Whether to parse or reject folded headers
+ * \returns \b true on success
+ */
+bool read_headers(std::istream& stream, httpony::Headers& headers, bool parse_folded = false);
 
-    /**
-     * \brief Reads a "quoted" header value
-     * \returns \b true on success
-     */
-    bool read_quoted_header_value(std::istream& stream, std::string& value);
+/**
+ * \brief Reads a "quoted" header value
+ * \returns \b true on success
+ */
+bool read_quoted_header_value(std::istream& stream, std::string& value);
 
-    /**
-     * \brief Reads the request line (GET /url HTTP/1.1)
-     * \param stream    Input stream
-     * \param request   Request object to update
-     * \returns \b true on success
-     */
-    bool read_request_line(std::istream& stream, Request& request);
+/**
+ * \brief Reads the request line (GET /url HTTP/1.1)
+ * \param stream    Input stream
+ * \param request   Request object to update
+ * \returns \b true on success
+ */
+bool read_request_line(std::istream& stream, Request& request);
 
 } // namespace httpony
 #endif // HTTPONY_HTTP_PARSER_HPP

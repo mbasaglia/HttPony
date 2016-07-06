@@ -23,7 +23,6 @@
 
 namespace httpony {
 
-
 Status read_request(std::istream& stream, Request& request, HttpParserFlags flags)
 {
     request = Request();
@@ -31,12 +30,18 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
     if ( !read_request_line(stream, request) )
         return StatusCode::BadRequest;
 
-    if ( !read_headers(stream, request.headers,
-            flags & ParseFoldedHeaders,
-            flags & PreserveCookieHeaders ? nullptr : &request.cookies
-        ) )
+    if ( !read_headers(stream, request.headers, flags & ParseFoldedHeaders) )
         return StatusCode::BadRequest;
 
+    if ( flags & ParseCookies )
+    {
+        for ( const auto& cookie_header : request.headers.key_range("Cookie") )
+        {
+            std::istringstream cookie_stream(cookie_header.second);
+            if ( !read_cookies(cookie_stream, request.cookies) )
+                return StatusCode::BadRequest;
+        }
+    }
 
     if ( request.headers.contains("Content-Length") )
     {
@@ -57,8 +62,6 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
     return StatusCode::OK;
 }
 
-
-
 void skip_line(std::istream& stream)
 {
     while ( stream && stream.get() != '\n' );
@@ -75,11 +78,8 @@ bool read_request_line(std::istream& stream, Request& request)
     return request.protocol.valid() && stream;
 }
 
-bool read_headers(std::istream& stream, Headers& headers, bool parse_folded, DataMap* cookies)
+bool read_headers(std::istream& stream, Headers& headers, bool parse_folded)
 {
-    if ( cookies )
-        cookies->clear();
-
     std::string name, value;
     while ( stream && stream.peek() != '\r' )
     {
@@ -105,13 +105,6 @@ bool read_headers(std::istream& stream, Headers& headers, bool parse_folded, Dat
 
         if ( !read_delimited(stream, name, ':') )
             return false;
-
-        if ( cookies && name == "Cookie" )
-        {
-            if ( !read_cookies(stream, *cookies) )
-                return false;
-            continue;
-        }
 
         if ( stream.peek() == '"' )
         {
@@ -209,7 +202,7 @@ bool read_quoted_header_value(std::istream& stream, std::string& value)
 
 bool read_cookies(std::istream& stream, DataMap& cookies)
 {
-    do
+    while ( stream.peek() != '\r' && stream.peek() != std::istream::traits_type::eof() )
     {
         std::string name;
         if ( !read_delimited(stream, name, '=') )
@@ -221,7 +214,6 @@ bool read_cookies(std::istream& stream, DataMap& cookies)
 
         cookies.append(name, value);
     }
-    while ( stream.peek() != '\r' );
 
     skip_line(stream);
 
