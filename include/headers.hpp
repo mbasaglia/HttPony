@@ -45,8 +45,8 @@ struct ICaseComparator
  * key and preserves insertion order
  */
 template<
-    class Key = std::string, class
-    Mapped = std::string,
+    class Key = std::string,
+    class Mapped = std::string,
     class Compare = std::equal_to<std::string>,
     class MappedCompare = std::equal_to<std::string>
 >
@@ -81,6 +81,118 @@ public:
         key_compare key;
         MappedCompare value;
     };
+    template<class BaseIter>
+        class basic_key_iterator : public std::iterator<
+            std::forward_iterator_tag,
+            typename BaseIter::value_type,
+            typename BaseIter::difference_type,
+            typename BaseIter::pointer,
+            typename BaseIter::reference
+        >
+    {
+    public:
+        using base_iterator = BaseIter;
+
+        template<class OthBaseIter>
+            bool operator==(const basic_key_iterator<OthBaseIter>& oth) const
+        {
+            return iter == oth.iter;
+        }
+
+        bool operator==(const base_iterator& oth) const
+        {
+            return iter == oth;
+        }
+
+        template<class OthBaseIter>
+            bool operator!=(const basic_key_iterator<OthBaseIter>& oth) const
+        {
+            return iter != oth.iter;
+        }
+
+        bool operator!=(const base_iterator& oth) const
+        {
+            return iter != oth;
+        }
+
+        typename BaseIter::reference operator*() const
+        {
+            return *iter;
+        }
+
+        typename BaseIter::pointer operator->() const
+        {
+            return iter.operator->();
+        }
+
+        basic_key_iterator& operator++()
+        {
+            if ( iter != end )
+                iter = std::find_if(iter + 1, end, [this](const_reference item){
+                    return comparator(item.first, search);
+                });
+            return *this;
+        }
+
+        basic_key_iterator operator++(int)
+        {
+            auto old = *this;
+            ++*this;
+            return old;
+        }
+
+        base_iterator base() const
+        {
+            return iter;
+        }
+
+    private:
+        basic_key_iterator(
+            key_type search,
+            key_compare comparator,
+            base_iterator iter,
+            base_iterator end
+        ) : search(std::move(search)),
+            comparator(std::move(comparator)),
+            iter(iter),
+            end(end)
+        {
+            if ( this->iter != this->end && !comparator(this->iter->first, this->search) )
+                ++*this;
+        }
+
+        key_type search;
+        key_compare comparator;
+        base_iterator iter;
+        base_iterator end;
+
+        friend class OrderedMultimap;
+    };
+    template<class BaseIter>
+        class basic_key_range
+        {
+        public:
+            using iterator = basic_key_iterator<BaseIter>;
+            basic_key_range(iterator begin, iterator end)
+                : _begin(begin), _end(end)
+            {}
+
+            iterator begin() const
+            {
+                return _begin;
+            }
+
+            iterator end() const
+            {
+                return _end;
+            }
+
+        private:
+            iterator _begin;
+            iterator _end;
+        };
+    using key_iterator = basic_key_iterator<iterator>;
+    using const_key_iterator = basic_key_iterator<const_iterator>;
 
     OrderedMultimap() = default;
     OrderedMultimap(const OrderedMultimap&) = default;
@@ -90,8 +202,9 @@ public:
         : compare(comp)
     {}
 
-    OrderedMultimap(container_type data)
-        : data(std::move(data))
+    OrderedMultimap(container_type data, const key_compare& comp = Compare())
+        : data(std::move(data)),
+          compare(comp)
     {}
 
     OrderedMultimap(std::initializer_list<value_type> data, const key_compare& comp = Compare())
@@ -101,7 +214,7 @@ public:
 
     template<class InputIterator>
     OrderedMultimap(InputIterator&& first, InputIterator&& last, const key_compare& comp = Compare())
-        : data(std::forward(first), std::forward(last)),
+        : data(std::forward<InputIterator>(first), std::forward<InputIterator>(last)),
         compare(comp)
     {}
 
@@ -195,17 +308,18 @@ public:
         return data.emplace(std::forward<Args>(args)...);
     }
 
-    template<class... Args>
-        auto erase(Args&&... args)
-    {
-        return data.erase(std::forward<Args>(args)...);
-    }
+    /// \todo Explicitly forward erase() overloads to avoid ambiguity with the one below
+//     template<class... Args>
+//         auto erase(Args&&... args)
+//     {
+//         return data.erase(std::forward<Args>(args)...);
+//     }
 
     size_type erase(const key_type& key)
     {
         auto last = std::remove_if(begin(), end(),
             [this, &key](const_reference item) {
-                return compare.key(item.key, key);
+                return compare.key(item.first, key);
             }
         );
         auto count = end() - last;
@@ -215,8 +329,8 @@ public:
 
     void swap(OrderedMultimap& oth)
     {
-        swap(data, oth.data);
-        swap(compare, oth.compare);
+        std::swap(data, oth.data);
+        std::swap(compare, oth.compare);
     }
 
     /**
@@ -292,9 +406,10 @@ public:
     /**
      * \brief Appends a new header
      */
-    void append(std::string name, std::string value)
+    template<class... Args>
+        void append(Args&&... args)
     {
-        data.emplace_back(name, value);
+        data.emplace_back(std::forward<Args>(args)...);
     }
 
     bool operator==(const OrderedMultimap& oth) const
@@ -305,6 +420,51 @@ public:
     bool operator!=(const OrderedMultimap& oth) const
     {
         return !(*this == oth);
+    }
+
+    key_iterator key_begin(const key_type& key)
+    {
+        return key_iterator(key, compare.key, begin(), end());
+    }
+
+    const_key_iterator key_begin(const key_type& key) const
+    {
+        return const_key_iterator(key, compare.key, begin(), end());
+    }
+
+    const_key_iterator key_cbegin(const key_type& key) const
+    {
+        return const_key_iterator(key, compare.key, begin(), end());
+    }
+
+    key_iterator key_end(const key_type& key)
+    {
+        return key_iterator(key, compare.key, end(), end());
+    }
+
+    const_key_iterator key_end(const key_type& key) const
+    {
+        return const_key_iterator(key, compare.key, end(), end());
+    }
+
+    const_key_iterator key_cend(const key_type& key) const
+    {
+        return const_key_iterator(key, compare.key, end(), end());
+    }
+
+    basic_key_range<iterator> key_range(const key_type& key)
+    {
+        return basic_key_range<iterator>(key_begin(key), key_end(key));
+    }
+
+    basic_key_range<const_iterator> key_range(const key_type& key) const
+    {
+        return basic_key_range<const_iterator>(key_begin(key), key_end(key));
+    }
+
+    basic_key_range<const_iterator> key_crange(const key_type& key) const
+    {
+        return basic_key_range<const_iterator>(key_begin(key), key_end(key));
     }
 
 private:

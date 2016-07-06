@@ -57,4 +57,6 @@ if (BUILD_TESTING)
     melanotest(test_base_encoding)
     target_link_libraries(test_uri ${COMMON_LIBRARIES})
 
+    melanotest(test_ordered_multimap)
+
 endif()
