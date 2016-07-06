@@ -120,13 +120,13 @@ private:
 class NetworkInputStream : public std::istream
 {
 public:
-    explicit NetworkInputStream(NetworkBuffer& buffer, const Headers& headers);
+    explicit NetworkInputStream(std::streambuf* buffer, const Headers& headers);
 
     NetworkInputStream()
         : std::istream(nullptr)
     {}
 
-    bool get_data(NetworkBuffer& buffer, const Headers& headers);
+    bool get_data(std::streambuf* buffer, const Headers& headers);
 
     bool has_data() const
     {

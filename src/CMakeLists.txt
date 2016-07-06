@@ -24,6 +24,7 @@ client_connection.cpp
 io.cpp
 uri.cpp
 request.cpp
+http_parser.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

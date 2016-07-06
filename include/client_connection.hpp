@@ -22,8 +22,7 @@
 #ifndef HTTPONY_CLIENT_CONNECTION_HPP
 #define HTTPONY_CLIENT_CONNECTION_HPP
 
-#include "request.hpp"
-#include "response.hpp"
+#include "http_parser.hpp"
 
 namespace httpony {
 
@@ -113,11 +112,7 @@ public:
     Status status = StatusCode::OK;
     NetworkBuffer input;
     Server* const server;
-    /// Whether to accept (and parse) requests containing folded headers
-    bool parse_folded_headers = false;
-    /// Whether to parse Cookie header into request.cookie
-    /// If false, cookies will be accessible as headers
-    bool parse_cookies = true;
+    HttpParserFlags parse_flags = ParseDefault;
 
 private:
     /**
@@ -132,55 +127,12 @@ private:
         );
     }
 
-    /**
-     * \brief Ignores all before "\n"
-     */
-    void skip_line(std::istream& buffer_stream);
-
-    /**
-     * \brief Reads the request line (GET /url HTTP/1.1)
-     * \returns \b true on success
-     */
-    bool read_request_line(std::istream& buffer_stream);
-
-    /**
-     * \brief Reads all headers and the empty line following them
-     * \returns \b true on success
-     */
-    bool read_headers(std::istream& buffer_stream);
-
-    /**
-     * \brief Reads a string delimited by a specific character and ignores following spaces
-     * \param stream Input to read from
-     * \param output Output string
-     * \param delim  Delimiting character
-     * \param at_end Whether the value can be at the end of the line
-     * \returns \b true on success
-     */
-    bool read_delimited(std::istream& stream, std::string& output,
-                        char delim = ':', bool at_end = false);
-
-    /**
-     * \brief Skips spaces (except \r)
-     * \param stream Input to read from
-     * \param at_end Whether the value can be at the end of the line
-     * \returns \b true on success
-     */
-    bool skip_spaces(std::istream& stream, bool at_end = false);
-
-    /**
-     * \brief Reads a "quoted" header value
-     * \returns \b true on success
-     */
-    bool read_quoted_header_value(std::istream& buffer_stream, std::string& value);
-
     template<class String, class Value>
         void write_header(std::ostream& stream, String&& name, Value&& value)
     {
         stream << std::forward<String>(name) << ": " << std::forward<Value>(value) << "\r\n";
     }
 
-    bool read_cookie(std::istream& stream);
 };
 
 
