@@ -66,7 +66,7 @@ struct Cookie
     std::vector<std::string> extension;
 };
 
-using CookieJar = OrderedMultimap<std::string, Cookie>;
+using CookieJar = melanolib::OrderedMultimap<std::string, Cookie>;
 
 inline std::ostream& operator<<(std::ostream& os, CookieJar::const_reference cookie)
 {
