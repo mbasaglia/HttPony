@@ -25,6 +25,7 @@ io.cpp
 uri.cpp
 request.cpp
 http_parser.cpp
+protocol.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

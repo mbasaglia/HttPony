@@ -110,7 +110,7 @@ private:
         }
 
         // We are not going to keep the connection open
-        if ( connection.response.protocol == httpony::Protocol("HTTP", 1, 1) )
+        if ( connection.response.protocol >= httpony::Protocol::http_1_1 )
         {
             connection.response.headers["Connection"] = "close";
         }

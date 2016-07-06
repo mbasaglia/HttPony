@@ -48,7 +48,7 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
         if ( !request.body.get_data(stream.rdbuf(), request.headers) )
             return StatusCode::BadRequest;
 
-        if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.get("Expect") == "100-continue" )
+        if ( request.protocol >= Protocol::http_1_1 && request.headers.get("Expect") == "100-continue" )
             return StatusCode::Continue;
     }
     else if ( !stream.eof() )
@@ -56,7 +56,7 @@ Status read_request(std::istream& stream, Request& request, HttpParserFlags flag
         return StatusCode::LengthRequired;
     }
 
-    if ( request.protocol == Protocol("HTTP", 1, 1) && request.headers.contains("Expect") )
+    if ( request.protocol < Protocol::http_1_1 && request.headers.contains("Expect") )
         return StatusCode::ExpectationFailed;
 
     return StatusCode::OK;

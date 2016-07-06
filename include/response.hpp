@@ -40,13 +40,15 @@ struct Response
 {
     explicit Response(std::string content_type, Status status = Status())
         : body(std::move(content_type)),
-          status(std::move(status))
+          status(std::move(status)),
+          protocol(Protocol::http_1_1)
     {
         /// \todo Date
     }
 
     Response(Status status = Status())
-        : status(std::move(status))
+        : status(std::move(status)),
+          protocol(Protocol::http_1_1)
     {
 
     }
@@ -54,7 +56,7 @@ struct Response
     NetworkOutputStream body;
     Status      status;
     Headers     headers;
-    Protocol    protocol = Protocol("HTTP", 1, 1);
+    Protocol    protocol;
     CookieJar   cookies;
     melanolib::time::DateTime date;
 

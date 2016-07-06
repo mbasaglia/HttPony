@@ -62,18 +62,62 @@ struct Protocol
         return !name.empty();
     }
 
-    std::string name;
-    unsigned version_major = 0;
-    unsigned version_minor = 0;
-
     bool operator==(const Protocol& oth) const
     {
         return name == oth.name && version_major == oth.version_major && version_minor == oth.version_minor;
     }
+
+    bool operator!=(const Protocol& oth) const
+    {
+        return !(*this == oth);
+    }
+
+
+    bool operator>=(const Protocol& oth) const
+    {
+        return name == oth.name && (
+            version_major > oth.version_major ||
+            (version_major == oth.version_major && version_minor >= oth.version_minor)
+        );
+    }
+
+    bool operator<=(const Protocol& oth) const
+    {
+        return name == oth.name && (
+            version_major < oth.version_major ||
+            (version_major == oth.version_major && version_minor <= oth.version_minor)
+        );
+    }
+
+    bool operator>(const Protocol& oth) const
+    {
+        return name == oth.name && (
+            version_major > oth.version_major ||
+            (version_major == oth.version_major && version_minor > oth.version_minor)
+        );
+    }
+
+    bool operator<(const Protocol& oth) const
+    {
+        return name == oth.name && (
+            version_major < oth.version_major ||
+            (version_major == oth.version_major && version_minor < oth.version_minor)
+        );
+    }
+
+
+    std::string name;
+    unsigned version_major = 0;
+    unsigned version_minor = 0;
+
+    static const Protocol http_1_0;
+    static const Protocol http_1_1;
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Protocol& protocol)
 {
+    if ( !protocol.valid() )
+        return os;
     return os << protocol.name << '/' << protocol.version_major << '.' << protocol.version_minor;
 }
 

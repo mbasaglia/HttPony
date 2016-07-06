@@ -57,4 +57,7 @@ if (BUILD_TESTING)
     melanotest(test_base_encoding)
     target_link_libraries(test_uri ${COMMON_LIBRARIES})
 
+    melanotest(test_protocol)
+    target_link_libraries(test_protocol ${COMMON_LIBRARIES})
+
 endif()
