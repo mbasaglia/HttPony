@@ -28,127 +28,39 @@
 
 namespace httpony {
 
-/// \see https://tools.ietf.org/html/rfc2046#section-5.1
+/**
+ * \brief Multipart content data
+ * \see https://tools.ietf.org/html/rfc2046#section-5.1
+ */
 struct Multipart
 {
+    /**
+     * \brief A part of the multipart data
+     */
     struct Part
     {
         Headers headers;
         std::string content;
     };
 
+    /**
+     * \brief Whether the string is a valid boundary
+     */
+    static bool valid_boundary(const std::string& boundary);
+
+    explicit Multipart(std::string boundary)
+        : boundary(std::move(boundary))
+    {}
+
+    /**
+     * \brief Populates the multipart data from a stream
+     * \returns \b true on success
+     */
+    bool read(std::istream& stream);
+
     std::string boundary;
     std::vector<Part> parts;
 };
-
-namespace multipart {
-
-
-inline bool valid_boundary(const std::string& boundary)
-{
-    if ( boundary.empty() )
-        return false;
-    for ( auto c : boundary )
-        if ( !melanolib::string::ascii::is_print(c) )
-            return false;
-    if ( boundary.back() == ' ' )
-        return false;
-    return true;
-}
-
-enum class LineType
-{
-    Boundary,
-    Data,
-    LastBoundary
-};
-
-inline LineType line_type(const std::string& line, const std::string& boundary)
-{
-    if ( line.size() < boundary.size() + 2 || line[0] != '-' || line[1] != '-' )
-        return LineType::Data;
-
-    if ( !std::equal(line.begin() + 2, line.begin() + 2 + boundary.size(),
-                     boundary.begin(), boundary.end()) )
-        return LineType::Data;
-
-    std::size_t space_start = boundary.size() + 2;
-    LineType expected_result = LineType::Boundary;
-
-    if ( line.size() >= space_start + 2 && line[space_start] == '-' && line[space_start+1] == '-' )
-    {
-        expected_result = LineType::LastBoundary;
-        space_start += 2;
-    }
-
-    if ( std::all_of(line.begin() + space_start, line.end(), melanolib::string::ascii::is_blank) )
-        return expected_result;
-
-    return LineType::Data;
-}
-
-bool cleanup_boundary(std::istream& stream, Multipart& output)
-{
-    if ( stream.get() != '\n' )
-        return false;
-
-    if ( output.parts.empty() )
-        return true;
-
-    std::string& content = output.parts.back().content;
-
-    if ( content.empty() )
-        return true;
-
-    if ( !melanolib::string::ends_with(content, "\r\n") )
-        return false;
-
-    content.resize(content.size() - 2);
-    return true;
-}
-
-inline bool read_multipart(std::istream& stream, Multipart& output)
-{
-    if ( !valid_boundary(output.boundary) )
-        return false;
-
-    while ( true )
-    {
-        std::string line;
-        std::getline(stream, line, '\r');
-        if ( !stream )
-            return false;
-
-        auto type = line_type(line, output.boundary);
-
-        if ( type == LineType::LastBoundary )
-        {
-            return cleanup_boundary(stream, output);
-        }
-        else if ( type == LineType::Boundary )
-        {
-            if ( !cleanup_boundary(stream, output) )
-                return false;
-
-            output.parts.emplace_back();
-            if ( !http::read::headers(stream, output.parts.back().headers) )
-                return false;
-        }
-        else if ( !output.parts.empty() )
-        {
-            output.parts.back().content += line + '\r';
-            std::getline(stream, line, '\n');
-            output.parts.back().content += line + '\n';
-        }
-        else
-        {
-            return false;
-        }
-    }
-}
-
-
-} // namespace multipart
 
 } // namespace httpony
 #endif // HTTPONY_MULTIPART_HPP

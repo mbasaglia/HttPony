@@ -26,6 +26,7 @@ uri.cpp
 request.cpp
 http_read.cpp
 protocol.cpp
+multipart.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

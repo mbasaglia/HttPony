@@ -35,7 +35,6 @@ bool Request::can_parse_post() const
     );
 }
 
-
 bool Request::parse_post()
 {
     if ( !body.has_data() )
@@ -52,9 +51,8 @@ bool Request::parse_post()
         if ( body.content_type().parameter().first != "boundary" )
             return false;
 
-        Multipart form_data;
-        form_data.boundary = body.content_type().parameter().second;
-        if ( !multipart::read_multipart(body, form_data) )
+        Multipart form_data(body.content_type().parameter().second);
+        if ( !form_data.read(body) )
             return false;
 
         for ( const auto& part : form_data.parts )
