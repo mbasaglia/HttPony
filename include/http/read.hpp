@@ -63,14 +63,6 @@ using HttpParserFlags = unsigned;
 Status request(std::istream& stream, Request& request, HttpParserFlags flags = ParseDefault);
 
 /**
- * \brief Parses Cookie: headers
- * \param stream    Input stream
- * \param cookies   Cookie container to update
- * \returns \b true on success
- */
-bool cookies(std::istream& stream, httpony::DataMap& cookies);
-
-/**
  * \brief Reads a string delimited by a specific character and ignores following spaces
  * \param stream Input to read from
  * \param output Output string
@@ -116,7 +108,6 @@ bool quoted_header_value(std::istream& stream, std::string& value);
  * \returns \b true on success
  */
 bool request_line(std::istream& stream, Request& request);
-
 
 } // namespace read
 } // namespace http

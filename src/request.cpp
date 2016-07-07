@@ -23,6 +23,7 @@
 
 #include "uri.hpp"
 #include "multipart.hpp"
+#include "base_encoding.hpp"
 
 namespace httpony {
 
@@ -71,5 +72,20 @@ bool Request::parse_post()
     return false;
 }
 
+Auth::Auth(const std::string& header_contents)
+{
+    melanolib::string::QuickStream stream(header_contents);
+    auth_scheme = stream.get_until(melanolib::string::ascii::is_space);
+    stream.ignore_if(melanolib::string::ascii::is_space);
+    auth_string = stream.get_until(melanolib::string::ascii::is_space);
+    parse_header_parameters(stream, parameters);
+
+    if ( auth_scheme == "Basic" )
+    {
+        stream.str(Base64().decode(auth_string));
+        user = stream.get_line(':');
+        password = stream.get_remaining();
+    }
+}
 
 } // namespace httpony

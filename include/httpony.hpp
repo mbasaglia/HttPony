@@ -24,5 +24,6 @@
 
 #include "server.hpp"
 #include "logging.hpp"
+#include "base_encoding.hpp"
 
 #endif // HTTPONY_HPP

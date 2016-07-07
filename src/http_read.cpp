@@ -40,10 +40,13 @@ Status request(std::istream& stream, Request& request, HttpParserFlags flags)
     {
         for ( const auto& cookie_header : request.headers.key_range("Cookie") )
         {
-            std::istringstream cookie_stream(cookie_header.second);
-            if ( !cookies(cookie_stream, request.cookies) )
+            melanolib::string::QuickStream cookie_stream(cookie_header.second);
+            if ( !parse_header_parameters(cookie_stream, request.cookies) )
                 return StatusCode::BadRequest;
         }
+
+        if ( request.headers.contains("Authorization") )
+            request.auth = Auth(request.headers.get("Authorization"));
     }
 
     if ( request.headers.contains("Content-Length") )
@@ -201,27 +204,6 @@ bool quoted_header_value(std::istream& stream, std::string& value)
 
     return true;
 }
-
-bool cookies(std::istream& stream, DataMap& cookies)
-{
-    while ( stream.peek() != '\r' && stream.peek() != std::istream::traits_type::eof() )
-    {
-        std::string name;
-        if ( !delimited(stream, name, '=') )
-            return false;
-
-        std::string value;
-        if ( !delimited(stream, value, ';', true) )
-            return false;
-
-        cookies.append(name, value);
-    }
-
-    skip_line(stream);
-
-    return true;
-}
-
 
 } // namespace read
 } // namespace http

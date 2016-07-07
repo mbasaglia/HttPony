@@ -1,8 +1,10 @@
 /**
  * \file
+ *
  * \author Mattia Basaglia
+ *
  * \copyright Copyright 2016 Mattia Basaglia
- * \section License
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU Affero General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -16,12 +18,12 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 #ifndef HTTPONY_MIME_TYPE_HPP
 #define HTTPONY_MIME_TYPE_HPP
 
 #include <ostream>
 
-#include <melanolib/string/quickstream.hpp>
 #include <melanolib/string/simple_stringutils.hpp>
 
 #include "headers.hpp"
@@ -31,38 +33,20 @@ namespace httpony {
 class MimeType
 {
 public:
-    using Parameter = std::pair<std::string, std::string>;
+    using Parameter = Headers::value_type;
 
     MimeType(const std::string& string)
     {
         melanolib::string::QuickStream stream(string);
         set_type(stream.get_line('/'));
         set_subtype(stream.get_until(
-            [](char c){ return std::isspace(c) || c ==';'; }
+            [](char c){ return melanolib::string::ascii::is_space(c) || c ==';'; }
         ));
 
-        if ( !stream.eof() )
-        {
-            stream.get_until(
-                [](char c){ return !std::isspace(c) && c != ';'; },
-                false
-            );
-
-            Parameter parameter;
-            parameter.first = stream.get_line('=');
-
-            if ( stream.peek() == '"' )
-            {
-                stream.ignore(1);
-                parameter.second = stream.get_line('"');
-            }
-            else
-            {
-                parameter.second = stream.get_line();
-            }
-
-            set_parameter(parameter);
-        }
+        Headers parameters;
+        parse_header_parameters(stream, parameters);
+        if ( !parameters.empty() )
+            set_parameter(parameters.front());
     }
 
     MimeType(){}

@@ -37,8 +37,15 @@ namespace httpony {
  */
 struct Auth
 {
+    Auth(){}
+    explicit Auth(const std::string& header_contents);
+
     std::string user;
     std::string password;
+    std::string auth_scheme;
+    std::string auth_string;
+    Headers     parameters;
+
 };
 
 
