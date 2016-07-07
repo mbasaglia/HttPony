@@ -94,13 +94,6 @@ protected:
                 );
 
             ret = boost::asio::streambuf::underflow();
-
-            if ( ret == traits_type::eof() && _expected_input > 0 )
-            {
-                _error = boost::system::errc::make_error_code(
-                    boost::system::errc::message_size
-                );
-            }
         }
         return ret;
     }
@@ -190,13 +183,9 @@ public:
         return !_error && rdbuf();
     }
 
-    boost::system::error_code error() const
+    bool has_error() const
     {
-        if ( fail() )
-            return boost::system::errc::make_error_code(
-            boost::system::errc::bad_message
-        );
-        return _error;
+        return fail() || _error;
     }
 
     explicit operator bool() const
@@ -214,20 +203,7 @@ public:
         return _content_length;
     }
 
-    std::string read_all()
-    {
-        std::string all(_content_length, ' ');
-        read(&all[0], _content_length);
-        /// \todo if possible set a low-level failbit when the streambuf finds an error
-        if ( std::size_t(gcount()) != _content_length )
-        {
-            _error = boost::system::errc::make_error_code(
-                boost::system::errc::message_size
-            );
-            all.resize(gcount());
-        }
-        return all;
-    }
+    std::string read_all();
 
     MimeType content_type() const
     {

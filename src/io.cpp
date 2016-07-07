@@ -60,6 +60,29 @@ bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers
     return true;
 }
 
+std::string InputContentStream::read_all()
+{
+    std::string all(_content_length, ' ');
+    read(&all[0], _content_length);
+
+    /// \todo if possible set a low-level failbit when the streambuf finds an error
+    if ( std::size_t(gcount()) != _content_length )
+    {
+        _error = boost::system::errc::make_error_code(
+            boost::system::errc::message_size
+        );
+        all.resize(gcount());
+    }
+    else if ( !eof() && peek() != traits_type::eof() )
+    {
+        _error = boost::system::errc::make_error_code(
+            boost::system::errc::message_size
+        );
+    }
+
+    return all;
+}
+
 void OutputContentStream::copy_from(OutputContentStream& other)
 {
     other.flush();

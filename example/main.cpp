@@ -58,6 +58,13 @@ private:
      */
     std::string get_body(httpony::ClientConnection& connection) const
     {
+        // Discard requests with a too long of a payload
+        if ( connection.request.body.content_length() > max_size )
+        {
+            connection.status = httpony::StatusCode::PayloadTooLarge;
+            return "";
+        }
+
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
         if ( connection.status == httpony::StatusCode::Continue )
         {
@@ -80,7 +87,7 @@ private:
             std::string body = connection.request.body.read_all();
 
             // Handle read errors (eg: wrong Content-Length)
-            if ( connection.request.body.error() )
+            if ( connection.request.body.has_error() )
                 connection.status = httpony::StatusCode::BadRequest;
 
             return body;
@@ -161,6 +168,7 @@ private:
 
 
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
+    std::size_t max_size = 8192;
 };
 
 int main()
