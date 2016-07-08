@@ -79,6 +79,8 @@ Auth::Auth(const std::string& header_contents)
     stream.ignore_if(melanolib::string::ascii::is_space);
     auth_string = stream.get_until(melanolib::string::ascii::is_space);
     parse_header_parameters(stream, parameters);
+    realm = parameters.get("realm");
+    parameters.erase("realm");
 
     if ( auth_scheme == "Basic" )
     {

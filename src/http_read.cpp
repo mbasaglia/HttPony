@@ -57,7 +57,7 @@ Status request(std::istream& stream, Request& request, HttpParserFlags flags)
         if ( request.protocol >= Protocol::http_1_1 && request.headers.get("Expect") == "100-continue" )
             return StatusCode::Continue;
     }
-    else if ( !stream.eof() )
+    else if ( !stream.eof() && stream.peek() != std::istream::traits_type::eof() )
     {
         return StatusCode::LengthRequired;
     }

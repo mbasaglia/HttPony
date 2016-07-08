@@ -33,6 +33,26 @@
 
 namespace httpony {
 
+struct AuthChallenge
+{
+    std::string auth_scheme;
+    std::string realm;
+    Headers     parameters;
+
+    std::string header_value() const
+    {
+        std::string authenticate = auth_scheme;
+
+        if ( !realm.empty() )
+            authenticate += " realm=\"" + melanolib::string::add_slashes(realm, "\"\\") + "\";";
+
+        if ( !parameters.empty() )
+            authenticate += ' ' + header_parameters(parameters);
+
+        return authenticate;
+    }
+};
+
 /**
  * \brief Response data
  */
@@ -64,6 +84,20 @@ struct Response
     {
         Response response(status);
         response.headers["Location"] = location.full();
+        return response;
+    }
+
+    static Response authorization_required(const std::vector<AuthChallenge>& challenges)
+    {
+        Response response(StatusCode::Unauthorized);
+        std::string www_authenticate;
+        for ( const auto& challenge : challenges )
+        {
+            if ( !www_authenticate.empty() )
+                www_authenticate += ", ";
+            www_authenticate += challenge.header_value();
+        }
+        response.headers["WWW-Authenticate"] = www_authenticate;
         return response;
     }
 };

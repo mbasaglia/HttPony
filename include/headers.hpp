@@ -25,6 +25,7 @@
 #include <melanolib/data_structures/ordered_multimap.hpp>
 #include <melanolib/string/quickstream.hpp>
 #include <melanolib/string/ascii.hpp>
+#include <melanolib/string/stringutils.hpp>
 
 namespace httpony {
 
@@ -36,17 +37,19 @@ using DataMap = melanolib::OrderedMultimap<>;
  * \brief Reads header parameters (param1=foo param2=bar)
  * \param stream    Input stream
  * \param output    Container to update
+ * \param delimiter Character delimitng the arguments
  * \returns \b true on success
  */
 template<class OrderedContainer>
     bool parse_header_parameters(
     melanolib::string::QuickStream& stream,
-    OrderedContainer& output
+    OrderedContainer& output,
+    char delimiter = ';'
 )
 {
     using melanolib::string::ascii::is_space;
 
-    auto is_boundary_char = [](char c){ return is_space(c) || c == ';'; };
+    auto is_boundary_char = [delimiter](char c){ return is_space(c) || c == delimiter; };
 
     while ( !stream.eof() )
     {
@@ -91,6 +94,37 @@ template<class OrderedContainer>
     }
     return true;
 }
+
+inline std::string header_parameter(const std::string& name, const std::string& value)
+{
+    using namespace melanolib::string;
+    static const char* const slashable = "\" \t\\";
+    std::string result = name;
+    result +=  '=';
+    if ( contains_any(value, slashable) )
+    {
+        result +=  '"';
+        result += add_slashes(value, slashable);
+        result += '"';
+    }
+    else
+    {
+        result += value;
+    }
+    return result;
+}
+
+template<class OrderedContainer>
+    inline std::string header_parameters(const OrderedContainer& input, char delimiter = ',')
+{
+    std::string result;
+    for ( const auto& param : input )
+        result += header_parameter(param.first, param.second) + delimiter + ' ';
+    if ( !result.empty() )
+        result.pop_back();
+    return result;
+}
+
 
 struct CompoundHeader
 {

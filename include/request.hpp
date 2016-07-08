@@ -44,6 +44,7 @@ struct Auth
     std::string password;
     std::string auth_scheme;
     std::string auth_string;
+    std::string realm;
     Headers     parameters;
 
 };
