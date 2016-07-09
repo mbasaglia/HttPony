@@ -205,7 +205,7 @@ void Server::process_log_format(
             output << request.auth.user;
             break;
         case 'U': // The URL path requested, not including any query string.
-            output << request.url.path_string();
+            output << request.url.path.url_encoded();
             break;
         case 'v': // The canonical ServerName of the server serving the request.
             // TODO ?

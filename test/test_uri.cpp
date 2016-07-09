@@ -134,11 +134,11 @@ BOOST_AUTO_TEST_CASE( test_uri_ctor_fragment )
 
 BOOST_AUTO_TEST_CASE( test_uri_path_string )
 {
-    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path_string() == "" );
-    BOOST_CHECK( Uri({"", "", {"foo"}, {}, ""}).path_string() == "/foo" );
-    BOOST_CHECK( Uri({"", "", {"foo", "bar"}, {}, ""}).path_string() == "/foo/bar" );
-    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path_string() == "" );
-    BOOST_CHECK( Uri({"", "", {"f o"}, {}, ""}).path_string() == "/f%20o" );
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path.url_encoded() == "" );
+    BOOST_CHECK( Uri({"", "", {"foo"}, {}, ""}).path.url_encoded() == "/foo" );
+    BOOST_CHECK( Uri({"", "", {"foo", "bar"}, {}, ""}).path.url_encoded() == "/foo/bar" );
+    BOOST_CHECK( Uri({"", "", {}, {}, ""}).path.url_encoded() == "" );
+    BOOST_CHECK( Uri({"", "", {"f o"}, {}, ""}).path.url_encoded() == "/f%20o" );
 }
 
 BOOST_AUTO_TEST_CASE( test_uri_query_string )

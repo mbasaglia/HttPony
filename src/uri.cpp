@@ -42,14 +42,7 @@ Uri::Uri(const std::string& uri)
         scheme = urldecode(match[1]);
         authority = match[2]; /// \todo could parse user:password@host:port
 
-        auto segments = melanolib::string::char_split(match[3], '/');
-        for ( auto& segment : segments )
-        {
-            if ( segment == ".." && ! path.empty() )
-                path.pop_back();
-            else if ( segment != "." )
-                path.push_back(urldecode(segment));
-        }
+        path = Path(match[3], true);
 
         query = parse_query_string(match[4]);
 
@@ -60,7 +53,7 @@ Uri::Uri(const std::string& uri)
 Uri::Uri(
     std::string scheme,
     std::string authority,
-    std::vector<std::string> path,
+    Path path,
     DataMap query,
     std::string fragment
 ) : scheme(std::move(scheme)),
@@ -80,7 +73,7 @@ std::string Uri::full() const
     if ( !authority.empty() )
         result += "//" + authority;
 
-    result += path_string();
+    result += path.url_encoded();
 
     result += query_string(true);
 
@@ -98,14 +91,6 @@ bool Uri::operator==(const Uri& oth) const
            query == oth.query &&
            fragment == oth.fragment
     ;
-}
-
-std::string Uri::path_string() const
-{
-    std::string result;
-    for ( const auto& segment : path )
-        result += '/' + urlencode(segment);
-    return result;
 }
 
 std::string Uri::query_string(bool question_mark) const

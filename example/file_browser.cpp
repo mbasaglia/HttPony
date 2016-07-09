@@ -67,7 +67,7 @@ protected:
                 {
                     std::string basename = item.path().filename().string();
                     response.body << "<li><a href='"
-                        << request.url.path_string() << '/' << basename
+                        << (request.url.path / basename).url_encoded()
                         << "'>" << basename << "</a></li>\n";
                 }
 
