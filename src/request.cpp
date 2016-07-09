@@ -58,7 +58,9 @@ bool Request::parse_post()
 
         for ( const auto& part : form_data.parts )
         {
-            CompoundHeader disposition(part.headers.get("content-disposition"));
+            CompoundHeader disposition;
+            if ( !http::read::compound_header(part.headers.get("content-disposition"), disposition) )
+                return false;
             if ( disposition.value != "form-data" || !disposition.parameters.contains("name") )
                 return false;
             post.append(disposition.parameters["name"], part.content);
@@ -78,7 +80,7 @@ Auth::Auth(const std::string& header_contents)
     auth_scheme = stream.get_until(melanolib::string::ascii::is_space);
     stream.ignore_if(melanolib::string::ascii::is_space);
     auth_string = stream.get_until(melanolib::string::ascii::is_space);
-    parse_header_parameters(stream, parameters);
+    http::read::header_parameters(stream, parameters);
     realm = parameters.get("realm");
     parameters.erase("realm");
 

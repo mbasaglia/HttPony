@@ -25,6 +25,7 @@
 
 #include "server.hpp"
 #include "logging.hpp"
+#include "connection.hpp"
 
 
 namespace httpony {
@@ -56,22 +57,17 @@ struct Server::Data
                 if ( !acceptor.is_open() )
                     return;
 
-                parse_request(error_code);
+                /// \todo Keep the connection alive if needed
+                Connection connection(std::move(socket));
+                if ( !error_code )
+                {
+                    owner->respond(connection, connection.read_request());
+                }
+                /// \todo Log error if error_code
 
                 accept();
             }
         );
-    }
-
-    void parse_request(boost::system::error_code error_code)
-    {
-        /// \todo This could spawn async reads (and writes)
-        ClientConnection connection(std::move(socket), owner);
-        if ( error_code )
-            connection.status = StatusCode::BadRequest;
-        else
-            connection.read_request();
-        owner->respond(connection);
     }
 };
 
@@ -106,7 +102,9 @@ void Server::set_max_request_body(std::size_t size)
 void Server::process_log_format(
         char label,
         const std::string& argument,
-        const ClientConnection& connection,
+        const Connection& connection,
+        const Request& request,
+        const Response& response,
         std::ostream& output
     ) const
 {
@@ -119,23 +117,23 @@ void Server::process_log_format(
             break;
         case 'h': // Remote host
         case 'a': // Remote IP-address
-            output << connection.request.from.string;
+            output << request.from.string;
             break;
         case 'A': // Local IP-address
-            output << connection.io.local_address().string;
+            output << connection.local_address().string;
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
-            output << connection.response.body.content_length();
+            output << response.body.content_length();
             break;
         case 'b': // Size of response in bytes, excluding HTTP headers. In CLF format, i.e. a '-' rather than a 0 when no bytes are sent.
-            output << clf(connection.response.body.content_length());
+            output << clf(response.body.content_length());
             break;
         case 'C': // The contents of cookie Foobar in the request sent to the server.
-            output << connection.request.cookies[argument];
+            output << request.cookies[argument];
             break;
         case 'D': // The time taken to serve the request, in microseconds.
             std::cout << std::chrono::duration_cast<std::chrono::microseconds>(
-                connection.response.date - connection.request.received_date
+                response.date - request.received_date
             ).count();
             break;
         case 'e': // The contents of the environment variable FOOBAR
@@ -145,11 +143,11 @@ void Server::process_log_format(
             // TODO
             break;
         case 'H': // The request protocol
-            output << connection.request.protocol;
+            output << request.protocol;
             break;
         case 'i': // The contents of header line in the request sent to the server.
             /// \todo Handle multiple headers with the same name
-            output << connection.request.headers[argument];
+            output << request.headers[argument];
             break;
         case 'k': // Number of keepalive requests handled on this connection.
             // TODO ?
@@ -159,17 +157,17 @@ void Server::process_log_format(
             output << '-';
             break;
         case 'm':
-            output << connection.request.method;
+            output << request.method;
             break;
         case 'o': // The contents of header line(s) in the reply.
             /// \todo Handle multiple headers with the same name
-            output << connection.response.headers[argument];
+            output << response.headers[argument];
             break;
         case 'p':
             if ( argument == "remote" )
-                output << connection.request.from.port;
+                output << request.from.port;
             else if ( argument == "local" )
-                output << connection.io.local_address().port;
+                output << connection.local_address().port;
             else // canonical
                 output << data->listen.port;
             break;
@@ -177,16 +175,16 @@ void Server::process_log_format(
             // TODO ?
             break;
         case 'q': // The query string (prepended with a ? if a query string exists, otherwise an empty string)
-            output << connection.request.url.query_string(true);
+            output << request.url.query_string(true);
             break;
         case 'r': // First line of request
-            output << connection.request.method << ' ' << connection.request.url.full() << ' ' << connection.request.protocol;
+            output << request.method << ' ' << request.url.full() << ' ' << request.protocol;
             break;
         case 'R': // The handler generating the response (if any).
             // TODO ?
             break;
         case 's': // Status
-            output << connection.response.status.code;
+            output << response.status.code;
             break;
         case 't': // The time, in the format given by argument
             output << melanolib::time::strftime(melanolib::time::DateTime(), argument);
@@ -194,7 +192,7 @@ void Server::process_log_format(
         case 'T': // The time taken to serve the request, in a time unit given by argument (default seconds).
         {
             auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(
-                connection.response.date - connection.request.received_date
+                response.date - request.received_date
             ).count();
             if ( argument == "ms" )
                 microseconds /= 1000;
@@ -204,10 +202,10 @@ void Server::process_log_format(
             break;
         }
         case 'u': // Remote user (from auth; may be bogus if return status (%s) is 401)
-            output << connection.request.auth.user;
+            output << request.auth.user;
             break;
         case 'U': // The URL path requested, not including any query string.
-            output << connection.request.url.path_string();
+            output << request.url.path_string();
             break;
         case 'v': // The canonical ServerName of the server serving the request.
             // TODO ?
@@ -217,7 +215,7 @@ void Server::process_log_format(
             break;
         case 'X': // Connection status when response is completed. X = aborted before response; + = Maybe keep alive; - = Close after response.
             // TODO keep alive?
-            output << (connection.status.is_error() ? 'X' : '-');
+            output << (request.suggested_status.is_error() ? 'X' : '-');
             break;
     }
 }
@@ -253,6 +251,52 @@ void Server::stop()
         data->io_service.stop();
         data->thread.join();
     }
+}
+
+void Server::log_response(
+        const std::string& format,
+        const Connection& connection,
+        const Request& request,
+        const Response& response,
+        std::ostream& output
+    ) const
+{
+    auto start = format.begin();
+    auto finish = format.begin();
+    while ( start < format.end() )
+    {
+        finish = std::find(start, format.end(), '%');
+        output << std::string(start, finish);
+
+        // No more % (clean exit)
+        if ( finish == format.end() )
+            break;
+
+        start = finish + 1;
+        // stray % at the end
+        if ( start == format.end() )
+            break;
+
+        char label = *start;
+        start++;
+        std::string argument;
+
+        if ( label == '{' )
+        {
+            finish = std::find(start, format.end(), '}');
+            // Unterminated %{
+            if ( finish + 1 >= format.end() )
+                break;
+            argument = std::string(start, finish);
+            start = finish + 1;
+            label = *start;
+            start++;
+        }
+
+        process_log_format(label, argument, connection, request, response, output);
+
+    }
+    output << std::endl;
 }
 
 } // namespace httpony

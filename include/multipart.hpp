@@ -22,11 +22,6 @@
 #ifndef HTTPONY_MULTIPART_HPP
 #define HTTPONY_MULTIPART_HPP
 
-#include <melanolib/string/ascii.hpp>
-#include <melanolib/string/simple_stringutils.hpp>
-
-#include "headers.hpp"
-
 #include "http/read.hpp"
 
 namespace httpony {

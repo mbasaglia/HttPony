@@ -22,8 +22,6 @@
 #ifndef HTTPONY_HTTP_WRITE_HPP
 #define HTTPONY_HTTP_WRITE_HPP
 
-#include <ostream>
-
 #include "response.hpp"
 
 namespace httpony {
@@ -104,6 +102,49 @@ inline void response(std::ostream& stream, Response& response)
     response.body.write_to(stream);
 }
 
+
+inline std::string header_parameter(const std::string& name, const std::string& value)
+{
+    using namespace melanolib::string;
+    static const char* const slashable = "\" \t\\";
+    std::string result = name;
+    result +=  '=';
+    if ( contains_any(value, slashable) )
+    {
+        result +=  '"';
+        result += add_slashes(value, slashable);
+        result += '"';
+    }
+    else
+    {
+        result += value;
+    }
+    return result;
+}
+
+template<class OrderedContainer>
+    inline std::string header_parameters(const OrderedContainer& input, char delimiter = ',')
+{
+    std::string result;
+    for ( const auto& param : input )
+        result += header_parameter(param.first, param.second) + delimiter + ' ';
+    if ( !result.empty() )
+        result.pop_back();
+    return result;
+}
+
+inline std::string auth_challenge(const AuthChallenge& challenge)
+{
+    std::string authenticate = challenge.auth_scheme;
+
+    if ( !challenge.realm.empty() )
+        authenticate += " realm=\"" + melanolib::string::add_slashes(challenge.realm, "\"\\") + "\";";
+
+    if ( !challenge.parameters.empty() )
+        authenticate += ' ' + header_parameters(challenge.parameters);
+
+    return authenticate;
+}
 } // namespace write
 } // namespace http
 } // namespace httpony

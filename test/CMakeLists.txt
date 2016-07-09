@@ -52,10 +52,10 @@ if (BUILD_TESTING)
     target_link_libraries(test_uri ${COMMON_LIBRARIES})
 
     melanotest(test_mime_type)
-    target_link_libraries(test_uri ${COMMON_LIBRARIES})
+    target_link_libraries(test_mime_type ${COMMON_LIBRARIES})
 
     melanotest(test_base_encoding)
-    target_link_libraries(test_uri ${COMMON_LIBRARIES})
+    target_link_libraries(test_base_encoding ${COMMON_LIBRARIES})
 
     melanotest(test_protocol)
     target_link_libraries(test_protocol ${COMMON_LIBRARIES})

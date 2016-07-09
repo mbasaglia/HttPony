@@ -19,7 +19,8 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "io.hpp"
+#include "network_stream.hpp"
+#include "connection.hpp"
 
 namespace httpony {
 
@@ -43,9 +44,7 @@ bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers
         _content_length = 0;
         _content_type = {};
         rdbuf(nullptr);
-        _error = boost::system::errc::make_error_code(
-            boost::system::errc::bad_message
-        );
+        _error = true;
         return false;
     }
 
@@ -56,7 +55,7 @@ bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers
     if ( auto netbuf = dynamic_cast<NetworkInputBuffer*>(buffer) )
         netbuf->expect_input(_content_length);
 
-    _error = boost::system::error_code();
+    _error = false;
     return true;
 }
 
@@ -68,16 +67,12 @@ std::string InputContentStream::read_all()
     /// \todo if possible set a low-level failbit when the streambuf finds an error
     if ( std::size_t(gcount()) != _content_length )
     {
-        _error = boost::system::errc::make_error_code(
-            boost::system::errc::message_size
-        );
+        _error = true;
         all.resize(gcount());
     }
     else if ( !eof() && peek() != traits_type::eof() )
     {
-        _error = boost::system::errc::make_error_code(
-            boost::system::errc::message_size
-        );
+        _error = true;
     }
 
     return all;

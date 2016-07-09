@@ -20,13 +20,13 @@ set(SOURCES
 server.cpp
 status.cpp
 logging.cpp
-client_connection.cpp
-io.cpp
+network_stream.cpp
 uri.cpp
 request.cpp
 http_read.cpp
 protocol.cpp
 multipart.cpp
+mime_type.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

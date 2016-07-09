@@ -19,40 +19,26 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "client_connection.hpp"
+#include "mime_type.hpp"
 
-#include <melanolib/time/time_string.hpp>
+#include "http/read.hpp"
 
-#include "http/write.hpp"
 
 namespace httpony {
 
-void ClientConnection::read_request()
+
+MimeType::MimeType(const std::string& string)
 {
-    boost::system::error_code error;
+    melanolib::string::QuickStream stream(string);
+    set_type(stream.get_line('/'));
+    set_subtype(stream.get_until(
+        [](char c){ return melanolib::string::ascii::is_space(c) || c ==';'; }
+    ));
 
-    request = Request();
-    request.from = io.remote_address();
-
-    /// \todo Avoid magic number, keep reading if needed
-    auto sz = io.input_buffer().read_some(1024, error);
-
-    status = StatusCode::BadRequest;
-
-    if ( error || sz == 0 )
-        return;
-
-    std::istream stream(&io.input_buffer());
-    status = http::read::request(stream, request, parse_flags);
-    response.protocol = request.protocol;
-    request.from = io.remote_address();
-}
-
-void ClientConnection::send_response(Response& response)
-{
-    std::ostream stream(&io.output_buffer());
-    http::write::response(stream, response);
-    io.commit_output();
+    Headers parameters;
+    http::read::header_parameters(stream, parameters);
+    if ( !parameters.empty() )
+        set_parameter(parameters.front());
 }
 
 } // namespace httpony

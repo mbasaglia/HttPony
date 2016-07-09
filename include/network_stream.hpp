@@ -19,149 +19,18 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTPONY_IO_HPP
-#define HTTPONY_IO_HPP
+#ifndef HTTPONY_NETWORK_STREAM_HPP
+#define HTTPONY_NETWORK_STREAM_HPP
 
 #include <iostream>
+
+/// \todo Limit asio dependencies to connection.hpp and server.cpp
 #include <boost/asio.hpp>
 
 #include "mime_type.hpp"
-#include "ip_address.hpp"
+#include "headers.hpp"
 
 namespace httpony {
-
-/**
- * \brief Stream buffer linked to a socket for reading
- */
-class NetworkInputBuffer : public boost::asio::streambuf
-{
-public:
-    explicit NetworkInputBuffer(boost::asio::ip::tcp::socket& socket)
-        : _socket(socket)
-    {
-    }
-
-    /**
-     * \brief Reads up to size from the socket
-     */
-    std::size_t read_some(std::size_t size, boost::system::error_code& error)
-    {
-        /// \todo timeout
-        auto prev_size = this->size();
-        if ( size <= prev_size )
-            return size;
-        size -= prev_size;
-
-        auto in_buffer = prepare(size);
-        auto read_size = _socket.read_some(boost::asio::buffer(in_buffer), error);
-        commit(read_size);
-
-        return read_size + prev_size;
-    }
-
-    /**
-     * \brief Expect at least \p byte_count to be available in the socket
-     */
-    void expect_input(std::size_t byte_count)
-    {
-        _expected_input = byte_count;
-    }
-
-    std::size_t expected_input() const
-    {
-        return _expected_input;
-    }
-
-    boost::system::error_code error() const
-    {
-        return _error;
-    }
-
-protected:
-    int_type underflow() override
-    {
-        int_type ret = boost::asio::streambuf::underflow();
-        if ( ret == traits_type::eof() && _expected_input > 0 )
-        {
-            auto read_size = read_some(_expected_input, _error);
-
-            if ( read_size <= _expected_input )
-                _expected_input -= read_size;
-            else
-                /// \todo This should trigger a bad request
-                _error = boost::system::errc::make_error_code(
-                    boost::system::errc::file_too_large
-                );
-
-            ret = boost::asio::streambuf::underflow();
-        }
-        return ret;
-    }
-
-private:
-    boost::asio::ip::tcp::socket& _socket;
-    std::size_t _expected_input = 0;
-    boost::system::error_code _error;
-};
-
-using NetworkOutputBuffer = boost::asio::streambuf;
-
-class NetworkIO
-{
-public:
-    explicit NetworkIO(boost::asio::ip::tcp::socket socket)
-        : _socket(std::move(socket)), _input_buffer(_socket)
-    {
-    }
-
-    NetworkInputBuffer& input_buffer()
-    {
-        return _input_buffer;
-    }
-
-    boost::asio::streambuf& output_buffer()
-    {
-        return _output_buffer;
-    }
-
-    void commit_output()
-    {
-        boost::asio::write(_socket, _output_buffer);
-    }
-
-    void close()
-    {
-        _socket.close();
-    }
-
-    IPAddress remote_address() const
-    {
-        return endpoint_to_ip(_socket.remote_endpoint());
-    }
-
-    IPAddress local_address() const
-    {
-        return endpoint_to_ip(_socket.local_endpoint());
-    }
-
-private:
-    /**
-     * \brief Converts a boost endpoint to an IPAddress object
-     */
-    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
-    {
-        return IPAddress(
-            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
-            endpoint.address().to_string(),
-            endpoint.port()
-        );
-    }
-
-    boost::asio::ip::tcp::socket _socket;
-    NetworkInputBuffer  _input_buffer;
-    NetworkOutputBuffer _output_buffer;
-
-};
 
 
 /**
@@ -175,6 +44,22 @@ public:
     InputContentStream()
         : std::istream(nullptr)
     {}
+
+    InputContentStream(InputContentStream&& other)
+        : std::istream(other.rdbuf()),
+          _content_length(other._content_length),
+          _content_type(std::move(other._content_type)),
+          _error(other._error)
+        {}
+
+    InputContentStream& operator=(InputContentStream&& other)
+    {
+        rdbuf(other.rdbuf());
+        _content_length = other._content_length;
+        std::swap(_content_type, other._content_type);
+        std::swap(_error, other._error);
+        return *this;
+    }
 
     bool get_data(std::streambuf* buffer, const Headers& headers);
 
@@ -213,7 +98,7 @@ public:
 private:
     std::size_t _content_length = 0;
     MimeType _content_type;
-    boost::system::error_code _error;
+    bool _error = false;
 };
 
 /**
@@ -227,7 +112,7 @@ public:
     {
     }
 
-    explicit OutputContentStream(OutputContentStream&& other)
+    OutputContentStream(OutputContentStream&& other)
         : std::ostream(other.rdbuf() ? &buffer : nullptr),
           _content_type(std::move(other._content_type))
     {
@@ -297,15 +182,6 @@ public:
     }
 
     /**
-     * \brief Writes the payload to a socket
-     */
-    void net_write(boost::asio::ip::tcp::socket& socket)
-    {
-        if ( has_data() )
-            boost::asio::write(socket, buffer);
-    }
-
-    /**
      * \brief Writes the payload to a stream
      */
     void write_to(std::ostream& output)
@@ -322,4 +198,4 @@ private:
 };
 
 } // namespace httpony
-#endif // HTTPONY_IO_HPP
+#endif // HTTPONY_NETWORK_STREAM_HPP

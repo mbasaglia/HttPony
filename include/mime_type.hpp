@@ -26,28 +26,14 @@
 
 #include <melanolib/string/simple_stringutils.hpp>
 
-#include "headers.hpp"
-
 namespace httpony {
 
 class MimeType
 {
 public:
-    using Parameter = Headers::value_type;
+    using Parameter = std::pair<std::string, std::string>;
 
-    MimeType(const std::string& string)
-    {
-        melanolib::string::QuickStream stream(string);
-        set_type(stream.get_line('/'));
-        set_subtype(stream.get_until(
-            [](char c){ return melanolib::string::ascii::is_space(c) || c ==';'; }
-        ));
-
-        Headers parameters;
-        parse_header_parameters(stream, parameters);
-        if ( !parameters.empty() )
-            set_parameter(parameters.front());
-    }
+    MimeType(const std::string& string);
 
     MimeType(){}
 

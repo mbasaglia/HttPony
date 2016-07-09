@@ -26,23 +26,25 @@ namespace httpony {
 namespace http {
 namespace read {
 
-Status request(std::istream& stream, Request& request, HttpParserFlags flags)
+Request request(std::istream& stream, HttpParserFlags flags)
 {
-    request = Request();
+    Request request;
+
+    request.suggested_status = StatusCode::BadRequest;
 
     if ( !request_line(stream, request) )
-        return StatusCode::BadRequest;
+        return request;
 
     if ( !headers(stream, request.headers, flags & ParseFoldedHeaders) )
-        return StatusCode::BadRequest;
+        return request;
 
     if ( flags & ParseCookies )
     {
         for ( const auto& cookie_header : request.headers.key_range("Cookie") )
         {
             melanolib::string::QuickStream cookie_stream(cookie_header.second);
-            if ( !parse_header_parameters(cookie_stream, request.cookies) )
-                return StatusCode::BadRequest;
+            if ( !header_parameters(cookie_stream, request.cookies) )
+                return request;
         }
 
         if ( request.headers.contains("Authorization") )
@@ -52,20 +54,26 @@ Status request(std::istream& stream, Request& request, HttpParserFlags flags)
     if ( request.headers.contains("Content-Length") )
     {
         if ( !request.body.get_data(stream.rdbuf(), request.headers) )
-            return StatusCode::BadRequest;
+            return request;
 
         if ( request.protocol >= Protocol::http_1_1 && request.headers.get("Expect") == "100-continue" )
-            return StatusCode::Continue;
+        {
+            request.suggested_status = StatusCode::Continue;
+            return request;
+        }
     }
     else if ( !stream.eof() && stream.peek() != std::istream::traits_type::eof() )
     {
-        return StatusCode::LengthRequired;
+        request.suggested_status = StatusCode::LengthRequired;
+        return request;
     }
 
     if ( request.protocol < Protocol::http_1_1 && request.headers.contains("Expect") )
-        return StatusCode::ExpectationFailed;
-
-    return StatusCode::OK;
+    {
+        request.suggested_status = StatusCode::ExpectationFailed;
+    }
+    request.suggested_status = StatusCode::OK;
+    return request;
 }
 
 void skip_line(std::istream& stream)

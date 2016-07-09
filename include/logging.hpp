@@ -22,15 +22,9 @@
 #ifndef HTTPONY_LOGGING_HPP
 #define HTTPONY_LOGGING_HPP
 
-#include "client_connection.hpp"
+#include <ostream>
 
 namespace httpony {
-
-
-/**
- * \brief Writes a line of log into \p output based on format
- */
-void log(const std::string& format, const ClientConnection& connection, std::ostream& output);
 
 template<class T>
     struct CommonLogFormatItem

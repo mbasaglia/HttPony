@@ -22,14 +22,8 @@
 #ifndef HTTPONY_RESPONSE_HPP
 #define HTTPONY_RESPONSE_HPP
 
-#include <melanolib/utils/c++-compat.hpp>
-#include <melanolib/time/date_time.hpp>
-
-#include "status.hpp"
-#include "protocol.hpp"
-#include "io.hpp"
-#include "uri.hpp"
 #include "cookie.hpp"
+#include "request.hpp"
 
 namespace httpony {
 
@@ -38,19 +32,6 @@ struct AuthChallenge
     std::string auth_scheme;
     std::string realm;
     Headers     parameters;
-
-    std::string header_value() const
-    {
-        std::string authenticate = auth_scheme;
-
-        if ( !realm.empty() )
-            authenticate += " realm=\"" + melanolib::string::add_slashes(realm, "\"\\") + "\";";
-
-        if ( !parameters.empty() )
-            authenticate += ' ' + header_parameters(parameters);
-
-        return authenticate;
-    }
 };
 
 /**
@@ -58,27 +39,27 @@ struct AuthChallenge
  */
 struct Response
 {
-    explicit Response(std::string content_type, Status status = Status())
+    explicit Response(
+        std::string content_type,
+        Status status = Status(),
+        const Protocol& protocol = Protocol::http_1_1
+    )
         : body(std::move(content_type)),
           status(std::move(status)),
-          protocol(Protocol::http_1_1)
+          protocol(protocol)
     {
         /// \todo Date
     }
 
-    Response(Status status = Status())
+    Response(Status status = Status(), const Protocol& protocol = Protocol::http_1_1)
         : status(std::move(status)),
-          protocol(Protocol::http_1_1)
-    {
+          protocol(protocol)
+    {}
 
-    }
-
-    OutputContentStream body;
-    Status      status;
-    Headers     headers;
-    Protocol    protocol;
-    CookieJar   cookies;
-    melanolib::time::DateTime date;
+    explicit Response(const Request& request)
+        : status(request.suggested_status),
+          protocol(request.protocol)
+    {}
 
     static Response redirect(const Uri& location, Status status = StatusCode::Found)
     {
@@ -87,19 +68,44 @@ struct Response
         return response;
     }
 
-    static Response authorization_required(const std::vector<AuthChallenge>& challenges)
+    static Response authorization_required(const std::vector<AuthChallenge>& challenges);
+
+
+    /**
+     * \brief Removes the response body when required by HTTP
+     */
+    void clean_body()
     {
-        Response response(StatusCode::Unauthorized);
-        std::string www_authenticate;
-        for ( const auto& challenge : challenges )
+        if ( body.has_data() )
         {
-            if ( !www_authenticate.empty() )
-                www_authenticate += ", ";
-            www_authenticate += challenge.header_value();
+            if ( status.type() == StatusType::Informational ||
+                status == StatusCode::NoContent ||
+                status == StatusCode::NotModified
+            )
+            {
+                body.stop_data();
+            }
         }
-        response.headers["WWW-Authenticate"] = www_authenticate;
-        return response;
     }
+
+    /**
+     * \brief Removes the response body when required by HTTP
+     */
+    void clean_body(const Request& input)
+    {
+        clean_body();
+        if ( body.has_data() && status == StatusCode::OK && input.method == "CONNECT" )
+        {
+            body.stop_data();
+        }
+    }
+
+    OutputContentStream body;
+    Status      status;
+    Headers     headers;
+    Protocol    protocol;
+    CookieJar   cookies;
+    melanolib::time::DateTime date;
 };
 
 } // namespace httpony

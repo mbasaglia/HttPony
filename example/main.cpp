@@ -30,65 +30,64 @@ class MyServer : public httpony::Server
 public:
     using Server::Server;
 
-    void respond(httpony::ClientConnection& connection) override
+    void respond(httpony::Connection& connection, httpony::Request&& request) override
     {
         try
         {
-            std::string body = get_body(connection);
+            std::string body = get_body(connection, request);
 
-            create_response(connection);
+            httpony::Response response = send_response(connection, request);
 
-            print_info(connection, body);
+            print_info(connection, request, response, body);
         }
         catch ( const std::exception& )
         {
             // Create a server error response if an exception happened
             // while handling the request
-            connection.response = httpony::Response();
-            connection.status = httpony::StatusCode::InternalServerError;
-            create_response(connection);
-        }
+            request.suggested_status = httpony::StatusCode::InternalServerError;
+            httpony::Response response = send_response(connection, request);
 
-        send_response(connection);;
+            log_response(log_format, connection, request, response, std::cout);
+        }
     }
 
 private:
     /**
      * \brief Returns the whole request body as a string
      */
-    std::string get_body(httpony::ClientConnection& connection) const
+    std::string get_body(httpony::Connection& connection, httpony::Request& request) const
     {
         // Discard requests with a too long of a payload
-        if ( connection.request.body.content_length() > max_size )
+        if ( request.body.content_length() > max_size )
         {
-            connection.status = httpony::StatusCode::PayloadTooLarge;
+            request.suggested_status = httpony::StatusCode::PayloadTooLarge;
             return "";
         }
 
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
-        if ( connection.status == httpony::StatusCode::Continue )
+        if ( request.suggested_status == httpony::StatusCode::Continue )
         {
-            connection.send_response(connection.status);
-            connection.status = httpony::StatusCode::OK;
+            connection.send_response(request.suggested_status);
+            request.suggested_status = httpony::StatusCode::OK;
         }
 
         // Parse form data
-        if ( connection.request.can_parse_post() )
+        if ( request.can_parse_post() )
         {
-            if ( !connection.request.parse_post() )
-                connection.status = httpony::StatusCode::BadRequest;
+            if ( !request.parse_post() )
+                request.suggested_status = httpony::StatusCode::BadRequest;
 
             return "";
         }
 
         // Check if we have something to read
-        if ( connection.request.body.has_data() )
+        if ( request.body.has_data() )
         {
-            std::string body = connection.request.body.read_all();
+            std::string body = request.body.read_all();
 
             // Handle read errors (eg: wrong Content-Length)
-            if ( connection.request.body.has_error() )
-                connection.status = httpony::StatusCode::BadRequest;
+            if ( request.body.has_error() )
+                request.suggested_status = httpony::StatusCode::BadRequest;
 
             return body;
         }
@@ -97,30 +96,41 @@ private:
     }
 
     /**
-     * \brief Sets up the response object
+     * \brief Sets up the response object and sends it to the client
      */
-    void create_response(httpony::ClientConnection& connection) const
+    httpony::Response send_response(httpony::Connection& connection, const httpony::Request& request) const
     {
-        // The response is in plain text
-        connection.response.body.start_data("text/plain");
+        httpony::Response response(request);
 
-        if ( connection.ok() )
+        // The response is in plain text
+        response.body.start_data("text/plain");
+
+        if ( !response.status.is_error() )
         {
             // On success, send Hello world
-            connection.response.body << "Hello, world!\n";
+            response.body << "Hello, world!\n";
         }
         else
         {
             // On failure send the error message
-            connection.response.status = connection.status;
-            connection.response.body << connection.response.status.message << '\n';
+            response.body << response.status.message << '\n';
         }
 
         // We are not going to keep the connection open
-        if ( connection.response.protocol >= httpony::Protocol::http_1_1 )
+        if ( response.protocol >= httpony::Protocol::http_1_1 )
         {
-            connection.response.headers["Connection"] = "close";
+            response.headers["Connection"] = "close";
         }
+
+
+        // Ensure the response isn't cached
+        response.headers["Expires"] = "0";
+        // This removes the response body when mandated by HTTP
+        response.clean_body(request);
+
+        connection.send_response(response);
+
+        return response;
     }
 
     /**
@@ -137,33 +147,24 @@ private:
     /**
      * \brief Logs info on the current request/response
      */
-    void print_info(httpony::ClientConnection& connection, std::string& body) const
+    void print_info(httpony::Connection& connection,
+                    const httpony::Request& request,
+                    const httpony::Response& response,
+                    std::string& body) const
     {
         std::cout << '\n';
-        log(log_format, connection, std::cout);
+        log_response(log_format, connection, request, response, std::cout);
 
-        show_headers("Headers", connection.request.headers);
-        show_headers("Cookies", connection.request.cookies);
-        show_headers("Get", connection.request.get);
-        show_headers("Post", connection.request.post);
+        show_headers("Headers", request.headers);
+        show_headers("Cookies", request.cookies);
+        show_headers("Get", request.get);
+        show_headers("Post", request.post);
 
-        if ( connection.request.body.has_data() )
+        if ( request.body.has_data() )
         {
             std::replace_if(body.begin(), body.end(), [](char c){return c < ' ' && c != '\n';}, ' ');
             std::cout << '\n' << body << '\n';
         }
-    }
-
-    /**
-     * \brief Send the connection to the client
-     */
-    void send_response(httpony::ClientConnection& connection) const
-    {
-        // Ensure the response isn't cached
-        connection.response.headers["Expires"] = "0";
-        // This removes the response body when mandated by HTTP
-        connection.clean_response_body();
-        connection.send_response();
     }
 
 

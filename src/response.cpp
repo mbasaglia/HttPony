@@ -18,11 +18,23 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "logging.hpp"
-#include "server.hpp"
+#include "response.hpp"
+#include "http/write.hpp"
 
 namespace httpony {
 
+static Response authorization_required(const std::vector<AuthChallenge>& challenges)
+{
+    Response response(StatusCode::Unauthorized);
+    std::string www_authenticate;
+    for ( const auto& challenge : challenges )
+    {
+        if ( !www_authenticate.empty() )
+            www_authenticate += ", ";
+        www_authenticate += http::write::auth_challenge(challenge);
+    }
+    response.headers["WWW-Authenticate"] = www_authenticate;
+    return response;
+}
 
 } // namespace httpony

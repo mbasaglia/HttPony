@@ -26,8 +26,9 @@
 
 #include "ip_address.hpp"
 #include "protocol.hpp"
-#include "io.hpp"
+#include "network_stream.hpp"
 #include "uri.hpp"
+#include "status.hpp"
 
 namespace httpony {
 
@@ -55,6 +56,10 @@ struct Auth
  */
 struct Request
 {
+    bool can_parse_post() const;
+
+    bool parse_post();
+
     Uri         url;
     std::string method;
     Protocol    protocol;
@@ -64,14 +69,11 @@ struct Request
     DataMap     post;
     IPAddress   from;
     Auth        auth;
+    Status      suggested_status;
 
     InputContentStream body;
 
     melanolib::time::DateTime received_date;
-
-    bool can_parse_post() const;
-
-    bool parse_post();
 };
 
 } // namespace httpony

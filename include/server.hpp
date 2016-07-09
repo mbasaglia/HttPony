@@ -22,11 +22,9 @@
 #ifndef HTTPONY_SERVER_HPP
 #define HTTPONY_SERVER_HPP
 
-#include <stdexcept>
 #include <memory>
-#include <ostream>
 
-#include "client_connection.hpp"
+#include "connection.hpp"
 
 namespace httpony {
 
@@ -74,19 +72,31 @@ public:
     /**
      * \brief Function handling requests
      */
-    virtual void respond(ClientConnection& connection) = 0;
+    virtual void respond(Connection& connection, Request&& request) = 0;
 
+    /**
+     * \brief Writes a line of log into \p output based on format
+     */
+    void log_response(
+        const std::string& format,
+        const Connection& connection,
+        const Request& request,
+        const Response& response,
+        std::ostream& output) const;
+
+private:
     /**
      * \brief Writes a single log item into \p output
      */
     virtual void process_log_format(
         char label,
         const std::string& argument,
-        const ClientConnection& connection,
+        const Connection& connection,
+        const Request& request,
+        const Response& response,
         std::ostream& output
     ) const;
 
-private:
     struct Data;
     std::unique_ptr<Data> data;
 };
