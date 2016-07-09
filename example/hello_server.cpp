@@ -174,12 +174,13 @@ private:
 
 int main()
 {
-    MyServer server(8888);
+    MyServer server(8081);
 
     server.start();
 
-    std::cout << "Server started, hit enter to quit\n";
+    std::cout << "Server started on port "<< server.listen_address().port << ", hit enter to quit\n";
     std::cin.get();
+    std::cout << "Stopped\n";
 
     return 0;
 }

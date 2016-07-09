@@ -16,13 +16,20 @@
 #
 
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
-set(EXECUTABLE_NAME ${LIBRARY_NAME}_example)
-
-set(SOURCES
-main.cpp
-)
 
 
-# Executable
-add_executable(${EXECUTABLE_NAME} ${SOURCES})
-target_link_libraries(${EXECUTABLE_NAME} ${LIBRARY_NAME})
+function(example name)
+    add_executable(${name} ${name}.cpp)
+    target_link_libraries(${name} ${LIBRARY_NAME})
+endfunction()
+
+
+example(hello_server)
+
+set(Boot_FOUND ON)
+find_package (Boost COMPONENTS filesystem QUIET)
+if(Boot_FOUND)
+    example(file_browser)
+    target_link_libraries(file_browser ${Boost_LIBRARIES})
+endif()
+

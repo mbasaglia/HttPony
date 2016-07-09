@@ -26,6 +26,9 @@
 
 namespace httpony {
 
+/// \todo Use a proper class for this
+using Path = std::vector<std::string>;
+
 /**
  * \brief Uniform resource identifier
  * \see http://www.faqs.org/rfcs/rfc3986.html
@@ -41,7 +44,7 @@ struct Uri
     Uri(
         std::string scheme,
         std::string authority,
-        std::vector<std::string> path,
+        Path path,
         DataMap query,
         std::string fragment
     );
@@ -54,7 +57,7 @@ struct Uri
 
     std::string scheme;
     std::string authority;
-    std::vector<std::string> path;
+    Path path;
     DataMap query;
     std::string fragment;
 

@@ -56,7 +56,7 @@ include_directories(include)
 add_subdirectory(src lib)
 add_subdirectory(lib/Melanolib/src EXCLUDE_FROM_ALL)
 
-add_subdirectory(example)
+add_subdirectory(example EXCLUDE_FROM_ALL)
 
 # Find all sources for documentation and stuff
 set(ALL_SOURCE_DIRECTORIES src include)
