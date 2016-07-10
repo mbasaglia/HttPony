@@ -147,6 +147,12 @@ public:
     /**
      * \brief Sets up the stream to contain data in the specified encoding
      */
+    void start_data(const MimeType& content_type)
+    {
+        rdbuf(&buffer);
+        _content_type = content_type;
+    }
+
     void start_data(const std::string& content_type)
     {
         rdbuf(&buffer);

@@ -21,6 +21,7 @@
 #include <fstream>
 
 #include <boost/filesystem.hpp>
+#include <magic.h>
 
 #include "httpony.hpp"
 
@@ -28,7 +29,22 @@
 class ServeFiles : public httpony::Server
 {
 public:
-    using Server::Server;
+    explicit ServeFiles(httpony::IPAddress listen)
+        : Server(listen)
+    {
+        magic_cookie = magic_open(MAGIC_SYMLINK|MAGIC_MIME_TYPE);
+        magic_load(magic_cookie, nullptr);
+    }
+
+    explicit ServeFiles(uint16_t port)
+        : ServeFiles(httpony::IPAddress(httpony::IPAddress::Type::IPv4, "0.0.0.0", port))
+    {}
+
+    ~ServeFiles()
+    {
+        if ( magic_cookie )
+            magic_close(magic_cookie);
+    }
 
     void respond(httpony::Connection& connection, httpony::Request&& request) override
     {
@@ -38,11 +54,13 @@ public:
     }
 
 protected:
-
     httpony::Response build_response(httpony::Connection& connection, httpony::Request& request) const
     {
         try
         {
+            if ( request.method != "GET"  && request.method != "HEAD")
+                request.suggested_status = httpony::StatusCode::MethodNotAllowed;
+
             if ( request.suggested_status.is_error() )
                 return simple_response(request);
 
@@ -77,8 +95,7 @@ protected:
             else if ( boost::filesystem::is_regular(file) )
             {
                 httpony::Response response(request);
-                /// \todo Use libmagic or something
-                response.body.start_data("text/plain");
+                response.body.start_data(mime_type(file.string()));
                 std::ifstream input(file.string());
                 while ( input )
                 {
@@ -128,15 +145,28 @@ protected:
 
         // Ensure the response isn't cached
         response.headers["Expires"] = "0";
+
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
         connection.send_response(response);
     }
 
+    httpony::MimeType mime_type(const std::string& filename) const
+    {
+        if ( magic_cookie )
+        {
+            const char* mime = magic_file(magic_cookie, filename.c_str());
+            if ( mime )
+                return httpony::MimeType(mime);
+        }
+        return httpony::MimeType("application", "octet-stream");
+    }
+
 private:
     boost::filesystem::path root = "/home";
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
+    magic_t magic_cookie;
 };
 
 

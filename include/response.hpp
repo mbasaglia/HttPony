@@ -94,9 +94,18 @@ struct Response
     void clean_body(const Request& input)
     {
         clean_body();
-        if ( body.has_data() && status == StatusCode::OK && input.method == "CONNECT" )
+        if ( body.has_data() )
         {
-            body.stop_data();
+            if ( status == StatusCode::OK && input.method == "CONNECT" )
+            {
+                body.stop_data();
+            }
+            else if ( input.method == "HEAD" )
+            {
+                headers["Content-Type"] = body.content_type().string();
+                headers["Content-Length"] = std::to_string(body.content_length());
+                body.stop_data();
+            }
         }
     }
 
