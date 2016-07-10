@@ -125,9 +125,11 @@ public:
         return _output_buffer;
     }
 
-    void commit_output()
+    bool commit_output()
     {
-        boost::asio::write(_socket, _output_buffer);
+        boost::system::error_code error;
+        boost::asio::write(_socket, _output_buffer, error);
+        return !error;
     }
 
     void close()
@@ -145,16 +147,16 @@ public:
         return endpoint_to_ip(_socket.local_endpoint());
     }
 
-    void send_response(Response& response)
+    bool send_response(Response& response)
     {
         std::ostream stream(&_output_buffer);
         http::write::response(stream, response);
-        commit_output();
+        return commit_output();
     }
 
-    void send_response(Response&& resp)
+    bool send_response(Response&& resp)
     {
-        send_response(resp);
+        return send_response(resp);
     }
 
     /**
