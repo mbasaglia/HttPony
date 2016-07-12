@@ -34,6 +34,7 @@ public:
     {
         magic_cookie = magic_open(MAGIC_SYMLINK|MAGIC_MIME_TYPE);
         magic_load(magic_cookie, nullptr);
+        set_timeout(melanolib::time::seconds(16));
     }
 
     explicit ServeFiles(uint16_t port)
@@ -149,7 +150,8 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        connection.send_response(response);
+        if ( !connection.send_response(response) )
+            connection.close();
     }
 
     httpony::MimeType mime_type(const std::string& filename) const

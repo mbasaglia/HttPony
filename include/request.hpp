@@ -62,7 +62,7 @@ struct Request
 
     Uri         url;
     std::string method;
-    Protocol    protocol;
+    Protocol    protocol = Protocol::http_1_1;
     Headers     headers;
     DataMap     cookies;
     DataMap     get;

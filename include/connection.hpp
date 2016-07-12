@@ -26,13 +26,127 @@
 
 namespace httpony {
 
+class TimeoutSocket
+{
+public:
+    explicit TimeoutSocket(melanolib::time::seconds timeout)
+    {
+        set_timeout(timeout);
+        check_deadline();
+    }
+
+    TimeoutSocket()
+    {
+        clear_timeout();
+        check_deadline();
+    }
+
+    ~TimeoutSocket()
+    {
+        close();
+    }
+
+    void close()
+    {
+        boost::system::error_code error;
+        _socket.close(error);
+    }
+
+    bool timed_out() const
+    {
+        return _timed_out;
+    }
+
+    boost::asio::ip::tcp::socket& socket()
+    {
+        return _socket;
+    }
+
+    const boost::asio::ip::tcp::socket& socket() const
+    {
+        return _socket;
+    }
+
+    void set_timeout(melanolib::time::seconds timeout)
+    {
+        _deadline.expires_from_now(boost::posix_time::seconds(timeout.count()));
+    }
+
+    void clear_timeout()
+    {
+        _deadline.expires_at(boost::posix_time::pos_infin);
+    }
+
+    template<class MutableBufferSequence>
+        std::size_t read_some(MutableBufferSequence&& buffer, boost::system::error_code& error)
+    {
+        std::size_t read_size = 0;
+        error = boost::asio::error::would_block;
+        _socket.async_read_some(std::forward<MutableBufferSequence>(buffer),
+            [&error, &read_size](const boost::system::error_code& ec, std::size_t bytes_read)
+            {
+                error = ec;
+                read_size += bytes_read;
+            }
+        );
+
+        do
+            _io_service.run_one();
+        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+
+        return read_size;
+    }
+
+    template<class ConstBufferSequence>
+        std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
+    {
+        std::size_t written_size = 0;
+        error = boost::asio::error::would_block;
+
+        boost::asio::async_write(_socket, buffer,
+            [&error, &written_size](const boost::system::error_code& ec, std::size_t bytes_written)
+            {
+                error = ec;
+                written_size += bytes_written;
+            }
+        );
+
+        do
+            _io_service.run_one();
+        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+
+        return written_size;
+    }
+
+private:
+    void check_deadline()
+    {
+        auto efn(_deadline. expires_from_now());
+        (void)(efn);
+        if ( _deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now() )
+        {
+            _deadline.expires_at(boost::posix_time::pos_infin);
+
+            _timed_out = true;
+            _io_service.stop();
+        }
+
+        _deadline.async_wait([this](const boost::system::error_code&){check_deadline();});
+    }
+
+    boost::asio::io_service _io_service;
+    boost::asio::ip::tcp::socket _socket{_io_service};
+    boost::asio::deadline_timer _deadline{_io_service};
+    bool _timed_out = false;
+};
+
 /**
  * \brief Stream buffer linked to a socket for reading
  */
 class NetworkInputBuffer : public boost::asio::streambuf
 {
 public:
-    explicit NetworkInputBuffer(boost::asio::ip::tcp::socket& socket)
+    explicit NetworkInputBuffer(TimeoutSocket& socket)
         : _socket(socket)
     {
     }
@@ -49,7 +163,9 @@ public:
         size -= prev_size;
 
         auto in_buffer = prepare(size);
+
         auto read_size = _socket.read_some(boost::asio::buffer(in_buffer), error);
+
         commit(read_size);
 
         return read_size + prev_size;
@@ -95,7 +211,8 @@ protected:
     }
 
 private:
-    boost::asio::ip::tcp::socket& _socket;
+
+    TimeoutSocket& _socket;
     std::size_t _expected_input = 0;
     boost::system::error_code _error;
 };
@@ -105,16 +222,6 @@ using NetworkOutputBuffer = boost::asio::streambuf;
 class Connection
 {
 public:
-    explicit Connection(boost::asio::ip::tcp::socket socket)
-        : _socket(std::move(socket)), _input_buffer(_socket)
-    {
-    }
-
-    ~Connection()
-    {
-        _socket.close();
-    }
-
     NetworkInputBuffer& input_buffer()
     {
         return _input_buffer;
@@ -128,7 +235,7 @@ public:
     bool commit_output()
     {
         boost::system::error_code error;
-        boost::asio::write(_socket, _output_buffer, error);
+        _socket.write(_output_buffer, error);
         return !error;
     }
 
@@ -139,12 +246,12 @@ public:
 
     IPAddress remote_address() const
     {
-        return endpoint_to_ip(_socket.remote_endpoint());
+        return endpoint_to_ip(_socket.socket().remote_endpoint());
     }
 
     IPAddress local_address() const
     {
-        return endpoint_to_ip(_socket.local_endpoint());
+        return endpoint_to_ip(_socket.socket().local_endpoint());
     }
 
     bool send_response(Response& response)
@@ -176,6 +283,10 @@ public:
             std::istream stream(&_input_buffer);
             output = http::read::request(stream, parse_flags);
         }
+        else if ( _socket.timed_out() )
+        {
+            output.suggested_status = StatusCode::RequestTimeout;
+        }
         else
         {
             output.suggested_status = StatusCode::BadRequest;
@@ -184,6 +295,11 @@ public:
         output.from = remote_address();
 
         return output;
+    }
+
+    TimeoutSocket& socket()
+    {
+        return _socket;
     }
 
 private:
@@ -199,8 +315,8 @@ private:
         );
     }
 
-    boost::asio::ip::tcp::socket _socket;
-    NetworkInputBuffer  _input_buffer;
+    TimeoutSocket _socket;
+    NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
 
 };

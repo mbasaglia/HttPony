@@ -63,6 +63,15 @@ public:
     void stop();
 
     /**
+     * \brief The timeout for network I/O operations
+     */
+    melanolib::Optional<melanolib::time::seconds> timeout() const;
+
+    void set_timeout(melanolib::time::seconds timeout);
+
+    void clear_timeout();
+
+    /**
      * \brief Maximum size of a request body to be accepted
      */
     std::size_t max_request_body() const;

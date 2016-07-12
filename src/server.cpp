@@ -23,6 +23,8 @@
 
 #include <melanolib/time/time_string.hpp>
 
+#include <list>
+
 #include "server.hpp"
 #include "logging.hpp"
 #include "connection.hpp"
@@ -41,29 +43,47 @@ struct Server::Data
     Server* owner;
     IPAddress listen;
     std::size_t max_request_body;
+    melanolib::Optional<melanolib::time::seconds> timeout;
 
     boost::asio::io_service             io_service;
-    boost::asio::ip::tcp::socket        socket{io_service};
     boost::asio::ip::tcp::acceptor      acceptor{io_service};
 
+    std::list<std::unique_ptr<Connection>> connections;
+
     std::thread thread;
+    std::mutex mutex;
+
+    std::unique_lock<std::mutex> lock()
+    {
+        return std::unique_lock<std::mutex>(mutex);
+    }
 
     void accept()
     {
+        connections.push_back(melanolib::New<Connection>());
+        auto connection = connections.back().get();
         acceptor.async_accept(
-            socket,
-            [this](boost::system::error_code error_code)
+            connection->socket().socket(),
+            [this, connection] (boost::system::error_code error_code)
             {
                 if ( !acceptor.is_open() )
                     return;
+                
+                if ( timeout )
+                    connection->socket().set_timeout(*timeout);
 
-                /// \todo Keep the connection alive if needed
-                Connection connection(std::move(socket));
                 if ( !error_code )
                 {
-                    owner->respond(connection, connection.read_request());
+                    owner->respond(*connection, connection->read_request());
                 }
                 /// \todo Log error if error_code
+
+                /// \todo Keep the connection alive if needed
+                auto it = std::find_if(connections.begin(), connections.end(),
+                    [connection](const auto& c) { return c.get() == connection; }
+                );
+                if ( it != connections.end() ) // Should never be == end
+                    connections.erase(it);
 
                 accept();
             }
@@ -297,6 +317,21 @@ void Server::log_response(
 
     }
     output << std::endl;
+}
+
+void Server::clear_timeout()
+{
+    data->timeout = {};
+}
+
+void Server::set_timeout(std::chrono::seconds timeout)
+{
+    data->timeout = timeout;
+}
+
+melanolib::Optional<melanolib::time::seconds> Server::timeout() const
+{
+    return data->timeout;
 }
 
 } // namespace httpony

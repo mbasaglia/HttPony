@@ -28,7 +28,15 @@
 class MyServer : public httpony::Server
 {
 public:
-    using Server::Server;
+    explicit MyServer(httpony::IPAddress listen)
+        : Server(listen)
+    {
+        set_timeout(melanolib::time::seconds(16));
+    }
+
+    explicit MyServer(uint16_t port)
+        : MyServer(httpony::IPAddress(httpony::IPAddress::Type::IPv4, "0.0.0.0", port))
+    {}
 
     void respond(httpony::Connection& connection, httpony::Request&& request) override
     {
@@ -128,7 +136,8 @@ private:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        connection.send_response(response);
+        if ( !connection.send_response(response) )
+            connection.close();
 
         return response;
     }
