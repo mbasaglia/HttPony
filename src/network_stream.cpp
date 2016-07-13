@@ -51,10 +51,6 @@ bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers
     _content_length = std::stoul(length);
     _content_type = std::move(content_type);
 
-    /// \todo Maybe this can go in ClientConnection
-    if ( auto netbuf = dynamic_cast<NetworkInputBuffer*>(buffer) )
-        netbuf->expect_input(_content_length);
-
     _error = false;
     return true;
 }

@@ -166,7 +166,6 @@ void Server::process_log_format(
             output << request.protocol;
             break;
         case 'i': // The contents of header line in the request sent to the server.
-            /// \todo Handle multiple headers with the same name
             output << request.headers[argument];
             break;
         case 'k': // Number of keepalive requests handled on this connection.
@@ -180,7 +179,6 @@ void Server::process_log_format(
             output << request.method;
             break;
         case 'o': // The contents of header line(s) in the reply.
-            /// \todo Handle multiple headers with the same name
             output << response.headers[argument];
             break;
         case 'p':

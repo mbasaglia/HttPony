@@ -121,8 +121,6 @@ public:
 private:
     void check_deadline()
     {
-        auto efn(_deadline. expires_from_now());
-        (void)(efn);
         if ( _deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now() )
         {
             _deadline.expires_at(boost::posix_time::pos_infin);
@@ -156,7 +154,6 @@ public:
      */
     std::size_t read_some(std::size_t size, boost::system::error_code& error)
     {
-        /// \todo timeout
         auto prev_size = this->size();
         if ( size <= prev_size )
             return size;
@@ -282,6 +279,8 @@ public:
         {
             std::istream stream(&_input_buffer);
             output = http::read::request(stream, parse_flags);
+            if ( output.body.has_data() )
+                _input_buffer.expect_input(output.body.content_length());
         }
         else if ( _socket.timed_out() )
         {

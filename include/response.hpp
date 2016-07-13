@@ -48,7 +48,6 @@ struct Response
           status(std::move(status)),
           protocol(protocol)
     {
-        /// \todo Date
     }
 
     Response(Status status = Status(), const Protocol& protocol = Protocol::http_1_1)

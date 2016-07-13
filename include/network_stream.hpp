@@ -129,7 +129,6 @@ public:
             copy_from(other);
         }
         _content_type = std::move(other._content_type);
-        /// \todo Transfer data?
         return *this;
     }
 
