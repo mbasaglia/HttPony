@@ -173,7 +173,10 @@ public:
      */
     void expect_input(std::size_t byte_count)
     {
-        _expected_input = byte_count;
+        if ( byte_count > size() )
+            _expected_input = byte_count - size();
+        else
+            _expected_input = 0;
     }
 
     std::size_t expected_input() const
