@@ -25,12 +25,14 @@
 
 #include "httpony.hpp"
 
-
+/**
+ * \brief Example server that sends back files from a given directory
+ */
 class ServeFiles : public httpony::Server
 {
 public:
-    explicit ServeFiles(httpony::ListenAddress listen)
-        : Server(listen)
+    explicit ServeFiles(const std::string& path, httpony::ListenAddress listen)
+        : Server(listen), root(path)
     {
         magic_cookie = magic_open(MAGIC_SYMLINK|MAGIC_MIME_TYPE);
         magic_load(magic_cookie, nullptr);
@@ -150,6 +152,9 @@ protected:
             connection.close();
     }
 
+    /**
+     * \brief Returns the Mime type from a file name
+     */
     httpony::MimeType mime_type(const std::string& filename) const
     {
         if ( magic_cookie )
@@ -162,21 +167,34 @@ protected:
     }
 
 private:
-    boost::filesystem::path root = "/home";
+    boost::filesystem::path root;
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
     magic_t magic_cookie;
 };
 
-
-int main()
+/**
+ * The executable accepts two optional command line arguments:
+ * the path to the directory to expose and the port number to listen on
+ */
+int main(int argc, char** argv)
 {
-    ServeFiles server(8082);
+    std::string path = "/home";
+    uint16_t port = 8082;
+
+    if ( argc > 1 )
+        path = argv[1];
+
+    if ( argc > 2 )
+        port = std::stoul(argv[2]);
+
+    ServeFiles server(path, port);
 
     server.start();
 
+    std::cout << "Serving files in " << path << "\n";
     std::cout << "Server started on port "<< server.listen_address().port << ", hit enter to quit\n";
     std::cin.get();
-    std::cout << "Stopped\n";
+    std::cout << "Server stopped\n";
 
     return 0;
 }

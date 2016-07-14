@@ -24,7 +24,12 @@
 
 #include "httpony.hpp"
 
-
+/**
+ * \brief Simple example server
+ *
+ * This server logs the contents of incoming requests to stdout and
+ * returns simple "Hello World" responses to the client
+ */
 class MyServer : public httpony::Server
 {
 public:
@@ -126,12 +131,13 @@ private:
             response.headers["Connection"] = "close";
         }
 
-
         // Ensure the response isn't cached
         response.headers["Expires"] = "0";
+
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
+        // Drop the connection if there is some network error on the response
         if ( !connection.send_response(response) )
             connection.close();
 
@@ -177,15 +183,29 @@ private:
     std::size_t max_size = 8192;
 };
 
-int main()
+/**
+ * The executable accepts an optional command line argument to change the
+ * listen port
+ */
+int main(int argc, char** argv)
 {
-    MyServer server(8081);
+    uint16_t port = 8081;
 
+    if ( argc > 1 )
+        port = std::stoul(argv[1]);
+
+    // This creates a server that listens to both IPv4 and IPv6
+    // on the given port
+    MyServer server(port);
+
+    // This starts the server on a separate thread
     server.start();
 
     std::cout << "Server started on port "<< server.listen_address().port << ", hit enter to quit\n";
+    // Pause the main thread listening to standard input
     std::cin.get();
-    std::cout << "Stopped\n";
+    std::cout << "Server stopped\n";
 
+    // The MyServer destructor will stop the server and join the thread
     return 0;
 }
