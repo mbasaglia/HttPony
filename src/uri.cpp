@@ -24,8 +24,6 @@
 #include <cctype>
 #include <regex>
 #include <melanolib/string/stringutils.hpp>
-#include <melanolib/string/quickstream.hpp>
-#include <melanolib/string/ascii.hpp>
 
 namespace httpony {
 

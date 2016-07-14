@@ -21,8 +21,6 @@
 
 #include "httpony/io/connection.hpp"
 
-#include "httpony/http/format/write.hpp"
-
 namespace httpony {
 namespace io {
 

@@ -21,11 +21,8 @@
 
 #include <thread>
 
-#include <melanolib/time/time_string.hpp>
-
 #include "httpony/http/server/server.hpp"
 #include "httpony/http/server/logging.hpp"
-#include "httpony/io/listen_server.hpp"
 
 namespace httpony {
 
