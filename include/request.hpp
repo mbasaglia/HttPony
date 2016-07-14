@@ -22,11 +22,9 @@
 #ifndef HTTPONY_REQUEST_HPP
 #define HTTPONY_REQUEST_HPP
 
-#include <melanolib/time/date_time.hpp>
-
 #include "ip_address.hpp"
 #include "protocol.hpp"
-#include "network_stream.hpp"
+#include "io/network_stream.hpp"
 #include "uri.hpp"
 #include "status.hpp"
 
@@ -71,7 +69,7 @@ struct Request
     Auth        auth;
     Status      suggested_status;
 
-    InputContentStream body;
+    io::InputContentStream body;
 
     melanolib::time::DateTime received_date;
 };

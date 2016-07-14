@@ -20,7 +20,7 @@ set(SOURCES
 server.cpp
 status.cpp
 logging.cpp
-network_stream.cpp
+io/network_stream.cpp
 uri.cpp
 request.cpp
 http_read.cpp

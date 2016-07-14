@@ -24,7 +24,7 @@
 
 #include <memory>
 
-#include "connection.hpp"
+#include "io/connection.hpp"
 
 namespace httpony {
 
@@ -81,14 +81,14 @@ public:
     /**
      * \brief Function handling requests
      */
-    virtual void respond(Connection& connection, Request&& request) = 0;
+    virtual void respond(io::Connection& connection, Request&& request) = 0;
 
     /**
      * \brief Writes a line of log into \p output based on format
      */
     void log_response(
         const std::string& format,
-        const Connection& connection,
+        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output) const;
@@ -100,7 +100,7 @@ private:
     virtual void process_log_format(
         char label,
         const std::string& argument,
-        const Connection& connection,
+        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output

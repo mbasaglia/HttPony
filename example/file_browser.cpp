@@ -47,7 +47,7 @@ public:
             magic_close(magic_cookie);
     }
 
-    void respond(httpony::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
     {
         httpony::Response response = build_response(connection, request);
         log_response(log_format, connection, request, response, std::cout);
@@ -55,7 +55,7 @@ public:
     }
 
 protected:
-    httpony::Response build_response(httpony::Connection& connection, httpony::Request& request) const
+    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request) const
     {
         try
         {
@@ -133,7 +133,7 @@ protected:
     /**
      * \brief Sends the response back to the client
      */
-    void send_response(httpony::Connection& connection,
+    void send_response(httpony::io::Connection& connection,
                        httpony::Request& request,
                        httpony::Response& response) const
     {

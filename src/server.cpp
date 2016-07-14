@@ -27,7 +27,7 @@
 
 #include "server.hpp"
 #include "logging.hpp"
-#include "connection.hpp"
+#include "io/connection.hpp"
 
 
 namespace httpony {
@@ -48,7 +48,7 @@ struct Server::Data
     boost::asio::io_service             io_service;
     boost::asio::ip::tcp::acceptor      acceptor{io_service};
 
-    std::list<std::unique_ptr<Connection>> connections;
+    std::list<std::unique_ptr<io::Connection>> connections;
 
     std::thread thread;
     std::mutex mutex;
@@ -60,7 +60,7 @@ struct Server::Data
 
     void accept()
     {
-        connections.push_back(melanolib::New<Connection>());
+        connections.push_back(melanolib::New<io::Connection>());
         auto connection = connections.back().get();
         acceptor.async_accept(
             connection->socket().socket(),
@@ -122,7 +122,7 @@ void Server::set_max_request_body(std::size_t size)
 void Server::process_log_format(
         char label,
         const std::string& argument,
-        const Connection& connection,
+        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output
@@ -273,7 +273,7 @@ void Server::stop()
 
 void Server::log_response(
         const std::string& format,
-        const Connection& connection,
+        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output

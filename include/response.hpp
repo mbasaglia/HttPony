@@ -108,7 +108,7 @@ struct Response
         }
     }
 
-    OutputContentStream body;
+    io::OutputContentStream body;
     Status      status;
     Headers     headers;
     Protocol    protocol;

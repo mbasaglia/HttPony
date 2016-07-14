@@ -19,11 +19,10 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "network_stream.hpp"
-#include "connection.hpp"
+#include "io/network_stream.hpp"
 
 namespace httpony {
-
+namespace io {
 
 InputContentStream::InputContentStream(std::streambuf* buffer, const Headers& headers)
     : std::istream(buffer)
@@ -85,5 +84,5 @@ void OutputContentStream::copy_from(OutputContentStream& other)
     }
 }
 
-
+} // namespace io
 } // namespace httpony

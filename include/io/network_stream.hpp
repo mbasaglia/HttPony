@@ -24,14 +24,12 @@
 
 #include <iostream>
 
-/// \todo Limit asio dependencies to connection.hpp and server.cpp
-#include <boost/asio.hpp>
-
 #include "mime_type.hpp"
 #include "headers.hpp"
+#include "io/buffer.hpp"
 
 namespace httpony {
-
+namespace io {
 
 /**
  * \brief Reads an incoming message payload
@@ -202,5 +200,6 @@ private:
     MimeType _content_type;
 };
 
+} // namespace io
 } // namespace httpony
 #endif // HTTPONY_NETWORK_STREAM_HPP

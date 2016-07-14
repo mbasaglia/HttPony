@@ -38,7 +38,7 @@ public:
         : MyServer(httpony::IPAddress(httpony::IPAddress::Type::IPv4, "0.0.0.0", port))
     {}
 
-    void respond(httpony::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
     {
         try
         {
@@ -63,7 +63,7 @@ private:
     /**
      * \brief Returns the whole request body as a string
      */
-    std::string get_body(httpony::Connection& connection, httpony::Request& request) const
+    std::string get_body(httpony::io::Connection& connection, httpony::Request& request) const
     {
         // Discard requests with a too long of a payload
         if ( request.body.content_length() > max_size )
@@ -106,7 +106,7 @@ private:
     /**
      * \brief Sets up the response object and sends it to the client
      */
-    httpony::Response send_response(httpony::Connection& connection, const httpony::Request& request) const
+    httpony::Response send_response(httpony::io::Connection& connection, const httpony::Request& request) const
     {
         httpony::Response response(request);
 
@@ -156,7 +156,7 @@ private:
     /**
      * \brief Logs info on the current request/response
      */
-    void print_info(httpony::Connection& connection,
+    void print_info(httpony::io::Connection& connection,
                     const httpony::Request& request,
                     const httpony::Response& response,
                     std::string& body) const
