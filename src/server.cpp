@@ -23,78 +23,14 @@
 
 #include <melanolib/time/time_string.hpp>
 
-#include <list>
-
 #include "server.hpp"
 #include "logging.hpp"
-#include "io/connection.hpp"
-
+#include "io/listen_server.hpp"
 
 namespace httpony {
 
-struct Server::Data
-{
-    Data(Server* owner, ListenAddress listen)
-        : owner(owner),
-          listen(std::move(listen)),
-          max_request_body(std::string().max_size())
-    {}
-
-    virtual ~Data(){}
-
-    Server* owner;
-    ListenAddress listen;
-    std::size_t max_request_body;
-    melanolib::Optional<melanolib::time::seconds> timeout;
-
-    boost::asio::io_service             io_service;
-    boost::asio::ip::tcp::acceptor      acceptor{io_service};
-
-    std::list<std::unique_ptr<io::Connection>> connections;
-
-    std::thread thread;
-    std::mutex mutex;
-
-    std::unique_lock<std::mutex> lock()
-    {
-        return std::unique_lock<std::mutex>(mutex);
-    }
-
-    void accept()
-    {
-        connections.push_back(melanolib::New<io::Connection>());
-        auto connection = connections.back().get();
-        acceptor.async_accept(
-            connection->socket().socket(),
-            [this, connection] (boost::system::error_code error_code)
-            {
-                if ( !acceptor.is_open() )
-                    return;
-                
-                if ( timeout )
-                    connection->socket().set_timeout(*timeout);
-
-                if ( !error_code )
-                {
-                    owner->respond(*connection, connection->read_request());
-                }
-                /// \todo Log error if error_code
-
-                /// \todo Keep the connection alive if needed
-                auto it = std::find_if(connections.begin(), connections.end(),
-                    [connection](const auto& c) { return c.get() == connection; }
-                );
-                if ( it != connections.end() ) // Should never be == end
-                    connections.erase(it);
-
-                accept();
-            }
-        );
-    }
-};
-
-Server::Server(ListenAddress listen)
-    : data(std::make_unique<Data>(this, listen))
+Server::Server(io::ListenAddress listen_address)
+    : _listen_address(std::move(listen_address))
 {}
 
 Server::~Server()
@@ -102,19 +38,19 @@ Server::~Server()
     stop();
 }
 
-ListenAddress Server::listen_address() const
+io::ListenAddress Server::listen_address() const
 {
-    return data->listen;
+    return _listen_address;
 }
 
 std::size_t Server::max_request_body() const
 {
-    return data->max_request_body;
+    return _max_request_body;
 }
 
 void Server::set_max_request_body(std::size_t size)
 {
-    data->max_request_body = size;
+    _max_request_body = size;
 }
 
 void Server::process_log_format(
@@ -185,7 +121,7 @@ void Server::process_log_format(
             else if ( argument == "local" )
                 output << connection.local_address().port;
             else // canonical
-                output << data->listen.port;
+                output << _listen_address.port;
             break;
         case 'P': // The process ID or thread id of the child that serviced the request. Valid formats are pid, tid, and hextid.
             // TODO ?
@@ -238,39 +174,21 @@ void Server::process_log_format(
 
 bool Server::started() const
 {
-    return data->thread.joinable();
+    return _thread.joinable();
 }
 
 void Server::start()
 {
-    using boost::asio::ip::tcp;
-    tcp::resolver resolver(data->io_service);
-    tcp protocol = data->listen.type == IPAddress::Type::IPv4 ? tcp::v4() : tcp::v6();
+    _listen_server.start(_listen_address);
 
-    tcp::endpoint endpoint;
-    if ( !data->listen.string.empty() )
-        endpoint = *resolver.resolve({
-            protocol,
-            data->listen.string,
-            std::to_string(data->listen.port)
+    _thread = std::thread([this](){
+        _listen_server.run(
+        [this](io::Connection& connection){
+            respond(connection, connection.read_request());
+        },
+        [this](io::Connection& connection){
+            /// \todo Log error
         });
-    else
-        endpoint = *resolver.resolve({
-            protocol,
-            std::to_string(data->listen.port)
-        });
-
-    data->acceptor.open(endpoint.protocol());
-    data->acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
-    data->acceptor.bind(endpoint);
-    data->acceptor.listen();
-
-    if ( data->io_service.stopped() )
-        data->io_service.reset();
-
-    data->thread = std::thread([this](){
-        data->accept();
-        data->io_service.run();
     });
 }
 
@@ -278,10 +196,8 @@ void Server::stop()
 {
     if ( started() )
     {
-        /// \todo Needs locking?
-        data->acceptor.close();
-        data->io_service.stop();
-        data->thread.join();
+        _listen_server.stop();
+        _thread.join();
     }
 }
 
@@ -333,17 +249,17 @@ void Server::log_response(
 
 void Server::clear_timeout()
 {
-    data->timeout = {};
+    _listen_server.clear_timeout();
 }
 
-void Server::set_timeout(std::chrono::seconds timeout)
+void Server::set_timeout(melanolib::time::seconds timeout)
 {
-    data->timeout = timeout;
+    _listen_server.set_timeout(timeout);
 }
 
 melanolib::Optional<melanolib::time::seconds> Server::timeout() const
 {
-    return data->timeout;
+    return _listen_server.timeout();
 }
 
 } // namespace httpony

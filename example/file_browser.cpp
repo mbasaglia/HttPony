@@ -31,7 +31,7 @@
 class ServeFiles : public httpony::Server
 {
 public:
-    explicit ServeFiles(const std::string& path, httpony::ListenAddress listen)
+    explicit ServeFiles(const std::string& path, httpony::io::ListenAddress listen)
         : Server(listen), root(path)
     {
         magic_cookie = magic_open(MAGIC_SYMLINK|MAGIC_MIME_TYPE);

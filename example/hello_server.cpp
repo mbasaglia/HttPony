@@ -33,7 +33,7 @@
 class MyServer : public httpony::Server
 {
 public:
-    explicit MyServer(httpony::ListenAddress listen)
+    explicit MyServer(httpony::io::ListenAddress listen)
         : Server(listen)
     {
         set_timeout(melanolib::time::seconds(16));

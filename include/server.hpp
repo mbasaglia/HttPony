@@ -22,26 +22,9 @@
 #ifndef HTTPONY_SERVER_HPP
 #define HTTPONY_SERVER_HPP
 
-#include <memory>
-
-#include "io/connection.hpp"
+#include "io/listen_server.hpp"
 
 namespace httpony {
-
-struct ListenAddress : public IPAddress
-{
-    ListenAddress(Type type, std::string string, uint16_t port)
-        : IPAddress(type, std::move(string), port)
-    {}
-
-    ListenAddress(uint16_t port = 0)
-        : IPAddress(Type::IPv6, "", port)
-    {}
-
-    ListenAddress(Type type, uint16_t port)
-        : IPAddress(type, "", port)
-    {}
-};
 
 /**
  * \brief Base class for a simple HTTP server
@@ -51,14 +34,14 @@ class Server
 {
 public:
 
-    explicit Server(ListenAddress listen);
+    explicit Server(io::ListenAddress listen);
 
     ~Server();
 
     /**
      * \brief Listening address
      */
-    ListenAddress listen_address() const;
+    io::ListenAddress listen_address() const;
 
     /**
      * \brief Starts the server in a background thread
@@ -120,8 +103,10 @@ private:
         std::ostream& output
     ) const;
 
-    struct Data;
-    std::unique_ptr<Data> data;
+    io::ListenAddress _listen_address;
+    io::ListenServer _listen_server;
+    std::size_t _max_request_body;
+    std::thread _thread;
 };
 
 } // namespace httpony
