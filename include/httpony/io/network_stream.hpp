@@ -24,9 +24,9 @@
 
 #include <iostream>
 
-#include "mime_type.hpp"
-#include "headers.hpp"
-#include "io/buffer.hpp"
+#include "httpony/mime_type.hpp"
+#include "httpony/http/headers.hpp"
+#include "httpony/io/buffer.hpp"
 
 namespace httpony {
 namespace io {

@@ -21,7 +21,7 @@
 #ifndef HTTPONY_IO_LISTEN_SERVER_HPP
 #define HTTPONY_IO_LISTEN_SERVER_HPP
 
-#include "io/connection.hpp"
+#include "httpony/io/connection.hpp"
 
 #include <list>
 

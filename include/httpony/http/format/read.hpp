@@ -24,7 +24,7 @@
 
 #include <istream>
 
-#include "response.hpp"
+#include "httpony/http/response.hpp"
 
 namespace httpony {
 /**

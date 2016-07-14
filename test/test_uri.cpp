@@ -23,7 +23,7 @@
 #define BOOST_TEST_MODULE HttPony_Uri
 #include <boost/test/unit_test.hpp>
 
-#include "uri.hpp"
+#include "httpony/uri.hpp"
 
 using namespace httpony;
 

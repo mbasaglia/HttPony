@@ -22,9 +22,9 @@
 #ifndef HTTPONY_HPP
 #define HTTPONY_HPP
 
-#include "server.hpp"
-#include "logging.hpp"
-#include "base_encoding.hpp"
-#include "multipart.hpp"
+#include "httpony/http/server/server.hpp"
+#include "httpony/http/server/logging.hpp"
+#include "httpony/base_encoding.hpp"
+#include "httpony/multipart.hpp"
 
 #endif // HTTPONY_HPP

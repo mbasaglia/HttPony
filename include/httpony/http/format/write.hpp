@@ -22,7 +22,7 @@
 #ifndef HTTPONY_HTTP_WRITE_HPP
 #define HTTPONY_HTTP_WRITE_HPP
 
-#include "response.hpp"
+#include "httpony/http/response.hpp"
 
 namespace httpony {
 namespace http {

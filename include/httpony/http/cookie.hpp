@@ -26,7 +26,7 @@
 #include <melanolib/time/time_string.hpp>
 #include <melanolib/utils/c++-compat.hpp>
 
-#include "uri.hpp"
+#include "httpony/uri.hpp"
 
 namespace httpony {
 

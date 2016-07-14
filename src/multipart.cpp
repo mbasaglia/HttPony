@@ -19,7 +19,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "multipart.hpp"
+#include "httpony/multipart.hpp"
+
+#include "httpony/http/format/read.hpp"
 
 namespace httpony {
 

@@ -19,7 +19,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "io/network_stream.hpp"
+#include "httpony/io/network_stream.hpp"
 
 namespace httpony {
 namespace io {

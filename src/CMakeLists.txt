@@ -17,16 +17,15 @@
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 
 set(SOURCES
-server.cpp
-status.cpp
-logging.cpp
+http/format/read.cpp
+http/server/server.cpp
+http/protocol.cpp
+http/request.cpp
+http/status.cpp
 io/network_stream.cpp
-uri.cpp
-request.cpp
-http_read.cpp
-protocol.cpp
-multipart.cpp
 mime_type.cpp
+multipart.cpp
+uri.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

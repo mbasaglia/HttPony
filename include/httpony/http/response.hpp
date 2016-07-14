@@ -22,8 +22,8 @@
 #ifndef HTTPONY_RESPONSE_HPP
 #define HTTPONY_RESPONSE_HPP
 
-#include "cookie.hpp"
-#include "request.hpp"
+#include "httpony/http/cookie.hpp"
+#include "httpony/http/request.hpp"
 
 namespace httpony {
 

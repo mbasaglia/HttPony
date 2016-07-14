@@ -19,11 +19,12 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "request.hpp"
+#include "httpony/http/request.hpp"
 
-#include "uri.hpp"
-#include "multipart.hpp"
-#include "base_encoding.hpp"
+#include "httpony/multipart.hpp"
+#include "httpony/base_encoding.hpp"
+
+#include "httpony/http/format/read.hpp"
 
 namespace httpony {
 

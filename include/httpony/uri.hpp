@@ -22,7 +22,7 @@
 #ifndef HTTPONY_URI_HPP
 #define HTTPONY_URI_HPP
 
-#include "headers.hpp"
+#include "httpony/http/headers.hpp"
 
 namespace httpony {
 

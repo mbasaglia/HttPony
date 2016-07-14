@@ -23,9 +23,9 @@
 
 #include <melanolib/time/time_string.hpp>
 
-#include "server.hpp"
-#include "logging.hpp"
-#include "io/listen_server.hpp"
+#include "httpony/http/server/server.hpp"
+#include "httpony/http/server/logging.hpp"
+#include "httpony/io/listen_server.hpp"
 
 namespace httpony {
 

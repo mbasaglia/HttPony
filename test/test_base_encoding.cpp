@@ -23,7 +23,7 @@
 #define BOOST_TEST_MODULE HttPony_BaseEncoding
 #include <boost/test/unit_test.hpp>
 
-#include "base_encoding.hpp"
+#include "httpony/base_encoding.hpp"
 
 using namespace httpony;
 

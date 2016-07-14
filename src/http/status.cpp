@@ -19,7 +19,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "status.hpp"
+#include "httpony/http/status.hpp"
 #include <map>
 
 namespace httpony {

@@ -21,7 +21,7 @@
 #ifndef HTTPONY_IO_BUFFER_HPP
 #define HTTPONY_IO_BUFFER_HPP
 
-#include "io/socket.hpp"
+#include "httpony/io/socket.hpp"
 
 namespace httpony {
 namespace io {

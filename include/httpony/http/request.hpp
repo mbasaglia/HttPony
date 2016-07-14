@@ -22,10 +22,10 @@
 #ifndef HTTPONY_REQUEST_HPP
 #define HTTPONY_REQUEST_HPP
 
-#include "ip_address.hpp"
-#include "protocol.hpp"
-#include "io/network_stream.hpp"
-#include "uri.hpp"
+#include "httpony/ip_address.hpp"
+#include "httpony/http/protocol.hpp"
+#include "httpony/io/network_stream.hpp"
+#include "httpony/uri.hpp"
 #include "status.hpp"
 
 namespace httpony {

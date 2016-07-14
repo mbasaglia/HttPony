@@ -21,8 +21,8 @@
 #ifndef HTTPONY_CONNECTION_HPP
 #define HTTPONY_CONNECTION_HPP
 
-#include "http/write.hpp"
-#include "http/read.hpp"
+#include "httpony/http/format/write.hpp"
+#include "httpony/http/format/read.hpp"
 
 namespace httpony {
 namespace io {
