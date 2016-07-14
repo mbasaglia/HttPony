@@ -29,17 +29,13 @@
 class ServeFiles : public httpony::Server
 {
 public:
-    explicit ServeFiles(httpony::IPAddress listen)
+    explicit ServeFiles(httpony::ListenAddress listen)
         : Server(listen)
     {
         magic_cookie = magic_open(MAGIC_SYMLINK|MAGIC_MIME_TYPE);
         magic_load(magic_cookie, nullptr);
         set_timeout(melanolib::time::seconds(16));
     }
-
-    explicit ServeFiles(uint16_t port)
-        : ServeFiles(httpony::IPAddress(httpony::IPAddress::Type::IPv4, "0.0.0.0", port))
-    {}
 
     ~ServeFiles()
     {

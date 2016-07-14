@@ -34,14 +34,16 @@ namespace httpony {
 
 struct Server::Data
 {
-    Data(Server* owner, IPAddress listen)
-        : owner(owner), listen(listen), max_request_body(std::string().max_size())
+    Data(Server* owner, ListenAddress listen)
+        : owner(owner),
+          listen(std::move(listen)),
+          max_request_body(std::string().max_size())
     {}
 
     virtual ~Data(){}
 
     Server* owner;
-    IPAddress listen;
+    ListenAddress listen;
     std::size_t max_request_body;
     melanolib::Optional<melanolib::time::seconds> timeout;
 
@@ -91,12 +93,8 @@ struct Server::Data
     }
 };
 
-Server::Server(IPAddress listen)
+Server::Server(ListenAddress listen)
     : data(std::make_unique<Data>(this, listen))
-{}
-
-Server::Server(uint16_t port)
-    : Server(IPAddress(IPAddress::Type::IPv4, "0.0.0.0", port))
 {}
 
 Server::~Server()
@@ -104,7 +102,7 @@ Server::~Server()
     stop();
 }
 
-IPAddress Server::listen_address() const
+ListenAddress Server::listen_address() const
 {
     return data->listen;
 }
@@ -245,15 +243,31 @@ bool Server::started() const
 
 void Server::start()
 {
-    boost::asio::ip::tcp::resolver resolver(data->io_service);
-    boost::asio::ip::tcp::endpoint endpoint = *resolver.resolve({
-        data->listen.string,
-        std::to_string(data->listen.port)
-    });
+    using boost::asio::ip::tcp;
+    tcp::resolver resolver(data->io_service);
+    tcp protocol = data->listen.type == IPAddress::Type::IPv4 ? tcp::v4() : tcp::v6();
+
+    tcp::endpoint endpoint;
+    if ( !data->listen.string.empty() )
+        endpoint = *resolver.resolve({
+            protocol,
+            data->listen.string,
+            std::to_string(data->listen.port)
+        });
+    else
+        endpoint = *resolver.resolve({
+            protocol,
+            std::to_string(data->listen.port)
+        });
+
     data->acceptor.open(endpoint.protocol());
     data->acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
     data->acceptor.bind(endpoint);
     data->acceptor.listen();
+
+    if ( data->io_service.stopped() )
+        data->io_service.reset();
+
     data->thread = std::thread([this](){
         data->accept();
         data->io_service.run();

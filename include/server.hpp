@@ -28,6 +28,21 @@
 
 namespace httpony {
 
+struct ListenAddress : public IPAddress
+{
+    ListenAddress(Type type, std::string string, uint16_t port)
+        : IPAddress(type, std::move(string), port)
+    {}
+
+    ListenAddress(uint16_t port = 0)
+        : IPAddress(Type::IPv6, "", port)
+    {}
+
+    ListenAddress(Type type, uint16_t port)
+        : IPAddress(type, "", port)
+    {}
+};
+
 /**
  * \brief Base class for a simple HTTP server
  * \note It reads POST data in a single buffer instead of streaming it
@@ -36,15 +51,14 @@ class Server
 {
 public:
 
-    explicit Server(IPAddress listen);
-    explicit Server(uint16_t listen_port);
+    explicit Server(ListenAddress listen);
 
     ~Server();
 
     /**
      * \brief Listening address
      */
-    IPAddress listen_address() const;
+    ListenAddress listen_address() const;
 
     /**
      * \brief Starts the server in a background thread

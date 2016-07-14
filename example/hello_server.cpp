@@ -28,15 +28,11 @@
 class MyServer : public httpony::Server
 {
 public:
-    explicit MyServer(httpony::IPAddress listen)
+    explicit MyServer(httpony::ListenAddress listen)
         : Server(listen)
     {
         set_timeout(melanolib::time::seconds(16));
     }
-
-    explicit MyServer(uint16_t port)
-        : MyServer(httpony::IPAddress(httpony::IPAddress::Type::IPv4, "0.0.0.0", port))
-    {}
 
     void respond(httpony::io::Connection& connection, httpony::Request&& request) override
     {
