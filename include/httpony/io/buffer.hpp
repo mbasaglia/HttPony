@@ -50,7 +50,7 @@ public:
 
         auto in_buffer = prepare(size);
 
-        auto read_size = _socket.read_some(boost::asio::buffer(in_buffer), error);
+        auto read_size = _socket.read_some(in_buffer, error);
 
         commit(read_size);
 

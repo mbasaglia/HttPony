@@ -81,15 +81,43 @@ public:
     template<class MutableBufferSequence>
         std::size_t read_some(MutableBufferSequence&& buffer, boost::system::error_code& error)
     {
-        std::size_t read_size = 0;
-        error = boost::asio::error::would_block;
-        _socket.async_read_some(std::forward<MutableBufferSequence>(buffer),
-            [&error, &read_size](const boost::system::error_code& ec, std::size_t bytes_read)
-            {
-                error = ec;
-                read_size += bytes_read;
-            }
-        );
+        return io_operation(&TimeoutSocket::do_async_read_some, boost::asio::buffer(buffer), error);
+    }
+
+    template<class ConstBufferSequence>
+        std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
+    {
+        return io_operation(&TimeoutSocket::do_async_write, boost::asio::buffer(buffer), error);
+    }
+
+private:
+    class AsyncCallback
+    {
+    public:
+        AsyncCallback(boost::system::error_code& error_code, std::size_t& bytes_transferred)
+            : error_code(&error_code), bytes_transferred(&bytes_transferred)
+        {
+            *this->error_code = boost::asio::error::would_block;
+            *this->bytes_transferred = 0;
+        }
+
+        void operator()(const boost::system::error_code& ec, std::size_t bt) const
+        {
+            *error_code = ec;
+            *bytes_transferred += bt;
+        }
+
+    private:
+        boost::system::error_code* error_code;
+        std::size_t* bytes_transferred;
+    };
+
+    template<class Buffer>
+        std::size_t io_operation(void (TimeoutSocket::*func)(Buffer&, const AsyncCallback&), Buffer&& buffer, boost::system::error_code& error)
+    {
+        std::size_t read_size;
+
+        (this->*func)(buffer, AsyncCallback(error, read_size));
 
         do
             _io_service.run_one();
@@ -98,28 +126,16 @@ public:
         return read_size;
     }
 
-    template<class ConstBufferSequence>
-        std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
+    void do_async_read_some(boost::asio::mutable_buffers_1& buffer, const AsyncCallback& callback)
     {
-        std::size_t written_size = 0;
-        error = boost::asio::error::would_block;
-
-        boost::asio::async_write(_socket, buffer,
-            [&error, &written_size](const boost::system::error_code& ec, std::size_t bytes_written)
-            {
-                error = ec;
-                written_size += bytes_written;
-            }
-        );
-
-        do
-            _io_service.run_one();
-        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
-
-        return written_size;
+        _socket.async_read_some(buffer, callback);
     }
 
-private:
+    void do_async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback)
+    {
+        boost::asio::async_write(_socket, buffer, callback);
+    }
+
     void check_deadline()
     {
         if ( _deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now() )

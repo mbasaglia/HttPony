@@ -43,7 +43,7 @@ public:
     bool commit_output()
     {
         boost::system::error_code error;
-        _socket.write(_output_buffer, error);
+        _socket.write(_output_buffer.data(), error);
         return !error;
     }
 
