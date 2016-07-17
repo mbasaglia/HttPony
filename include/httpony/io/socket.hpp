@@ -27,63 +27,106 @@
 namespace httpony {
 namespace io {
 
+/**
+ * \brief A network socket with a timeout
+ */
 class TimeoutSocket
 {
 public:
+    /**
+     * \brief Creates the socket and sets the timeout
+     * \note The socket will time out this many seconds after creation
+     */
     explicit TimeoutSocket(melanolib::time::seconds timeout)
     {
         set_timeout(timeout);
         check_deadline();
     }
 
+    /**
+     * \brief Creates a socket without setting a timeout
+     */
     TimeoutSocket()
     {
         clear_timeout();
         check_deadline();
     }
 
+    /**
+     * \brief Closes the socket before destucting the object
+     */
     ~TimeoutSocket()
     {
         close();
     }
 
+    /**
+     * \brief Closes the socket, further IO calls will fail
+     */
     void close()
     {
         boost::system::error_code error;
         _socket.close(error);
     }
 
+    /**
+     * \brief Whether the socket timed out
+     */
     bool timed_out() const
     {
-        return _timed_out;
+        return _deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now();
     }
 
+    /**
+     * \brief Returns the low-level socket object
+     */
     boost::asio::ip::tcp::socket& socket()
     {
         return _socket;
     }
 
+    /**
+     * \brief Returns the low-level socket object
+     */
     const boost::asio::ip::tcp::socket& socket() const
     {
         return _socket;
     }
 
+    /**
+     * \brief Sets the timeout
+     *
+     * timed_out() will be true this many seconds from this call
+     * \see clear_timeout()
+     */
     void set_timeout(melanolib::time::seconds timeout)
     {
         _deadline.expires_from_now(boost::posix_time::seconds(timeout.count()));
     }
 
+    /**
+     * \brief Removes the timeout, IO calls will block indefinitely after this
+     * \see set_timeout()
+     */
     void clear_timeout()
     {
         _deadline.expires_at(boost::posix_time::pos_infin);
     }
 
+    /**
+     * \brief Reads some data to fill the input buffer
+     * \returns The number of bytes written to the destination
+     */
     template<class MutableBufferSequence>
         std::size_t read_some(MutableBufferSequence&& buffer, boost::system::error_code& error)
     {
         return io_operation(&TimeoutSocket::do_async_read_some, boost::asio::buffer(buffer), error);
     }
 
+    /**
+     * \brief writes all data from the given buffer
+     * \returns The number of bytes read from the source
+     */
     template<class ConstBufferSequence>
         std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
     {
@@ -91,6 +134,9 @@ public:
     }
 
 private:
+    /**
+     * \brief Functor for ASIO calls
+     */
     class AsyncCallback
     {
     public:
@@ -112,6 +158,9 @@ private:
         std::size_t* bytes_transferred;
     };
 
+    /**
+     * \brief Calls a function for async IO operations, then runs the io service until completion or timeout
+     */
     template<class Buffer>
         std::size_t io_operation(void (TimeoutSocket::*func)(Buffer&, const AsyncCallback&), Buffer&& buffer, boost::system::error_code& error)
     {
@@ -126,23 +175,30 @@ private:
         return read_size;
     }
 
+    /**
+     * \brief Async IO call to read from the socket into a buffer
+     */
     void do_async_read_some(boost::asio::mutable_buffers_1& buffer, const AsyncCallback& callback)
     {
         _socket.async_read_some(buffer, callback);
     }
 
+    /**
+     * \brief Async IO call to write to the socket from a buffer
+     */
     void do_async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback)
     {
         boost::asio::async_write(_socket, buffer, callback);
     }
 
+    /**
+     * \brief Async wait for the timeout
+     */
     void check_deadline()
     {
-        if ( _deadline.expires_at() <= boost::asio::deadline_timer::traits_type::now() )
+        if ( timed_out() )
         {
             _deadline.expires_at(boost::posix_time::pos_infin);
-
-            _timed_out = true;
             _io_service.stop();
         }
 
@@ -152,7 +208,6 @@ private:
     boost::asio::io_service _io_service;
     boost::asio::ip::tcp::socket _socket{_io_service};
     boost::asio::deadline_timer _deadline{_io_service};
-    bool _timed_out = false;
 };
 
 } // namespace io
