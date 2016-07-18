@@ -108,7 +108,24 @@ public:
     template<class OnSuccess, class OnFailure>
         void run(const OnSuccess& on_success, const OnFailure& on_failure)
     {
-        accept(on_success, on_failure);
+        accept(on_success, on_failure, &ListenServer::create_connection);
+        io_service.run();
+    }
+
+    /**
+     * \brief Runs the server synchronously
+     * \tparam OnSuccess Functor accepting a io::Connectio&
+     * \tparam OnFailure Functor accepting a io::Connectio&
+     * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
+     * \param on_success Functor called on a successful connection
+     * \param on_failure Functor called on a connection that had some issues
+     * \param create_connection Function called to create a new connection object
+     */
+    template<class OnSuccess, class OnFailure, class CreateConnection>
+        void run(const OnSuccess& on_success, const OnFailure& on_failure,
+                 const CreateConnection& create_connection)
+    {
+        accept(on_success, on_failure, create_connection);
         io_service.run();
     }
 
@@ -139,18 +156,25 @@ public:
         return _timeout;
     }
 
+
 private:
+    static std::unique_ptr<Connection> create_connection()
+    {
+        return melanolib::New<Connection>(SocketTag<PlainSocket>{});
+    }
+
     /**
      * \brief Schedules an async connection
      */
-    template<class OnSuccess, class OnFailure>
-        void accept(const OnSuccess& on_success, const OnFailure& on_failure)
+    template<class OnSuccess, class OnFailure, class CreateConnection>
+        void accept(const OnSuccess& on_success, const OnFailure& on_failure,
+                 const CreateConnection& create_connection)
         {
-            connections.push_back(melanolib::New<io::Connection>());
+            connections.push_back(create_connection());
             auto connection = connections.back().get();
             acceptor.async_accept(
                 connection->socket().socket(),
-                [this, connection, on_success, on_failure]
+                [this, connection, on_success, on_failure, create_connection]
                 (boost::system::error_code error_code)
                 {
                     if ( !acceptor.is_open() )
@@ -171,7 +195,7 @@ private:
                     if ( it != connections.end() ) // Should never be == end
                         connections.erase(it);
 
-                    accept(on_success, on_failure);
+                    accept(on_success, on_failure, create_connection);
                 }
             );
 

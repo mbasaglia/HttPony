@@ -30,6 +30,11 @@ namespace io {
 class Connection
 {
 public:
+    template<class... SocketArgs>
+        explicit Connection(SocketArgs&&... args)
+            : _socket(std::forward<SocketArgs>(args)...)
+    {}
+
     NetworkInputBuffer& input_buffer()
     {
         return _input_buffer;

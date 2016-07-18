@@ -121,6 +121,12 @@ private:
     boost::asio::ip::tcp::socket socket;
 };
 
+template<class SocketType>
+    struct SocketTag
+{
+    using type = SocketType;
+};
+
 /**
  * \brief A network socket with a timeout
  */
@@ -128,21 +134,11 @@ class TimeoutSocket
 {
 public:
     /**
-     * \brief Creates the socket and sets the timeout
-     * \note The socket will time out this many seconds after creation
-     */
-    explicit TimeoutSocket(melanolib::time::seconds timeout)
-        : _socket(std::make_unique<PlainSocket>(_io_service))
-    {
-        set_timeout(timeout);
-        check_deadline();
-    }
-
-    /**
      * \brief Creates a socket without setting a timeout
      */
-    TimeoutSocket()
-        : _socket(std::make_unique<PlainSocket>(_io_service))
+    template<class SocketType, class... ExtraArgs>
+        explicit TimeoutSocket(SocketTag<SocketType>, ExtraArgs&&... args)
+            : _socket(std::make_unique<SocketType>(_io_service, std::forward<ExtraArgs>(args)...))
     {
         clear_timeout();
         check_deadline();
