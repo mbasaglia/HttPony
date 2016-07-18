@@ -27,6 +27,100 @@
 namespace httpony {
 namespace io {
 
+class SocketWrapper
+{
+public:
+    /**
+     * \brief Functor for ASIO calls
+     */
+    class AsyncCallback
+    {
+    public:
+        AsyncCallback(boost::system::error_code& error_code, std::size_t& bytes_transferred)
+            : error_code(&error_code), bytes_transferred(&bytes_transferred)
+        {
+            *this->error_code = boost::asio::error::would_block;
+            *this->bytes_transferred = 0;
+        }
+
+        void operator()(const boost::system::error_code& ec, std::size_t bt) const
+        {
+            *error_code = ec;
+            *bytes_transferred += bt;
+        }
+
+    private:
+        boost::system::error_code* error_code;
+        std::size_t* bytes_transferred;
+    };
+
+    virtual ~SocketWrapper() {}
+
+    /**
+     * \brief Closes the socket, further IO calls will fail
+     *
+     * It shouldn't throw an exception on failure
+     */
+    virtual void close() = 0;
+
+    /**
+     * \brief Returns the low-level socket object
+     */
+    virtual boost::asio::ip::tcp::socket& raw_socket() = 0;
+    /**
+     * \brief Returns the low-level socket object
+     */
+    virtual const boost::asio::ip::tcp::socket& raw_socket() const = 0;
+
+
+    /**
+     * \brief Async IO call to read from the socket into a buffer
+     */
+    virtual void async_read_some(boost::asio::mutable_buffers_1& buffer, const AsyncCallback& callback) = 0;
+
+    /**
+     * \brief Async IO call to write to the socket from a buffer
+     */
+    virtual void async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback) = 0;
+};
+
+class PlainSocket : public SocketWrapper
+{
+public:
+    explicit PlainSocket(boost::asio::io_service& io_service)
+        : socket(io_service)
+    {}
+
+    void close() override
+    {
+        boost::system::error_code error;
+        socket.close(error);
+    }
+
+    boost::asio::ip::tcp::socket& raw_socket() override
+    {
+        return socket;
+    }
+
+    const boost::asio::ip::tcp::socket& raw_socket() const override
+    {
+        return socket;
+    }
+
+    void async_read_some(boost::asio::mutable_buffers_1& buffer, const AsyncCallback& callback) override
+    {
+        socket.async_read_some(buffer, callback);
+    }
+
+    void async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback) override
+    {
+        boost::asio::async_write(socket, buffer, callback);
+    }
+
+private:
+    boost::asio::ip::tcp::socket socket;
+};
+
 /**
  * \brief A network socket with a timeout
  */
@@ -38,6 +132,7 @@ public:
      * \note The socket will time out this many seconds after creation
      */
     explicit TimeoutSocket(melanolib::time::seconds timeout)
+        : _socket(std::make_unique<PlainSocket>(_io_service))
     {
         set_timeout(timeout);
         check_deadline();
@@ -47,6 +142,7 @@ public:
      * \brief Creates a socket without setting a timeout
      */
     TimeoutSocket()
+        : _socket(std::make_unique<PlainSocket>(_io_service))
     {
         clear_timeout();
         check_deadline();
@@ -65,8 +161,7 @@ public:
      */
     void close()
     {
-        boost::system::error_code error;
-        _socket.close(error);
+        _socket->close();
     }
 
     /**
@@ -82,7 +177,7 @@ public:
      */
     boost::asio::ip::tcp::socket& socket()
     {
-        return _socket;
+        return _socket->raw_socket();
     }
 
     /**
@@ -90,7 +185,7 @@ public:
      */
     const boost::asio::ip::tcp::socket& socket() const
     {
-        return _socket;
+        return _socket->raw_socket();
     }
 
     /**
@@ -120,7 +215,7 @@ public:
     template<class MutableBufferSequence>
         std::size_t read_some(MutableBufferSequence&& buffer, boost::system::error_code& error)
     {
-        return io_operation(&TimeoutSocket::do_async_read_some, boost::asio::buffer(buffer), error);
+        return io_operation(&SocketWrapper::async_read_some, boost::asio::buffer(buffer), error);
     }
 
     /**
@@ -130,65 +225,29 @@ public:
     template<class ConstBufferSequence>
         std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
     {
-        return io_operation(&TimeoutSocket::do_async_write, boost::asio::buffer(buffer), error);
+        return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), error);
     }
 
 private:
     /**
-     * \brief Functor for ASIO calls
-     */
-    class AsyncCallback
-    {
-    public:
-        AsyncCallback(boost::system::error_code& error_code, std::size_t& bytes_transferred)
-            : error_code(&error_code), bytes_transferred(&bytes_transferred)
-        {
-            *this->error_code = boost::asio::error::would_block;
-            *this->bytes_transferred = 0;
-        }
-
-        void operator()(const boost::system::error_code& ec, std::size_t bt) const
-        {
-            *error_code = ec;
-            *bytes_transferred += bt;
-        }
-
-    private:
-        boost::system::error_code* error_code;
-        std::size_t* bytes_transferred;
-    };
-
-    /**
      * \brief Calls a function for async IO operations, then runs the io service until completion or timeout
      */
     template<class Buffer>
-        std::size_t io_operation(void (TimeoutSocket::*func)(Buffer&, const AsyncCallback&), Buffer&& buffer, boost::system::error_code& error)
+    std::size_t io_operation(
+        void (SocketWrapper::*func)(Buffer&, const SocketWrapper::AsyncCallback&),
+        Buffer&& buffer,
+        boost::system::error_code& error
+    )
     {
         std::size_t read_size;
 
-        (this->*func)(buffer, AsyncCallback(error, read_size));
+        ((*_socket).*func)(buffer, SocketWrapper::AsyncCallback(error, read_size));
 
         do
             _io_service.run_one();
         while ( !_io_service.stopped() && error == boost::asio::error::would_block );
 
         return read_size;
-    }
-
-    /**
-     * \brief Async IO call to read from the socket into a buffer
-     */
-    void do_async_read_some(boost::asio::mutable_buffers_1& buffer, const AsyncCallback& callback)
-    {
-        _socket.async_read_some(buffer, callback);
-    }
-
-    /**
-     * \brief Async IO call to write to the socket from a buffer
-     */
-    void do_async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback)
-    {
-        boost::asio::async_write(_socket, buffer, callback);
     }
 
     /**
@@ -206,7 +265,7 @@ private:
     }
 
     boost::asio::io_service _io_service;
-    boost::asio::ip::tcp::socket _socket{_io_service};
+    std::unique_ptr<SocketWrapper> _socket;
     boost::asio::deadline_timer _deadline{_io_service};
 };
 
