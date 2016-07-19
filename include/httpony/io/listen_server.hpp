@@ -102,20 +102,6 @@ public:
      * \brief Runs the server synchronously
      * \tparam OnSuccess Functor accepting a io::Connectio&
      * \tparam OnFailure Functor accepting a io::Connectio&
-     * \param on_success Functor called on a successful connection
-     * \param on_failure Functor called on a connection that had some issues
-     */
-    template<class OnSuccess, class OnFailure>
-        void run(const OnSuccess& on_success, const OnFailure& on_failure)
-    {
-        accept(on_success, on_failure, &ListenServer::create_connection);
-        io_service.run();
-    }
-
-    /**
-     * \brief Runs the server synchronously
-     * \tparam OnSuccess Functor accepting a io::Connectio&
-     * \tparam OnFailure Functor accepting a io::Connectio&
      * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
      * \param on_success Functor called on a successful connection
      * \param on_failure Functor called on a connection that had some issues
@@ -158,11 +144,6 @@ public:
 
 
 private:
-    static std::unique_ptr<Connection> create_connection()
-    {
-        return melanolib::New<Connection>(SocketTag<PlainSocket>{});
-    }
-
     /**
      * \brief Schedules an async connection
      */

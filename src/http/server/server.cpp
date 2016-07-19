@@ -50,6 +50,39 @@ void Server::set_max_request_body(std::size_t size)
     _max_request_body = size;
 }
 
+bool Server::started() const
+{
+    return _thread.joinable();
+}
+
+void Server::start()
+{
+    _listen_server.start(_listen_address);
+
+    _thread = std::thread([this](){
+        _listen_server.run(
+            [this](io::Connection& connection){
+                respond(connection, connection.read_request());
+            },
+            [this](io::Connection& connection){
+                /// \todo Log error
+            },
+            [this]{
+                return create_connection();
+            }
+        );
+    });
+}
+
+void Server::stop()
+{
+    if ( started() )
+    {
+        _listen_server.stop();
+        _thread.join();
+    }
+}
+
 void Server::process_log_format(
         char label,
         const std::string& argument,
@@ -166,35 +199,6 @@ void Server::process_log_format(
             // TODO keep alive?
             output << (request.suggested_status.is_error() ? 'X' : '-');
             break;
-    }
-}
-
-bool Server::started() const
-{
-    return _thread.joinable();
-}
-
-void Server::start()
-{
-    _listen_server.start(_listen_address);
-
-    _thread = std::thread([this](){
-        _listen_server.run(
-        [this](io::Connection& connection){
-            respond(connection, connection.read_request());
-        },
-        [this](io::Connection& connection){
-            /// \todo Log error
-        });
-    });
-}
-
-void Server::stop()
-{
-    if ( started() )
-    {
-        _listen_server.stop();
-        _thread.join();
     }
 }
 

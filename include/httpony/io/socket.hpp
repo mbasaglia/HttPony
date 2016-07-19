@@ -30,6 +30,8 @@ namespace io {
 class SocketWrapper
 {
 public:
+    using raw_socket_type = boost::asio::ip::tcp::socket;
+
     /**
      * \brief Functor for ASIO calls
      */
@@ -66,11 +68,11 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    virtual boost::asio::ip::tcp::socket& raw_socket() = 0;
+    virtual raw_socket_type& raw_socket() = 0;
     /**
      * \brief Returns the low-level socket object
      */
-    virtual const boost::asio::ip::tcp::socket& raw_socket() const = 0;
+    virtual const raw_socket_type& raw_socket() const = 0;
 
 
     /**
@@ -97,12 +99,12 @@ public:
         socket.close(error);
     }
 
-    boost::asio::ip::tcp::socket& raw_socket() override
+    raw_socket_type& raw_socket() override
     {
         return socket;
     }
 
-    const boost::asio::ip::tcp::socket& raw_socket() const override
+    const raw_socket_type& raw_socket() const override
     {
         return socket;
     }
@@ -118,7 +120,7 @@ public:
     }
 
 private:
-    boost::asio::ip::tcp::socket socket;
+    raw_socket_type socket;
 };
 
 template<class SocketType>

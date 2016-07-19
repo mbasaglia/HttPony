@@ -36,7 +36,7 @@ public:
 
     explicit Server(io::ListenAddress listen);
 
-    ~Server();
+    virtual ~Server();
 
     /**
      * \brief Listening address
@@ -91,6 +91,15 @@ public:
         std::ostream& output) const;
 
 private:
+    /**
+     * \brief Creates a new connection object
+     */
+    virtual std::unique_ptr<io::Connection> create_connection() const
+    {
+        return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
+    }
+
+
     /**
      * \brief Writes a single log item into \p output
      */
