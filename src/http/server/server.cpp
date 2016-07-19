@@ -62,10 +62,11 @@ void Server::start()
     _thread = std::thread([this](){
         _listen_server.run(
             [this](io::Connection& connection){
-                respond(connection, connection.read_request());
+                if ( accept(connection) )
+                    respond(connection, connection.read_request());
             },
-            [this](io::Connection& connection){
-                /// \todo Log error
+            [this](io::Connection& connection, const std::string& message){
+                error(connection, message);
             },
             [this]{
                 return create_connection();

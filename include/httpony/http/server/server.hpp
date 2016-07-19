@@ -90,15 +90,33 @@ public:
         const Response& response,
         std::ostream& output) const;
 
+protected:
+    /**
+     * \brief Handles connection errors
+     */
+    virtual void error(io::Connection& connection, const std::string& what) const
+    {
+        std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
+    }
+
 private:
     /**
      * \brief Creates a new connection object
      */
-    virtual std::unique_ptr<io::Connection> create_connection() const
+    virtual std::unique_ptr<io::Connection> create_connection()
     {
         return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
+    /**
+     * \brief Whether to accept the incoming connection
+     *
+     * At this stage no data has been read from \p connection
+     */
+    virtual bool accept(io::Connection& connection)
+    {
+        return true;
+    }
 
     /**
      * \brief Writes a single log item into \p output

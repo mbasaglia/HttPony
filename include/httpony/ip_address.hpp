@@ -24,6 +24,7 @@
 
 #include <string>
 #include <cstdint>
+#include <ostream>
 
 namespace httpony {
 
@@ -53,6 +54,19 @@ struct IPAddress
     std::string string;
     uint16_t port = 0;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const IPAddress& ip)
+{
+    if ( ip.type == IPAddress::Type::Invalid )
+        return os << "(invalid)";
+
+    if ( ip.type == IPAddress::Type::IPv6 && ip.string.find(':') != std::string::npos )
+        os << '[' << ip.string << ']';
+    else
+        os << ip.string;
+    
+    return os << ':' << ip.port;
+}
 
 } // namespace httpony
 #endif // HTTPONY_IP_ADDRESS_HPP

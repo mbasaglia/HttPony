@@ -49,6 +49,7 @@ public:
     {
         boost::system::error_code error;
         _socket.write(_output_buffer.data(), error);
+        _output_buffer.consume(_output_buffer.size());
         return !error;
     }
 

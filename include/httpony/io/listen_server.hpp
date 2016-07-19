@@ -101,7 +101,7 @@ public:
     /**
      * \brief Runs the server synchronously
      * \tparam OnSuccess Functor accepting a io::Connectio&
-     * \tparam OnFailure Functor accepting a io::Connectio&
+     * \tparam OnFailure Functor accepting a io::Connectio& and a std::string
      * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
      * \param on_success Functor called on a successful connection
      * \param on_failure Functor called on a connection that had some issues
@@ -167,7 +167,7 @@ private:
                     if ( !error_code )
                         on_success(*connection);
                     else
-                        on_failure(*connection);
+                        on_failure(*connection, error_code.message());
 
                     /// \todo Keep the connection alive if needed
                     auto it = std::find_if(connections.begin(), connections.end(),
