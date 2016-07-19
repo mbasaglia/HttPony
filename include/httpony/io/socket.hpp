@@ -173,7 +173,7 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    boost::asio::ip::tcp::socket& socket()
+    boost::asio::ip::tcp::socket& raw_socket()
     {
         return _socket->raw_socket();
     }
@@ -181,9 +181,14 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    const boost::asio::ip::tcp::socket& socket() const
+    const boost::asio::ip::tcp::socket& raw_socket() const
     {
         return _socket->raw_socket();
+    }
+
+    SocketWrapper& socket_wrapper()
+    {
+        return *_socket;
     }
 
     /**

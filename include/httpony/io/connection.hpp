@@ -60,12 +60,12 @@ public:
 
     IPAddress remote_address() const
     {
-        return endpoint_to_ip(_socket.socket().remote_endpoint());
+        return endpoint_to_ip(_socket.raw_socket().remote_endpoint());
     }
 
     IPAddress local_address() const
     {
-        return endpoint_to_ip(_socket.socket().local_endpoint());
+        return endpoint_to_ip(_socket.raw_socket().local_endpoint());
     }
 
     bool send_response(Response& response)

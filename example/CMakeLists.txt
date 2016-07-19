@@ -37,3 +37,12 @@ else()
     message(STATUS "file_browser example disabled (You need libmagic and Boost::filesystem for this)")
 endif()
 
+set(OPENSSL_FOUND ON)
+find_package(OpenSSL QUIET)
+if(OPENSSL_FOUND)
+    example(ssl_hello_server)
+    target_link_libraries(ssl_hello_server ${OPENSSL_LIBRARIES})
+else()
+    message(STATUS "ssl_hello_server example disabled (You need OpenSSL for this)")
+endif()
+

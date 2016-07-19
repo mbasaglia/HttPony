@@ -154,7 +154,7 @@ private:
             connections.push_back(create_connection());
             auto connection = connections.back().get();
             acceptor.async_accept(
-                connection->socket().socket(),
+                connection->socket().raw_socket(),
                 [this, connection, on_success, on_failure, create_connection]
                 (boost::system::error_code error_code)
                 {
