@@ -76,7 +76,6 @@ public:
      */
     virtual const raw_socket_type& raw_socket() const = 0;
 
-
     /**
      * \brief Async IO call to read from the socket into a buffer
      */
@@ -231,6 +230,31 @@ public:
         std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
     {
         return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), error);
+    }
+
+
+    bool connect(
+        boost_tcp::resolver::iterator endpoint_iterator,
+        boost::system::error_code& error
+    )
+    {
+        error = boost::asio::error::would_block;
+
+        boost::asio::async_connect(raw_socket(), endpoint_iterator,
+            [this, &error](
+                const boost::system::error_code& error_code,
+                boost_tcp::resolver::iterator endpoint_iterator
+            )
+            {
+                error = error_code;
+            }
+        );
+
+        do
+            _io_service.run_one();
+        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+
+        return !error;
     }
 
 private:

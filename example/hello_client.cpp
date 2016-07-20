@@ -20,7 +20,6 @@
  */
 
 #include <iostream>
-#include <algorithm>
 
 #include "httpony.hpp"
 
@@ -29,7 +28,7 @@ int main(int argc, char** argv)
     httpony::Client client;
 
     // This starts the server on a separate thread
-    client.queue_request("http://example.com");
+    client.queue_request("localhost");
     client.start();
     std::cout << "Client started, hit enter to quit\n";
     // Pause the main thread listening to standard input

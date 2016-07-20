@@ -60,12 +60,20 @@ public:
 
     IPAddress remote_address() const
     {
-        return endpoint_to_ip(_socket.raw_socket().remote_endpoint());
+        boost::system::error_code error;
+        auto endpoint = _socket.raw_socket().remote_endpoint(error);
+        if ( error )
+            return {};
+        return endpoint_to_ip(endpoint);
     }
 
     IPAddress local_address() const
     {
-        return endpoint_to_ip(_socket.raw_socket().local_endpoint());
+        boost::system::error_code error;
+        auto endpoint = _socket.raw_socket().local_endpoint(error);
+        if ( error )
+            return {};
+        return endpoint_to_ip(endpoint);
     }
 
     bool send_response(Response& response)

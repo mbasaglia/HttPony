@@ -48,17 +48,20 @@ public:
         }
     }
 
-    void queue_request(const Uri& target)
+    void queue_request(Uri target)
     {
+        if ( target.scheme.empty() )
+            target.scheme = "http";
+
         _basic_client.queue_request(
-            target.authority,
+            target,
             [this](io::Connection& connection){
                 /// \todo
                 std::cout << "Connected to " << connection.remote_address() << '\n';
             },
-            [](const std::string& target, const std::string& message){
+            [](const Uri& target, const std::string& message){
                 /// \todo Virtual function
-                std::cerr << "Could resolve " << target << ": " << message << std::endl;
+                std::cerr << "Could not resolve " << target.full() << ": " << message << std::endl;
             },
             [this](const io::Connection& connection, const std::string& message){
                 error(connection, message);
@@ -76,7 +79,7 @@ protected:
      */
     virtual void error(const io::Connection& connection, const std::string& what) const
     {
-        std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
+        std::cerr << "Error on " << connection.remote_address() << ": " << what << std::endl;
     }
 
 private:
