@@ -22,7 +22,7 @@
 #ifndef HTTPONY_SERVER_HPP
 #define HTTPONY_SERVER_HPP
 
-#include "httpony/io/listen_server.hpp"
+#include "httpony/io/basic_server.hpp"
 
 namespace httpony {
 
@@ -131,7 +131,7 @@ private:
     ) const;
 
     io::ListenAddress _listen_address;
-    io::ListenServer _listen_server;
+    io::BasicServer _listen_server;
     std::size_t _max_request_body;
     std::thread _thread;
 };

@@ -50,7 +50,7 @@ struct ListenAddress : public IPAddress
  * \brief Low-level server object that listen to a port and
  * calls functor on incoming connections
  */
-class ListenServer
+class BasicServer
 {
 public:
     /**
