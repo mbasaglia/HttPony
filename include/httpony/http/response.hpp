@@ -82,7 +82,7 @@ struct Response
                 status == StatusCode::NotModified
             )
             {
-                body.stop_data();
+                body.stop_output();
             }
         }
     }
@@ -97,13 +97,13 @@ struct Response
         {
             if ( status == StatusCode::OK && input.method == "CONNECT" )
             {
-                body.stop_data();
+                body.stop_output();
             }
             else if ( input.method == "HEAD" )
             {
                 headers["Content-Type"] = body.content_type().string();
                 headers["Content-Length"] = std::to_string(body.content_length());
-                body.stop_data();
+                body.stop_output();
             }
         }
     }

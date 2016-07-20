@@ -59,13 +59,23 @@ public:
         return *this;
     }
 
-    bool get_data(std::streambuf* buffer, const Headers& headers);
+    /**
+     * \brief Sets up the stream to read from the given buffer
+     * \returns \b true on success
+     */
+    bool start_input(std::streambuf* buffer, const Headers& headers);
 
+    /**
+     * \brief Whether there is some data to read (which might have 0 length) or no data at all
+     */
     bool has_data() const
     {
         return !_error && rdbuf();
     }
 
+    /**
+     * \brief Whether the stream encountered an error
+     */
     bool has_error() const
     {
         return fail() || _error;
@@ -81,13 +91,23 @@ public:
         return _error || fail();
     }
 
+    /**
+     * \brief Expected size of the input, as advertised by the headers
+     * passed to start_input()
+     */
     std::size_t content_length() const
     {
         return _content_length;
     }
 
+    /**
+     * \brief Reads all available data and returns it as a string
+     */
     std::string read_all();
 
+    /**
+     * \brief Content type, as advertised by the headers passed to start_input()
+     */
     MimeType content_type() const
     {
         return _content_type;
@@ -120,7 +140,7 @@ public:
 
     OutputContentStream& operator=(OutputContentStream&& other)
     {
-        stop_data();
+        stop_output();
         if ( other.has_data() )
         {
             rdbuf(other.rdbuf() ? &buffer : nullptr);
@@ -144,13 +164,13 @@ public:
     /**
      * \brief Sets up the stream to contain data in the specified encoding
      */
-    void start_data(const MimeType& content_type)
+    void start_output(const MimeType& content_type)
     {
         rdbuf(&buffer);
         _content_type = content_type;
     }
 
-    void start_data(const std::string& content_type)
+    void start_output(const std::string& content_type)
     {
         rdbuf(&buffer);
         _content_type = content_type;
@@ -159,7 +179,7 @@ public:
     /**
      * \brief Removes all data from the stream, call start() to re-introduce it
      */
-    void stop_data()
+    void stop_output()
     {
         flush();
         buffer.consume(buffer.size());

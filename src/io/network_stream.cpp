@@ -27,10 +27,10 @@ namespace io {
 InputContentStream::InputContentStream(std::streambuf* buffer, const Headers& headers)
     : std::istream(buffer)
 {
-    get_data(buffer, headers);
+    start_input(buffer, headers);
 }
 
-bool InputContentStream::get_data(std::streambuf* buffer, const Headers& headers)
+bool InputContentStream::start_input(std::streambuf* buffer, const Headers& headers)
 {
     rdbuf(buffer);
 
