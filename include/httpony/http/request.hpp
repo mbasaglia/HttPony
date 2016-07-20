@@ -69,7 +69,7 @@ struct Request
     Auth        auth;
     Status      suggested_status;
 
-    io::InputContentStream body;
+    io::ContentStream body;
 
     melanolib::time::DateTime received_date;
 };

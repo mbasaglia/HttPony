@@ -70,7 +70,7 @@ protected:
             if ( boost::filesystem::is_directory(file) )
             {
                 httpony::Response response(request);
-                response.body.start_data("text/html");
+                response.body.start_output("text/html");
                 response.body << "<!DOCTYPE html>\n<html>\n"
                     << "<head><title>" << file << "</title></head>\n"
                     << "<body><ul>";
@@ -94,7 +94,7 @@ protected:
             else if ( boost::filesystem::is_regular(file) )
             {
                 httpony::Response response(request);
-                response.body.start_data(mime_type(file.string()));
+                response.body.start_output(mime_type(file.string()));
                 std::ifstream input(file.string());
                 while ( input )
                 {
@@ -123,7 +123,7 @@ protected:
     httpony::Response simple_response(const httpony::Request& request) const
     {
         httpony::Response response(request);
-        response.body.start_data("text/plain");
+        response.body.start_output("text/plain");
         response.body << response.status.message << '\n';
         return response;
     }

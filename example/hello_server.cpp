@@ -112,7 +112,7 @@ private:
         httpony::Response response(request);
 
         // The response is in plain text
-        response.body.start_data("text/plain");
+        response.body.start_output("text/plain");
 
         if ( !response.status.is_error() )
         {

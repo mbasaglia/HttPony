@@ -53,7 +53,7 @@ Request request(std::istream& stream, HttpParserFlags flags)
 
     if ( request.headers.contains("Content-Length") )
     {
-        if ( !request.body.get_data(stream.rdbuf(), request.headers) )
+        if ( !request.body.start_input(stream.rdbuf(), request.headers) )
             return request;
 
         if ( request.protocol >= Protocol::http_1_1 && request.headers.get("Expect") == "100-continue" )

@@ -44,10 +44,11 @@ struct Response
         Status status = Status(),
         const Protocol& protocol = Protocol::http_1_1
     )
-        : body(std::move(content_type)),
+        : body(io::ContentStream::OpenMode::Output),
           status(std::move(status)),
           protocol(protocol)
     {
+        body.start_output(content_type);
     }
 
     Response(Status status = Status(), const Protocol& protocol = Protocol::http_1_1)
@@ -82,7 +83,7 @@ struct Response
                 status == StatusCode::NotModified
             )
             {
-                body.stop_data();
+                body.stop_output();
             }
         }
     }
@@ -97,18 +98,18 @@ struct Response
         {
             if ( status == StatusCode::OK && input.method == "CONNECT" )
             {
-                body.stop_data();
+                body.stop_output();
             }
             else if ( input.method == "HEAD" )
             {
                 headers["Content-Type"] = body.content_type().string();
                 headers["Content-Length"] = std::to_string(body.content_length());
-                body.stop_data();
+                body.stop_output();
             }
         }
     }
 
-    io::OutputContentStream body;
+    io::ContentStream body;
     Status      status;
     Headers     headers;
     Protocol    protocol;
