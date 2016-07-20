@@ -60,11 +60,10 @@ public:
      */
     void start(const ListenAddress& listen)
     {
-        using boost::asio::ip::tcp;
-        tcp::resolver resolver(io_service);
-        tcp protocol = listen.type == IPAddress::Type::IPv4 ? tcp::v4() : tcp::v6();
+        boost_tcp::resolver resolver(io_service);
+        boost_tcp protocol = listen.type == IPAddress::Type::IPv4 ? boost_tcp::v4() : boost_tcp::v6();
 
-        tcp::endpoint endpoint;
+        boost_tcp::endpoint endpoint;
         if ( !listen.string.empty() )
             endpoint = *resolver.resolve({
                 protocol,
@@ -78,7 +77,7 @@ public:
             });
 
         acceptor.open(endpoint.protocol());
-        acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+        acceptor.set_option(boost_tcp::acceptor::reuse_address(true));
         acceptor.bind(endpoint);
         acceptor.listen();
 
@@ -184,7 +183,7 @@ private:
 
     melanolib::Optional<melanolib::time::seconds> _timeout;
     boost::asio::io_service             io_service;
-    boost::asio::ip::tcp::acceptor      acceptor{io_service};
+    boost_tcp::acceptor      acceptor{io_service};
     std::list<std::unique_ptr<io::Connection>> connections;
 };
 

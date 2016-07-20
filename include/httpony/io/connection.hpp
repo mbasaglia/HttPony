@@ -122,7 +122,7 @@ private:
     /**
      * \brief Converts a boost endpoint to an IPAddress object
      */
-    static IPAddress endpoint_to_ip(const boost::asio::ip::tcp::endpoint& endpoint)
+    static IPAddress endpoint_to_ip(const boost_tcp::endpoint& endpoint)
     {
         return IPAddress(
             endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
@@ -134,7 +134,6 @@ private:
     TimeoutSocket _socket;
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
-
 };
 
 } // namespace io

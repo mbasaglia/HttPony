@@ -27,10 +27,12 @@
 namespace httpony {
 namespace io {
 
+using boost_tcp = boost::asio::ip::tcp;
+
 class SocketWrapper
 {
 public:
-    using raw_socket_type = boost::asio::ip::tcp::socket;
+    using raw_socket_type = boost_tcp::socket;
 
     /**
      * \brief Functor for ASIO calls
@@ -173,7 +175,7 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    boost::asio::ip::tcp::socket& raw_socket()
+    boost_tcp::socket& raw_socket()
     {
         return _socket->raw_socket();
     }
@@ -181,7 +183,7 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    const boost::asio::ip::tcp::socket& raw_socket() const
+    const boost_tcp::socket& raw_socket() const
     {
         return _socket->raw_socket();
     }

@@ -19,13 +19,23 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTPONY_HPP
-#define HTTPONY_HPP
+#include <iostream>
+#include <algorithm>
 
-#include "httpony/http/agent/server.hpp"
-#include "httpony/http/agent/client.hpp"
-#include "httpony/http/agent/logging.hpp"
-#include "httpony/base_encoding.hpp"
-#include "httpony/multipart.hpp"
+#include "httpony.hpp"
 
-#endif // HTTPONY_HPP
+int main(int argc, char** argv)
+{
+    httpony::Client client;
+
+    // This starts the server on a separate thread
+    client.queue_request("http://example.com");
+    client.start();
+    std::cout << "Client started, hit enter to quit\n";
+    // Pause the main thread listening to standard input
+    std::cin.get();
+    std::cout << "Client stopped\n";
+
+    // The client destructor will stop the server and join the thread
+    return 0;
+}
