@@ -17,8 +17,8 @@
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 
 set(SOURCES
+http/agent/server.cpp
 http/format/read.cpp
-http/server/server.cpp
 http/protocol.cpp
 http/request.cpp
 http/status.cpp

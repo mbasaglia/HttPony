@@ -21,8 +21,8 @@
 
 #include <thread>
 
-#include "httpony/http/server/server.hpp"
-#include "httpony/http/server/logging.hpp"
+#include "httpony/http/agent/server.hpp"
+#include "httpony/http/agent/logging.hpp"
 
 namespace httpony {
 

@@ -22,8 +22,8 @@
 #ifndef HTTPONY_HPP
 #define HTTPONY_HPP
 
-#include "httpony/http/server/server.hpp"
-#include "httpony/http/server/logging.hpp"
+#include "httpony/http/agent/server.hpp"
+#include "httpony/http/agent/logging.hpp"
 #include "httpony/base_encoding.hpp"
 #include "httpony/multipart.hpp"
 
