@@ -53,9 +53,10 @@ public:
         const CreateConnection& create_connection
     )
     {
-        /// \todo pass port if available instead of the scheme
         std::string service = target.scheme;
-        boost_tcp::resolver::query query(target.authority, service);
+        if ( target.authority.port )
+            service = std::to_string(*target.authority.port);
+        boost_tcp::resolver::query query(target.authority.host, service);
         resolver.async_resolve(query,
             [this, target, on_success, on_resolve_failure, on_failure, create_connection](
                 const boost::system::error_code& error_code,
