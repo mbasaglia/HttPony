@@ -20,10 +20,16 @@
  */
 #include "httpony.hpp"
 
-class PingPongServer : public httpony::Server
+/**
+ * \brief Simple example server
+ *
+ * This server only supports GET and returns
+ * simple "Hello World" responses to the client
+ */
+class SimpleServer : public httpony::Server
 {
 public:
-    explicit PingPongServer(httpony::io::ListenAddress listen)
+    explicit SimpleServer(httpony::io::ListenAddress listen)
         : Server(listen)
     {
         set_timeout(melanolib::time::seconds(16));
@@ -37,41 +43,54 @@ public:
     }
 
 protected:
-    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request) const
+    /**
+     * \brief Returns a response for the given request
+     */
+    httpony::Response build_response(
+        httpony::io::Connection& connection,
+        httpony::Request& request) const
     {
         try
         {
-            if ( request.method != "GET"  && request.method != "HEAD")
-                request.suggested_status = httpony::StatusCode::MethodNotAllowed;
-            else if ( request.url.path.string() != "ping" )
-                request.suggested_status = httpony::StatusCode::NotFound;
-
             if ( request.suggested_status.is_error() )
                 return simple_response(request);
 
+            if ( request.method != "GET" && request.method != "HEAD")
+                return simple_response(request, httpony::StatusCode::MethodNotAllowed);
+
+            if ( !request.url.path.empty() )
+                return simple_response(request, httpony::StatusCode::NotFound);
+
             httpony::Response response(request);
             response.body.start_output("text/plain");
-            response.body << "pong";
+            response.body << "Hello world!";
             return response;
         }
         catch ( const std::exception& )
         {
             // Create a server error response if an exception happened
             // while handling the request
-            request.suggested_status = httpony::StatusCode::InternalServerError;
-            return simple_response(request);
+            return simple_response(request, httpony::StatusCode::InternalServerError);
         }
     }
 
     /**
      * \brief Creates a simple text response containing just the status message
      */
-    httpony::Response simple_response(const httpony::Request& request) const
+    httpony::Response simple_response(
+        const httpony::Request& request,
+        const httpony::Status& status) const
     {
         httpony::Response response(request);
+        response.status = status;
         response.body.start_output("text/plain");
         response.body << response.status.message << '\n';
         return response;
+    }
+
+    httpony::Response simple_response(const httpony::Request& request) const
+    {
+        return simple_response(request, request.suggested_status);
     }
 
     /**
@@ -98,47 +117,32 @@ protected:
     }
 
 private:
-    std::string log_format = "SV: %h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
+    std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
 };
 
-void queue_request(httpony::Client& client, const httpony::Authority& server)
-{
-    client.queue_request(httpony::Request(
-        "GET",
-        httpony::Uri("http", server, httpony::Path("ping"), {}, {})
-    ));
-}
-
+/**
+ * The executable accepts an optional command line argument to change the
+ * listen port
+ */
 int main(int argc, char** argv)
 {
-    uint16_t port = 8084;
+    uint16_t port = 8085;
 
     if ( argc > 1 )
         port = std::stoul(argv[1]);
 
     // This creates a server that listens to both IPv4 and IPv6
     // on the given port
-    httpony::Authority sv_auth;
-    sv_auth.host = "localhost";
-    sv_auth.port = port;
-    PingPongServer server(port);
+    SimpleServer server(port);
 
     // This starts the server on a separate thread
     server.start();
-    std::cout << "Server started on port " << server.listen_address().port << "\n";
-
-    // This starts the client on a separate thread
-    httpony::Client client;
-    queue_request(client, sv_auth);
-    client.start();
-    std::cout << "Client started\n";
+    std::cout << "Server started on port " << server.listen_address().port << ", hit enter to quit\n";
 
     // Pause the main thread listening to standard input
-    std::cout << "Hit enter to quit\n";
     std::cin.get();
-    std::cout << "Client stopped\n";
     std::cout << "Server stopped\n";
 
-    // The destructors will stop client and server and join the thread
+    // The destructor will stop the server and join the thread
     return 0;
 }
