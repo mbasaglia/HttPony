@@ -23,6 +23,7 @@
 #define HTTPONY_URI_HPP
 
 #include "httpony/http/headers.hpp"
+#include <melanolib/utils/c++-compat.hpp>
 
 namespace httpony {
 
@@ -225,8 +226,41 @@ private:
 };
 
 /**
+ * \brief URI authority information
+ * \see https://tools.ietf.org/html/rfc3986#section-3.2
+ */
+struct Authority
+{
+    explicit Authority(const std::string& string);
+    Authority() = default;
+
+    melanolib::Optional<std::string> user;
+    melanolib::Optional<std::string> password;
+    std::string host;
+    melanolib::Optional<uint16_t> port;
+
+    std::string full() const;
+
+    bool empty() const
+    {
+        return !user && !password && host.empty() && !port;
+    }
+
+    bool operator==(const Authority& oth) const
+    {
+        return user == oth.user && password == oth.password &&
+            host == oth.host && port == oth.port;
+    }
+
+    bool operator!=(const Authority& oth) const
+    {
+        return !(*this == oth);
+    }
+};
+
+/**
  * \brief Uniform resource identifier
- * \see http://www.faqs.org/rfcs/rfc3986.html
+ * \see https://tools.ietf.org/html/rfc3986
  */
 struct Uri
 {
@@ -249,7 +283,7 @@ struct Uri
     std::string query_string(bool question_mark = false) const;
 
     std::string scheme;
-    std::string authority;
+    Authority authority;
     Path path;
     DataMap query;
     std::string fragment;

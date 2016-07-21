@@ -27,6 +27,116 @@
 
 using namespace httpony;
 
+BOOST_AUTO_TEST_CASE( test_authority_empty )
+{
+    Authority auth;
+    BOOST_CHECK( !auth.user );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host.empty() );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( auth.empty() );
+    BOOST_CHECK( auth.full() == "" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_empty_string )
+{
+    Authority auth("");
+    BOOST_CHECK( !auth.user );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host.empty() );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( auth.empty() );
+    BOOST_CHECK( auth.full() == "" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_host_only )
+{
+    Authority auth("hello");
+    BOOST_CHECK( !auth.user );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host == "hello" );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_host_port )
+{
+    Authority auth("hello:123");
+    BOOST_CHECK( !auth.user );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host == "hello" );
+    BOOST_CHECK( *auth.port == 123 );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello:123" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_host_colon_noport )
+{
+    Authority auth("[::123]");
+    BOOST_CHECK( !auth.user );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host == "[::123]" );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "[::123]" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_user_host )
+{
+    Authority auth("hello@world");
+    BOOST_CHECK( *auth.user == "hello" );
+    BOOST_CHECK( !auth.password );
+    BOOST_CHECK( auth.host == "world" );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello@world" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_user_empty_password )
+{
+    Authority auth("hello:@world");
+    BOOST_CHECK( *auth.user == "hello" );
+    BOOST_CHECK( *auth.password == "" );
+    BOOST_CHECK( auth.host == "world" );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello:@world" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_user_password )
+{
+    Authority auth("hello:there@world");
+    BOOST_CHECK( *auth.user == "hello" );
+    BOOST_CHECK( *auth.password == "there" );
+    BOOST_CHECK( auth.host == "world" );
+    BOOST_CHECK( !auth.port );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello:there@world" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_user_password_port )
+{
+    Authority auth("hello:there@world:123");
+    BOOST_CHECK( *auth.user == "hello" );
+    BOOST_CHECK( *auth.password == "there" );
+    BOOST_CHECK( auth.host == "world" );
+    BOOST_CHECK( *auth.port == 123 );
+    BOOST_CHECK( !auth.empty() );
+    BOOST_CHECK( auth.full() == "hello:there@world:123" );
+}
+
+BOOST_AUTO_TEST_CASE( test_authority_cmp )
+{
+    BOOST_CHECK( Authority("hello:there@world:123") == Authority("hello:there@world:123") );
+    BOOST_CHECK( Authority("hello:there@world:123") != Authority("hello:there@world") );
+    BOOST_CHECK( Authority("hello:there@world:123") != Authority("hello:there@world:1234") );
+    BOOST_CHECK( Authority("hello:there@world:123") != Authority("hello:there@worl:123") );
+    BOOST_CHECK( Authority("hello:there@world:123") != Authority("hello:@world:123") );
+    BOOST_CHECK( Authority("hello@world:123") != Authority("hello:@world:123") );
+    BOOST_CHECK( Authority("hello:there@world:123") != Authority("world:123") );
+}
+
 BOOST_AUTO_TEST_CASE( test_urlencode )
 {
     BOOST_CHECK( urlencode("fo0.-_~ ?&/#:+%") == "fo0.-_~%20%3F%26%2F%23%3A%2B%25" );

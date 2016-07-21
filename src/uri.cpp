@@ -27,6 +27,61 @@
 
 namespace httpony {
 
+Authority::Authority(const std::string& string)
+{
+    auto at = string.find('@');
+
+    if ( at != std::string::npos )
+    {
+        auto colon = string.find(':');
+        if ( colon != std::string::npos && colon < at )
+        {
+            user = string.substr(0, colon);
+            colon += 1;
+            password = string.substr(colon, at - colon);
+        }
+        else
+        {
+            user = string.substr(0, at);
+        }
+        at += 1;
+    }
+    else
+    {
+        at = 0;
+    }
+
+    auto colon = string.rfind(':');
+    if ( colon != std::string::npos && colon > at &&
+        std::all_of(string.begin() + colon + 1, string.end(), melanolib::string::ascii::is_digit) )
+    {
+        host = string.substr(at, colon - at);
+        port = std::stoul(string.substr(colon + 1));
+    }
+    else
+    {
+        host = string.substr(at);
+    }
+}
+
+std::string Authority::full() const
+{
+    std::string result;
+    if ( user )
+    {
+        result += *user;
+        if ( password )
+            result += ':' + *password;
+        result += '@';
+    }
+
+    result += host;
+
+    if ( port )
+        result += ':' + std::to_string(*port);
+
+    return result;
+}
 
 Uri::Uri(const std::string& uri)
 {
@@ -38,7 +93,7 @@ Uri::Uri(const std::string& uri)
     if ( std::regex_match(uri, match, uri_regex) )
     {
         scheme = urldecode(match[1]);
-        authority = match[2]; /// \todo could parse user:password@host:port
+        authority = Authority(match[2]);
 
         path = Path(match[3], true);
 
@@ -69,7 +124,7 @@ std::string Uri::full() const
         result += urlencode(scheme) + ':';
 
     if ( !authority.empty() )
-        result += "//" + authority;
+        result += "//" + authority.full();
 
     result += path.url_encoded();
 
