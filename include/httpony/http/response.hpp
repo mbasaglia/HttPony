@@ -24,6 +24,7 @@
 
 #include "httpony/http/cookie.hpp"
 #include "httpony/http/request.hpp"
+#include "status.hpp"
 
 namespace httpony {
 
@@ -51,14 +52,13 @@ struct Response
         body.start_output(content_type);
     }
 
+    explicit Response(const Protocol& protocol = Protocol::http_1_1)
+        : Response(Status(), protocol)
+    {}
+
     Response(Status status = Status(), const Protocol& protocol = Protocol::http_1_1)
         : status(std::move(status)),
           protocol(protocol)
-    {}
-
-    explicit Response(const Request& request)
-        : status(request.suggested_status),
-          protocol(request.protocol)
     {}
 
     static Response redirect(const Uri& location, Status status = StatusCode::Found)

@@ -25,7 +25,7 @@ int main(int argc, char** argv)
     httpony::Client client;
 
     // This starts the client on a separate thread
-    client.queue_request("example.com");
+    client.queue_request(httpony::Request("GET", httpony::Uri("http://example.com")));
     client.start();
     std::cout << "Client started, hit enter to quit\n";
     // Pause the main thread listening to standard input

@@ -110,22 +110,30 @@ public:
         if ( !error && sz > 0 )
         {
             std::istream stream(&_input_buffer);
-            output = http::read::request(stream, parse_flags);
+            output = http::read::request(stream, parse_flags, _status);
             if ( output.body.has_data() )
                 _input_buffer.expect_input(output.body.content_length());
         }
         else if ( _socket.timed_out() )
         {
-            output.suggested_status = StatusCode::RequestTimeout;
+            _status = StatusCode::RequestTimeout;
         }
         else
         {
-            output.suggested_status = StatusCode::BadRequest;
+            _status = StatusCode::BadRequest;
         }
 
-        output.from = remote_address();
-
         return output;
+    }
+
+    Status status() const
+    {
+        return _status;
+    }
+
+    void set_status(const Status& status)
+    {
+        _status = status;
     }
 
     TimeoutSocket& socket()
@@ -146,9 +154,10 @@ private:
         );
     }
 
-    TimeoutSocket _socket;
+    TimeoutSocket       _socket;
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
+    Status              _status;
 };
 
 } // namespace io

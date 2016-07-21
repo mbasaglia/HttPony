@@ -58,10 +58,10 @@ protected:
         try
         {
             if ( request.method != "GET"  && request.method != "HEAD")
-                request.suggested_status = httpony::StatusCode::MethodNotAllowed;
+                connection.set_status(httpony::StatusCode::MethodNotAllowed);
 
-            if ( request.suggested_status.is_error() )
-                return simple_response(request);
+            if ( connection.status().is_error() )
+                return simple_response(connection.status(), request.protocol);
 
             auto file = root;
             for ( const auto & dir : request.url.path )
@@ -69,7 +69,7 @@ protected:
 
             if ( boost::filesystem::is_directory(file) )
             {
-                httpony::Response response(request);
+                httpony::Response response(request.protocol);
                 response.body.start_output("text/html");
                 response.body << "<!DOCTYPE html>\n<html>\n"
                     << "<head><title>" << file << "</title></head>\n"
@@ -93,7 +93,7 @@ protected:
             }
             else if ( boost::filesystem::is_regular(file) )
             {
-                httpony::Response response(request);
+                httpony::Response response(request.protocol);
                 response.body.start_output(mime_type(file.string()));
                 std::ifstream input(file.string());
                 while ( input )
@@ -105,24 +105,24 @@ protected:
                 return response;
             }
 
-            request.suggested_status = httpony::StatusCode::NotFound;
-            return simple_response(request);
+            return simple_response(httpony::StatusCode::NotFound, request.protocol);
         }
         catch ( const std::exception& )
         {
             // Create a server error response if an exception happened
             // while handling the request
-            request.suggested_status = httpony::StatusCode::InternalServerError;
-            return simple_response(request);
+            return simple_response(httpony::StatusCode::InternalServerError, request.protocol);
         }
     }
 
     /**
      * \brief Creates a simple text response containing just the status message
      */
-    httpony::Response simple_response(const httpony::Request& request) const
+    httpony::Response simple_response(
+        const httpony::Status& status,
+        const httpony::Protocol& protocol) const
     {
-        httpony::Response response(request);
+        httpony::Response response(status, protocol);
         response.body.start_output("text/plain");
         response.body << response.status.message << '\n';
         return response;

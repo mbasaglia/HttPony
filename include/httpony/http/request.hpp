@@ -26,7 +26,6 @@
 #include "httpony/http/protocol.hpp"
 #include "httpony/io/network_stream.hpp"
 #include "httpony/uri.hpp"
-#include "status.hpp"
 
 namespace httpony {
 
@@ -69,9 +68,7 @@ struct Request
     DataMap     cookies;
     DataMap     get;
     DataMap     post;
-    IPAddress   from;
     Auth        auth;
-    Status      suggested_status;
 
     io::ContentStream body;
 

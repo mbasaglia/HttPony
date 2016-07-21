@@ -37,23 +37,13 @@ public:
 
     void respond(httpony::io::Connection& connection, httpony::Request&& request) override
     {
-        try
-        {
-            std::string body = get_body(connection, request);
+        std::string body = get_body(connection, request);
 
-            httpony::Response response = send_response(connection, request);
+        httpony::Response response = build_response(connection, request);
 
-            print_info(connection, request, response, body);
-        }
-        catch ( const std::exception& )
-        {
-            // Create a server error response if an exception happened
-            // while handling the request
-            request.suggested_status = httpony::StatusCode::InternalServerError;
-            httpony::Response response = send_response(connection, request);
+        send_response(connection, request, response);
 
-            log_response(log_format, connection, request, response, std::cout);
-        }
+        print_info(connection, request, response, body);
     }
 
 private:
@@ -65,22 +55,22 @@ private:
         // Discard requests with a too long of a payload
         if ( request.body.content_length() > max_size )
         {
-            request.suggested_status = httpony::StatusCode::PayloadTooLarge;
+            connection.set_status(httpony::StatusCode::PayloadTooLarge);
             return "";
         }
 
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
-        if ( request.suggested_status == httpony::StatusCode::Continue )
+        if ( connection.status() == httpony::StatusCode::Continue )
         {
-            connection.send_response(request.suggested_status);
-            request.suggested_status = httpony::StatusCode::OK;
+            connection.send_response(simple_response(connection.status(), request.protocol));
+            connection.set_status(httpony::StatusCode::OK);
         }
 
         // Parse form data
         if ( request.can_parse_post() )
         {
             if ( !request.parse_post() )
-                request.suggested_status = httpony::StatusCode::BadRequest;
+                connection.set_status(httpony::StatusCode::BadRequest);
 
             return "";
         }
@@ -92,7 +82,7 @@ private:
 
             // Handle read errors (eg: wrong Content-Length)
             if ( request.body.has_error() )
-                request.suggested_status = httpony::StatusCode::BadRequest;
+                connection.set_status(httpony::StatusCode::BadRequest);
 
             return body;
         }
@@ -101,26 +91,50 @@ private:
     }
 
     /**
-     * \brief Sets up the response object and sends it to the client
+     * \brief Returns a response for the given request
      */
-    httpony::Response send_response(httpony::io::Connection& connection, const httpony::Request& request) const
+    httpony::Response build_response(
+        httpony::io::Connection& connection,
+        httpony::Request& request) const
     {
-        httpony::Response response(request);
+        try
+        {
+            if ( connection.status().is_error() )
+                return simple_response(connection.status(), request.protocol);
 
-        // The response is in plain text
+            httpony::Response response(request.protocol);
+            response.body.start_output("text/plain");
+            response.body << "Hello world!\r\n";
+            return response;
+        }
+        catch ( const std::exception& )
+        {
+            // Create a server error response if an exception happened
+            // while handling the request
+            return simple_response(httpony::StatusCode::InternalServerError, request.protocol);
+        }
+    }
+
+    /**
+     * \brief Creates a simple text response containing just the status message
+     */
+    httpony::Response simple_response(
+        const httpony::Status& status,
+        const httpony::Protocol& protocol) const
+    {
+        httpony::Response response(status, protocol);
         response.body.start_output("text/plain");
+        response.body << response.status.message << '\n';
+        return response;
+    }
 
-        if ( !response.status.is_error() )
-        {
-            // On success, send Hello world
-            response.body << "Hello, world!\n";
-        }
-        else
-        {
-            // On failure send the error message
-            response.body << response.status.message << '\n';
-        }
-
+    /**
+     * \brief Sends the response back to the client
+     */
+    void send_response(httpony::io::Connection& connection,
+                       httpony::Request& request,
+                       httpony::Response& response) const
+    {
         // We are not going to keep the connection open
         if ( response.protocol >= httpony::Protocol::http_1_1 )
         {
@@ -136,8 +150,6 @@ private:
         // Drop the connection if there is some network error on the response
         if ( !connection.send_response(response) )
             connection.close();
-
-        return response;
     }
 
     /**

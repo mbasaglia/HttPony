@@ -41,13 +41,14 @@ protected:
     {
         try
         {
-            if ( request.method != "GET"  && request.method != "HEAD")
-                request.suggested_status = httpony::StatusCode::MethodNotAllowed;
-            else if ( request.url.path.string() != "ping" )
-                request.suggested_status = httpony::StatusCode::NotFound;
+            if ( connection.status().is_error() )
+                return simple_response(connection.status(), request.protocol);
 
-            if ( request.suggested_status.is_error() )
-                return simple_response(request);
+            if ( request.method != "GET"  && request.method != "HEAD")
+                return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
+
+            if ( request.url.path.string() != "ping" )
+                return simple_response(httpony::StatusCode::NotFound, request.protocol);
 
             httpony::Response response(request);
             response.body.start_output("text/plain");
@@ -58,17 +59,18 @@ protected:
         {
             // Create a server error response if an exception happened
             // while handling the request
-            request.suggested_status = httpony::StatusCode::InternalServerError;
-            return simple_response(request);
+            return simple_response(httpony::StatusCode::InternalServerError, request.protocol);
         }
     }
 
     /**
      * \brief Creates a simple text response containing just the status message
      */
-    httpony::Response simple_response(const httpony::Request& request) const
+    httpony::Response simple_response(
+        const httpony::Status& status,
+        const httpony::Protocol& protocol) const
     {
-        httpony::Response response(request);
+        httpony::Response response(status, protocol);
         response.body.start_output("text/plain");
         response.body << response.status.message << '\n';
         return response;

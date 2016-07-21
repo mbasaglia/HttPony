@@ -63,7 +63,9 @@ void Server::start()
         _listen_server.run(
             [this](io::Connection& connection){
                 if ( accept(connection) )
+                {
                     respond(connection, connection.read_request());
+                }
             },
             [this](io::Connection& connection, const std::string& message){
                 error(connection, message);
@@ -102,7 +104,7 @@ void Server::process_log_format(
             break;
         case 'h': // Remote host
         case 'a': // Remote IP-address
-            output << request.from.string;
+            output << connection.remote_address().string;
             break;
         case 'A': // Local IP-address
             output << connection.local_address().string;
@@ -148,7 +150,7 @@ void Server::process_log_format(
             break;
         case 'p':
             if ( argument == "remote" )
-                output << request.from.port;
+                output << connection.remote_address().port;
             else if ( argument == "local" )
                 output << connection.local_address().port;
             else // canonical
@@ -198,7 +200,7 @@ void Server::process_log_format(
             break;
         case 'X': // Connection status when response is completed. X = aborted before response; + = Maybe keep alive; - = Close after response.
             // TODO keep alive?
-            output << (request.suggested_status.is_error() ? 'X' : '-');
+            output << (connection.status().is_error() ? 'X' : '-');
             break;
     }
 }

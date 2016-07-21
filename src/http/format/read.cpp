@@ -26,14 +26,18 @@ namespace httpony {
 namespace http {
 namespace read {
 
-Request request(std::istream& stream, HttpParserFlags flags)
+Request request(std::istream& stream, HttpParserFlags flags, Status& status)
 {
     Request request;
 
-    request.suggested_status = StatusCode::BadRequest;
+    status = StatusCode::BadRequest;
 
     if ( !request_line(stream, request) )
+    {
+        if ( !request.protocol.valid() )
+            request.protocol = Protocol::http_1_1;
         return request;
+    }
 
     if ( !headers(stream, request.headers, flags & ParseFoldedHeaders) )
         return request;
@@ -58,21 +62,21 @@ Request request(std::istream& stream, HttpParserFlags flags)
 
         if ( request.protocol >= Protocol::http_1_1 && request.headers.get("Expect") == "100-continue" )
         {
-            request.suggested_status = StatusCode::Continue;
+            status = StatusCode::Continue;
             return request;
         }
     }
     else if ( !stream.eof() && stream.peek() != std::istream::traits_type::eof() )
     {
-        request.suggested_status = StatusCode::LengthRequired;
+        status = StatusCode::LengthRequired;
         return request;
     }
 
     if ( request.protocol < Protocol::http_1_1 && request.headers.contains("Expect") )
     {
-        request.suggested_status = StatusCode::ExpectationFailed;
+        status = StatusCode::ExpectationFailed;
     }
-    request.suggested_status = StatusCode::OK;
+    status = StatusCode::OK;
     return request;
 }
 

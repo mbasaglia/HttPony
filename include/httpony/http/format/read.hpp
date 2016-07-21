@@ -53,13 +53,14 @@ using HttpParserFlags = unsigned;
 /**
  * \brief Reads a full request object from the stream
  * \param stream    Input stream
- * \param request   Request object to update
- * \param parse_folded_headers
+ * \param flags     Parser flags
+ * \param status    Output status code
  * \return Recommended status code
  * \note If it returns an error code, it's likely the request contain only
  *       partially parsed data
+ * \todo Use exceptions instead of passing status?
  */
-Request request(std::istream& stream, HttpParserFlags flags = ParseDefault);
+Request request(std::istream& stream, HttpParserFlags flags, Status& status);
 
 /**
  * \brief Reads a string delimited by a specific character and ignores following spaces
