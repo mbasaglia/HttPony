@@ -264,15 +264,25 @@ struct Authority
  */
 struct Uri
 {
-
     Uri(const char* uri)
         : Uri(std::string(uri))
     {}
+
     Uri(const std::string& uri);
+
     Uri() = default;
+
     Uri(
         std::string scheme,
         std::string authority,
+        Path path,
+        DataMap query,
+        std::string fragment
+    );
+
+    Uri(
+        std::string scheme,
+        Authority authority,
         Path path,
         DataMap query,
         std::string fragment

@@ -27,14 +27,14 @@ int main(int argc, char** argv)
 {
     httpony::Client client;
 
-    // This starts the server on a separate thread
-    client.queue_request("localhost");
+    // This starts the client on a separate thread
+    client.queue_request("example.com");
     client.start();
     std::cout << "Client started, hit enter to quit\n";
     // Pause the main thread listening to standard input
     std::cin.get();
     std::cout << "Client stopped\n";
 
-    // The client destructor will stop the server and join the thread
+    // The client destructor will stop it and join the thread
     return 0;
 }

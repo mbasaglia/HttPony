@@ -21,6 +21,8 @@
 #ifndef HTTPONY_HTTP_AGENT_CLIENT_HPP
 #define HTTPONY_HTTP_AGENT_CLIENT_HPP
 
+#include <list>
+
 #include "httpony/io/basic_client.hpp"
 
 namespace httpony {
@@ -28,43 +30,58 @@ namespace httpony {
 class Client
 {
 public:
+    virtual ~Client()
+    {
+        stop();
+    }
+
     void start()
     {
-        _thread = std::thread([this](){
-            _basic_client.run();
+        thread = std::thread([this](){
+            basic_client.run();
         });
     }
 
     bool started() const
     {
-        return _thread.joinable();
+        return thread.joinable();
     }
 
     void stop()
     {
         if ( started() )
         {
-            _thread.join();
+            thread.join();
         }
     }
 
-    void queue_request(Uri target)
+    /// \todo Overload taking a uri and a callback to generate the request only as needed
+    /// (Or make resolve/connect syncronous)
+    void queue_request(Request&& request)
     {
+        Uri target = request.url;
         if ( target.scheme.empty() )
             target.scheme = "http";
 
-        _basic_client.queue_request(
+        pending.push_back(melanolib::New<Request>(std::move(request)));
+        auto pending_request = pending.back().get();
+
+        basic_client.queue_request(
             target,
-            [this](io::Connection& connection){
+            [this, pending_request](io::Connection& connection){
                 /// \todo
                 std::cout << "Connected to " << connection.remote_address() << '\n';
+                connection.send_request(*pending_request);
+                cleanup_request(pending_request);
             },
-            [](const Uri& target, const std::string& message){
+            [this, pending_request](const Uri& target, const std::string& message){
                 /// \todo Virtual function
                 std::cerr << "Could not resolve " << target.full() << ": " << message << std::endl;
+                cleanup_request(pending_request);
             },
-            [this](const io::Connection& connection, const std::string& message){
+            [this, pending_request](const io::Connection& connection, const std::string& message){
                 error(connection, message);
+                cleanup_request(pending_request);
             },
             [this]{
                 /// \todo Handle SSL based on target.scheme
@@ -83,6 +100,16 @@ protected:
     }
 
 private:
+    void cleanup_request(Request* request)
+    {
+        auto it = std::find_if(pending.begin(), pending.end(),
+            [request](const auto& c) { return c.get() == request; }
+        );
+
+        if ( it != pending.end() )
+            pending.erase(it);
+    }
+
     /**
      * \brief Creates a new connection object
      */
@@ -91,8 +118,9 @@ private:
         return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
-    io::BasicClient _basic_client;
-    std::thread _thread;
+    io::BasicClient basic_client;
+    std::thread thread;
+    std::list<std::unique_ptr<Request>> pending;
 };
 
 } // namespace httpony

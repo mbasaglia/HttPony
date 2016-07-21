@@ -88,6 +88,13 @@ public:
         return send_response(resp);
     }
 
+    bool send_request(Request& request)
+    {
+        std::ostream stream(&_output_buffer);
+        http::write::request(stream, request);
+        return commit_output();
+    }
+
     /**
      * \brief Reads request data from the socket
      *

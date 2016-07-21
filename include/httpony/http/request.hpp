@@ -54,12 +54,16 @@ struct Auth
  */
 struct Request
 {
-    bool can_parse_post() const;
+    Request() = default;
 
-    bool parse_post();
+    Request(std::string method, const Uri& uri, Protocol protocol = Protocol::http_1_1)
+        : method(std::move(method)),
+          url(std::move(uri)),
+          protocol(std::move(protocol))
+    {}
 
-    Uri         url;
     std::string method;
+    Uri         url;
     Protocol    protocol = Protocol::http_1_1;
     Headers     headers;
     DataMap     cookies;
@@ -72,6 +76,9 @@ struct Request
     io::ContentStream body;
 
     melanolib::time::DateTime received_date;
+
+    bool can_parse_post() const;
+    bool parse_post();
 };
 
 } // namespace httpony

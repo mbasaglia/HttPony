@@ -145,6 +145,21 @@ inline std::string auth_challenge(const AuthChallenge& challenge)
 
     return authenticate;
 }
+
+inline void request_line(std::ostream& stream, Request& request)
+{
+    stream << request.method << ' ' << request.url.path.url_encoded()
+           << request.url.query_string(true) << ' ' << request.protocol << endl;
+}
+
+inline void request(std::ostream& stream, Request& request)
+{
+    request_line(stream, request);
+    headers(stream, request.headers);
+    stream << endl;
+    request.body.write_to(stream);
+}
+
 } // namespace write
 } // namespace http
 } // namespace httpony

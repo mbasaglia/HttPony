@@ -116,6 +116,21 @@ Uri::Uri(
     fragment(std::move(fragment))
 {}
 
+
+Uri::Uri(
+    std::string scheme,
+    Authority authority,
+    Path path,
+    DataMap query,
+    std::string fragment
+) : scheme(std::move(scheme)),
+    authority(std::move(authority)),
+    path(std::move(path)),
+    query(std::move(query)),
+    fragment(std::move(fragment))
+{}
+
+
 std::string Uri::full() const
 {
     std::string result;
