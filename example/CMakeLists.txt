@@ -25,6 +25,7 @@ endfunction()
 
 
 example(hello_server)
+example(hello_client)
 
 set(Boot_FOUND ON)
 set(Magic_FOUND ON)

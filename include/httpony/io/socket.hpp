@@ -27,10 +27,12 @@
 namespace httpony {
 namespace io {
 
+using boost_tcp = boost::asio::ip::tcp;
+
 class SocketWrapper
 {
 public:
-    using raw_socket_type = boost::asio::ip::tcp::socket;
+    using raw_socket_type = boost_tcp::socket;
 
     /**
      * \brief Functor for ASIO calls
@@ -73,7 +75,6 @@ public:
      * \brief Returns the low-level socket object
      */
     virtual const raw_socket_type& raw_socket() const = 0;
-
 
     /**
      * \brief Async IO call to read from the socket into a buffer
@@ -173,7 +174,7 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    boost::asio::ip::tcp::socket& raw_socket()
+    boost_tcp::socket& raw_socket()
     {
         return _socket->raw_socket();
     }
@@ -181,7 +182,7 @@ public:
     /**
      * \brief Returns the low-level socket object
      */
-    const boost::asio::ip::tcp::socket& raw_socket() const
+    const boost_tcp::socket& raw_socket() const
     {
         return _socket->raw_socket();
     }
@@ -229,6 +230,31 @@ public:
         std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
     {
         return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), error);
+    }
+
+
+    bool connect(
+        boost_tcp::resolver::iterator endpoint_iterator,
+        boost::system::error_code& error
+    )
+    {
+        error = boost::asio::error::would_block;
+
+        boost::asio::async_connect(raw_socket(), endpoint_iterator,
+            [this, &error](
+                const boost::system::error_code& error_code,
+                boost_tcp::resolver::iterator endpoint_iterator
+            )
+            {
+                error = error_code;
+            }
+        );
+
+        do
+            _io_service.run_one();
+        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+
+        return !error;
     }
 
 private:

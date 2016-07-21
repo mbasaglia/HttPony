@@ -23,7 +23,7 @@
 
 
 #include "httpony/ssl/ssl_socket.hpp"
-#include "httpony/http/server/server.hpp"
+#include "httpony/http/agent/server.hpp"
 
 namespace httpony {
 namespace ssl {
