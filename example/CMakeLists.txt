@@ -26,6 +26,7 @@ endfunction()
 
 example(hello_server)
 example(hello_client)
+example(ping_pong)
 
 set(Boot_FOUND ON)
 set(Magic_FOUND ON)
