@@ -40,19 +40,26 @@ struct Protocol
     Protocol(const std::string& string)
     {
         auto slash = string.find('/');
-        if ( slash == std::string::npos )
-            return;
-
-        auto dot = string.find('.', slash);
-        if ( dot == std::string::npos ||
-             dot > string.size() - 1 || dot < slash + 2  ||
-             !std::isdigit(string[slash+1]) || !std::isdigit(string[dot+1])
-           )
+        if ( slash == std::string::npos || slash > string.size() - 1 || !std::isdigit(string[slash+1]) )
             return;
 
         name = string.substr(0, slash);
-        version_major = std::stoul(string.substr(slash+1, dot-slash-1));
-        version_minor = std::stoul(string.substr(dot+1));
+
+        auto dot = string.find('.', slash);
+        if ( dot == std::string::npos )
+        {
+            version_major = std::stoul(string.substr(slash+1));
+            version_minor = 0;
+        }
+        else if ( dot > string.size() - 1 || dot < slash + 2  || !std::isdigit(string[dot+1]) )
+        {
+            name.clear();
+        }
+        else
+        {
+            version_major = std::stoul(string.substr(slash+1, dot-slash-1));
+            version_minor = std::stoul(string.substr(dot+1));
+        }
     }
 
     Protocol() = default;

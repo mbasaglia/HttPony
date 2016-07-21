@@ -68,10 +68,14 @@ BOOST_AUTO_TEST_CASE( test_valid )
 BOOST_AUTO_TEST_CASE( test_ctor )
 {
     BOOST_CHECK( Protocol("FOO/1.2") == Protocol("FOO", 1, 2) );
+    BOOST_CHECK( Protocol("FOO/3") == Protocol("FOO", 3, 0) );
     BOOST_CHECK( !Protocol("FOO").valid() );
     BOOST_CHECK( !Protocol("FOO/bar").valid() );
     BOOST_CHECK( !Protocol("FOO/b.r").valid() );
     BOOST_CHECK( !Protocol("FOO/.").valid() );
+    BOOST_CHECK( Protocol("FOO/3").valid() );
+    BOOST_CHECK( !Protocol("FOO/3.").valid() );
+    BOOST_CHECK( Protocol("FOO/3.4").valid() );
 }
 
 BOOST_AUTO_TEST_CASE( test_stream_out )
