@@ -69,6 +69,68 @@ inline void response_line(std::ostream& stream, const Response& response)
            << response.status.message << endl;
 }
 
+inline void header_parameter(std::ostream& stream, const std::string& name, const std::string& value)
+{
+    using namespace melanolib::string;
+    static const char* const slashable = "\" \t\\";
+    stream << name <<  '=';
+    if ( contains_any(value, slashable) )
+    {
+        stream << '"' << add_slashes(value, slashable) << '"';
+    }
+    else
+    {
+        stream << value;
+    }
+}
+
+template<class OrderedContainer>
+    inline void header_parameters(std::ostream& stream, const OrderedContainer& input, const std::string& delimiter = ", ")
+{
+    header_parameter(stream, input.front().first, input.front().second);
+
+    for ( auto it = input.begin() + 1; it != input.end(); ++it )
+    {
+        stream << delimiter;
+        header_parameter(stream, it->first, it->second);
+    }
+}
+
+inline void auth_challenge(std::ostream& stream, const AuthChallenge& challenge)
+{
+    stream << challenge.auth_scheme;
+
+    if ( !challenge.realm.empty() )
+        stream << " realm=\""
+               << melanolib::string::add_slashes(challenge.realm, "\"\\")
+               << "\";";
+
+    if ( !challenge.parameters.empty() )
+    {
+        stream << ' ';
+        header_parameters(stream, challenge.parameters);
+    }
+}
+
+inline void authenticate_header(std::ostream& stream, const std::string& name, const std::vector<AuthChallenge>& challenges)
+{
+    if ( challenges.empty() )
+        return;
+
+    stream << name << ": ";
+
+    /// \todo merge this loop with header_parameters
+    auth_challenge(stream, challenges.front());
+
+    for ( auto it = challenges.begin() + 1; it != challenges.end(); ++it )
+    {
+        stream << ", ";
+        auth_challenge(stream, *it);
+    }
+
+    stream << endl;
+}
+
 /**
  * \brief Writes all response headers, including the blank line at the end
  */
@@ -80,6 +142,9 @@ inline void response_headers(std::ostream& stream, const Response& response)
 
     for ( const auto& cookie : response.cookies )
         header(stream, "Set-Cookie", cookie);
+
+    authenticate_header(stream, "WWW-Authenticate", response.www_authenticate);
+    authenticate_header(stream, "Proxy-Authenticate", response.proxy_authenticate);
 
     if ( response.body.has_data() )
     {
@@ -100,50 +165,6 @@ inline void response(std::ostream& stream, Response& response)
     response_line(stream, response);
     response_headers(stream, response);
     response.body.write_to(stream);
-}
-
-
-inline std::string header_parameter(const std::string& name, const std::string& value)
-{
-    using namespace melanolib::string;
-    static const char* const slashable = "\" \t\\";
-    std::string result = name;
-    result +=  '=';
-    if ( contains_any(value, slashable) )
-    {
-        result +=  '"';
-        result += add_slashes(value, slashable);
-        result += '"';
-    }
-    else
-    {
-        result += value;
-    }
-    return result;
-}
-
-template<class OrderedContainer>
-    inline std::string header_parameters(const OrderedContainer& input, char delimiter = ',')
-{
-    std::string result;
-    for ( const auto& param : input )
-        result += header_parameter(param.first, param.second) + delimiter + ' ';
-    if ( !result.empty() )
-        result.pop_back();
-    return result;
-}
-
-inline std::string auth_challenge(const AuthChallenge& challenge)
-{
-    std::string authenticate = challenge.auth_scheme;
-
-    if ( !challenge.realm.empty() )
-        authenticate += " realm=\"" + melanolib::string::add_slashes(challenge.realm, "\"\\") + "\";";
-
-    if ( !challenge.parameters.empty() )
-        authenticate += ' ' + header_parameters(challenge.parameters);
-
-    return authenticate;
 }
 
 inline void request_line(std::ostream& stream, Request& request)

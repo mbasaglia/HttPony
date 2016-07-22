@@ -68,8 +68,12 @@ struct Response
         return response;
     }
 
-    static Response authorization_required(const std::vector<AuthChallenge>& challenges);
-
+    static Response authorization_required(std::vector<AuthChallenge> challenges)
+    {
+        Response response(StatusCode::Unauthorized);
+        response.www_authenticate = std::move(challenges);
+        return response;
+    }
 
     /**
      * \brief Removes the response body when required by HTTP
@@ -115,6 +119,8 @@ struct Response
     Protocol    protocol;
     CookieJar   cookies;
     melanolib::time::DateTime date;
+    std::vector<AuthChallenge> www_authenticate;
+    std::vector<AuthChallenge> proxy_authenticate;
 };
 
 } // namespace httpony

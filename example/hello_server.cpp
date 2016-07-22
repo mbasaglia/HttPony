@@ -102,6 +102,10 @@ private:
             if ( connection.status().is_error() )
                 return simple_response(connection.status(), request.protocol);
 
+
+            if ( request.url.path.string() == "admin" )
+                return check_auth(request);
+
             httpony::Response response(request.protocol);
             response.body.start_output("text/plain");
             response.body << "Hello world!\r\n";
@@ -125,6 +129,25 @@ private:
         httpony::Response response(status, protocol);
         response.body.start_output("text/plain");
         response.body << response.status.message << '\n';
+        return response;
+    }
+
+    /**
+     * \brief Requires the user to be HTTP-authenticated and sends an appropriate reply
+     */
+    httpony::Response check_auth(httpony::Request& request) const
+    {
+        if ( request.auth.user == "admin" && request.auth.password == "password" )
+        {
+            httpony::Response response(request.protocol);
+            response.body.start_output("text/plain");
+            response.body << "Hello admin!\r\n";
+            return response;
+        }
+
+        auto response = httpony::Response::authorization_required({{"Basic", "Admin area"}});
+        response.body.start_output("text/plain");
+        response.body << "You need to be an admin!\r\n";
         return response;
     }
 
