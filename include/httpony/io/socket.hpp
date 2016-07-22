@@ -24,6 +24,8 @@
 #include <boost/asio.hpp>
 #include <melanolib/time/date_time.hpp>
 
+#include "httpony/ip_address.hpp"
+
 namespace httpony {
 namespace io {
 
@@ -85,6 +87,43 @@ public:
      * \brief Async IO call to write to the socket from a buffer
      */
     virtual void async_write(boost::asio::const_buffers_1& buffer, const AsyncCallback& callback) = 0;
+
+
+    virtual bool is_open() const
+    {
+        return raw_socket().is_open();
+    }
+
+    virtual IPAddress remote_address() const
+    {
+        boost::system::error_code error;
+        auto endpoint = raw_socket().remote_endpoint(error);
+        if ( error )
+            return {};
+        return endpoint_to_ip(endpoint);
+    }
+
+    virtual IPAddress local_address() const
+    {
+        boost::system::error_code error;
+        auto endpoint = raw_socket().local_endpoint(error);
+        if ( error )
+            return {};
+        return endpoint_to_ip(endpoint);
+    }
+
+protected:
+    /**
+     * \brief Converts a boost endpoint to an IPAddress object
+     */
+    static IPAddress endpoint_to_ip(const boost_tcp::endpoint& endpoint)
+    {
+        return IPAddress(
+            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
+            endpoint.address().to_string(),
+            endpoint.port()
+        );
+    }
 };
 
 class PlainSocket : public SocketWrapper
@@ -257,7 +296,23 @@ public:
         return !error;
     }
 
+    bool is_open() const
+    {
+        return _socket->is_open();
+    }
+
+    IPAddress remote_address() const
+    {
+        return _socket->remote_address();
+    }
+
+    IPAddress local_address() const
+    {
+        return _socket->local_address();
+    }
+
 private:
+
     /**
      * \brief Calls a function for async IO operations, then runs the io service until completion or timeout
      */

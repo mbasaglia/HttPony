@@ -60,20 +60,12 @@ public:
 
     IPAddress remote_address() const
     {
-        boost::system::error_code error;
-        auto endpoint = _socket.raw_socket().remote_endpoint(error);
-        if ( error )
-            return {};
-        return endpoint_to_ip(endpoint);
+        return _socket.remote_address();
     }
 
     IPAddress local_address() const
     {
-        boost::system::error_code error;
-        auto endpoint = _socket.raw_socket().local_endpoint(error);
-        if ( error )
-            return {};
-        return endpoint_to_ip(endpoint);
+        return _socket.local_address();
     }
 
     bool send_response(Response& response)
@@ -93,6 +85,11 @@ public:
         std::ostream stream(&_output_buffer);
         http::write::request(stream, request);
         return commit_output();
+    }
+
+    bool connected() const
+    {
+        return _socket.is_open();
     }
 
     /**
@@ -170,17 +167,6 @@ public:
     }
 
 private:
-    /**
-     * \brief Converts a boost endpoint to an IPAddress object
-     */
-    static IPAddress endpoint_to_ip(const boost_tcp::endpoint& endpoint)
-    {
-        return IPAddress(
-            endpoint.address().is_v6() ? IPAddress::Type::IPv6 : IPAddress::Type::IPv4,
-            endpoint.address().to_string(),
-            endpoint.port()
-        );
-    }
 
     TimeoutSocket       _socket;
     NetworkInputBuffer  _input_buffer{_socket};
