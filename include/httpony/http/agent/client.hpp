@@ -72,6 +72,8 @@ public:
                 /// \todo
                 std::cout << "Connected to " << connection.remote_address() << '\n';
                 connection.send_request(*pending_request);
+                Response response = connection.read_response();
+                handle_response(connection, *pending_request, response);
                 cleanup_request(pending_request);
             },
             [this, pending_request](const Uri& target, const std::string& message){
@@ -88,6 +90,15 @@ public:
                 return create_connection();
             }
         );
+    }
+
+    virtual void handle_response(io::Connection& connection, Request& request, Response& response)
+    {
+        /// \todo Make sure http::write::response() works properly for input responses as well
+        http::write::response_line(std::cout, response);
+        http::write::headers(std::cout, response.headers);
+        std::cout << '\n';
+        std::cout << response.body.read_all() << '\n';
     }
 
 protected:

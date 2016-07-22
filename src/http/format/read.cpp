@@ -50,10 +50,10 @@ Request request(std::istream& stream, HttpParserFlags flags, Status& status)
             if ( !header_parameters(cookie_stream, request.cookies) )
                 return request;
         }
-
-        if ( request.headers.contains("Authorization") )
-            request.auth = Auth(request.headers.get("Authorization"));
     }
+
+    if ( request.headers.contains("Authorization") )
+        request.auth = Auth(request.headers.get("Authorization"));
 
     if ( request.headers.contains("Content-Length") )
     {
@@ -213,6 +213,50 @@ bool quoted_header_value(std::istream& stream, std::string& value)
     }
 
     skip_line(stream);
+
+    return true;
+}
+
+bool response_line(std::istream& stream, Response& response)
+{
+    stream >> response.protocol >> response.status;
+    skip_line(stream);
+    return response.protocol.valid() && stream;
+}
+
+bool response(std::istream& stream, HttpParserFlags flags, Response& response)
+{
+    response = Response();
+
+    if ( !response_line(stream, response) )
+        return false;
+
+    if ( !headers(stream, response.headers, flags & ParseFoldedHeaders) )
+        return false;
+
+
+    if ( flags & ParseCookies )
+    {
+        for ( const auto& cookie_header : response.headers.key_range("Set-Cookie") )
+        {
+            melanolib::string::QuickStream cookie_stream(cookie_header.second);
+            DataMap cookie_params;
+            if ( !header_parameters(cookie_stream, cookie_params) || cookie_params.empty() )
+                return false;
+
+            /// \todo parse cookie (read up rfc)
+            Cookie cookie(cookie_params.front().second);
+            response.cookies.append(cookie_params.front().first, cookie);
+        }
+    }
+
+    /// \todo Parse www-authenticate
+
+    if ( response.headers.contains("Content-Length") )
+    {
+        if ( !response.body.start_input(stream.rdbuf(), response.headers) )
+            return false;
+    }
 
     return true;
 }

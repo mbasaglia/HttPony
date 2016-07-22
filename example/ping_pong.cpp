@@ -50,7 +50,7 @@ protected:
             if ( request.url.path.string() != "ping" )
                 return simple_response(httpony::StatusCode::NotFound, request.protocol);
 
-            httpony::Response response(request);
+            httpony::Response response(request.protocol);
             response.body.start_output("text/plain");
             response.body << "pong";
             return response;

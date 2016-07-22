@@ -52,7 +52,7 @@ struct Response
         body.start_output(content_type);
     }
 
-    explicit Response(const Protocol& protocol = Protocol::http_1_1)
+    explicit Response(const Protocol& protocol)
         : Response(Status(), protocol)
     {}
 

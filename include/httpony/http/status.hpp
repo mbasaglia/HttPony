@@ -23,6 +23,7 @@
 #define HTTPONY_STATUS_HPP
 
 #include <string>
+#include <istream>
 
 namespace httpony {
 
@@ -141,6 +142,14 @@ inline bool operator==(StatusCode code, const Status& status)
 inline bool operator==(const Status& a, const Status& b)
 {
     return a.code == b.code;
+}
+
+inline std::istream& operator>>(std::istream& in, Status& out)
+{
+    unsigned numeric_code = 0;
+    if ( in >> numeric_code )
+        out = Status(numeric_code);
+    return in;
 }
 
 } // namespace httpony

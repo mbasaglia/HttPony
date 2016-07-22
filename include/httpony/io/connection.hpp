@@ -126,6 +126,34 @@ public:
         return output;
     }
 
+    Response read_response(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    {
+        Response output;
+
+        boost::system::error_code error;
+        /// \todo Avoid magic number, keep reading if needed
+        auto sz = _input_buffer.read_some(1024, error);
+
+        _status = StatusCode::BadRequest;
+
+        if ( !error && sz > 0 )
+        {
+            std::istream stream(&_input_buffer);
+
+            if ( http::read::response(stream, parse_flags, output) );
+                _status = output.status;
+
+            if ( output.body.has_data() )
+                _input_buffer.expect_input(output.body.content_length());
+        }
+        else if ( _socket.timed_out() )
+        {
+            _status = StatusCode::RequestTimeout;
+        }
+
+        return output;
+    }
+
     Status status() const
     {
         return _status;

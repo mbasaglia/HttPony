@@ -182,6 +182,8 @@ inline bool compound_header(const std::string& header_value, CompoundHeader& hea
     return header_parameters(stream, header.parameters);
 }
 
+bool response(std::istream& stream, HttpParserFlags flags, Response& response);
+
 } // namespace read
 } // namespace http
 } // namespace httpony
