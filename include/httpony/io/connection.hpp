@@ -40,7 +40,7 @@ public:
         return _input_buffer;
     }
 
-    boost::asio::streambuf& output_buffer()
+    NetworkOutputBuffer& output_buffer()
     {
         return _output_buffer;
     }
@@ -95,62 +95,83 @@ public:
         return commit_output();
     }
 
+    Status read_request(Request& output, http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    {
+        output = Request();
+
+        Status status;
+
+        boost::system::error_code error;
+        /// \todo Avoid magic number, keep reading if needed
+        auto sz = _input_buffer.read_some(1024, error);
+        if ( !error && sz > 0 )
+        {
+            std::istream stream(&_input_buffer);
+            output = http::read::request(stream, parse_flags, status);
+            if ( output.body.has_data() )
+                _input_buffer.expect_input(output.body.content_length());
+        }
+        else if ( _socket.timed_out() )
+        {
+            return StatusCode::RequestTimeout;
+        }
+        else
+        {
+            return StatusCode::BadRequest;
+        }
+
+        return status;
+    }
+
+    ClientStatus read_response(Response& output, http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    {
+        output = Response();
+
+        boost::system::error_code error;
+        /// \todo Avoid magic number, keep reading if needed
+        auto sz = _input_buffer.read_some(1024, error);
+
+        if ( !error && sz > 0 )
+        {
+            std::istream stream(&_input_buffer);
+
+            if ( !http::read::response(stream, parse_flags, output) );
+                return "malformed response";
+
+            if ( output.body.has_data() )
+                _input_buffer.expect_input(output.body.content_length());
+        }
+        else if ( _socket.timed_out() )
+        {
+            return "timeout";
+        }
+        else if ( error )
+        {
+            return error.message();
+        }
+        else if ( sz > 0 )
+        {
+            return "no content";
+        }
+
+        return {};
+    }
+
+
+    TimeoutSocket& socket()
+    {
+        return _socket;
+    }
+
     /**
      * \brief Reads request data from the socket
      *
-     * Sets \c output.status to an error code if the request is malformed
+     * Sets \c status() to an error code if the request is malformed
      */
     Request read_request(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
     {
         Request output;
-
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-            output = http::read::request(stream, parse_flags, _status);
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            _status = StatusCode::RequestTimeout;
-        }
-        else
-        {
-            _status = StatusCode::BadRequest;
-        }
-
-        return output;
-    }
-
-    Response read_response(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
-    {
-        Response output;
-
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-
-        _status = StatusCode::BadRequest;
-
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-
-            if ( http::read::response(stream, parse_flags, output) );
-                _status = output.status;
-
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            _status = StatusCode::RequestTimeout;
-        }
-
+        set_status(read_request(output, parse_flags));
         return output;
     }
 
@@ -164,9 +185,26 @@ public:
         _status = status;
     }
 
-    TimeoutSocket& socket()
+    /**
+     * \brief Reads response data from the socket
+     *
+     * Sets \c client_status() to an error if the response is malformed
+     */
+    Response read_response(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
     {
-        return _socket;
+        Response output;
+        set_client_status(read_response(output, parse_flags));
+        return output;
+    }
+
+    ClientStatus client_status() const
+    {
+        return _client_status;
+    }
+
+    void set_client_status(const ClientStatus& status)
+    {
+        _client_status = status;
     }
 
 private:
@@ -186,7 +224,9 @@ private:
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
     Status              _status;
+    ClientStatus        _client_status;
 };
+
 
 } // namespace io
 } // namespace httpony

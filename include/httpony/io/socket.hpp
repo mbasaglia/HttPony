@@ -250,11 +250,34 @@ public:
             }
         );
 
-        do
-            _io_service.run_one();
-        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+        io_loop(&error);
 
         return !error;
+    }
+
+    boost_tcp::resolver::iterator resolve(
+        const boost_tcp::resolver::query& query,
+        boost::system::error_code& error
+    )
+    {
+        boost_tcp::resolver resolver(_io_service);
+
+        boost_tcp::resolver::iterator result;
+        resolver.async_resolve(
+            query,
+            [&error, &result](
+                const boost::system::error_code& error_code,
+                const boost_tcp::resolver::iterator& iterator
+            )
+            {
+                error = error_code;
+                result = iterator;
+            }
+        );
+
+        io_loop(&error);
+
+        return result;
     }
 
 private:
@@ -272,11 +295,16 @@ private:
 
         ((*_socket).*func)(buffer, SocketWrapper::AsyncCallback(error, read_size));
 
-        do
-            _io_service.run_one();
-        while ( !_io_service.stopped() && error == boost::asio::error::would_block );
+        io_loop(&error);
 
         return read_size;
+    }
+
+    void io_loop(boost::system::error_code* error)
+    {
+        do
+            _io_service.run_one();
+        while ( !_io_service.stopped() && *error == boost::asio::error::would_block );
     }
 
     /**

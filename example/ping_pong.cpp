@@ -117,7 +117,7 @@ void accept_response(httpony::Response&& response)
 void send_request(httpony::Client& client, const httpony::Authority& server)
 {
     accept_response(
-        client.send_request(httpony::Request(
+        client.query(httpony::Request(
             "GET",
             httpony::Uri("http", server, httpony::Path("ping"), {}, {})
         ))
@@ -144,7 +144,6 @@ int main(int argc, char** argv)
 
     // This starts the client on a separate thread
     httpony::Client client;
-    client.start();
     std::cout << "Client started\n";
     send_request(client, sv_auth);
 

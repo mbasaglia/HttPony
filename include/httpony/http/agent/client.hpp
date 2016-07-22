@@ -23,6 +23,8 @@
 
 #include <list>
 
+#include <melanolib/utils/movable.hpp>
+
 #include "httpony/io/basic_client.hpp"
 
 namespace httpony {
@@ -30,97 +32,100 @@ namespace httpony {
 class Client
 {
 public:
+    /**
+     * \todo Add more semantic properties to user_agent, and add it as a request attribute
+     */
+    explicit Client(const std::string& user_agent)
+        : _user_agent(user_agent)
+    {}
+
+    Client() : Client("HttPony/1.0") {}
+
     virtual ~Client()
-    {
-        stop();
-    }
+    {}
 
-    void start()
+    /**
+     * \brief Creates a connection to the target of the geiven Uri
+     * \param[in]  target URI of the server to connect to
+     * \param[out] status Status of the operation
+     */
+    melanolib::Movable<io::Connection> connect(Uri target, ClientStatus& status) const
     {
-        /*thread = std::thread([this](){
-            basic_client.run();
-        });*/
-    }
-
-    bool started() const
-    {
-        return false; //thread.joinable();
-    }
-
-    void stop()
-    {
-        if ( started() )
-        {
-//             thread.join();
-        }
-    }
-
-    /// \todo Overload taking a uri and a callback to generate the request only as needed
-    /// (Or make resolve/connect syncronous)
-    Response send_request(Request&& request)
-    {
-        Uri target = request.url;
         if ( target.scheme.empty() )
             target.scheme = "http";
 
-        auto connection_result = basic_client.connect(
-            target,
-            [this, target] { return create_connection(target); }
-        );
+        auto connection = create_connection(target);
+        status = _basic_client.connect(target, *connection);
 
-        /// \todo Handle this better
-        if ( !connection_result.first )
+        return connection;
+    }
+
+    Response query(Request&& request) const
+    {
+        ClientStatus status;
+        auto connection = connect(request.url, status);
+        connection->set_client_status(status);
+
+        if ( status.error() )
         {
-            std::cerr << "Could not resolve " << target.full() << ": " << connection_result.second << std::endl;
+            error(connection, request);
             return Response();
         }
+        return get_response(connection, std::move(request));
+    }
 
-        auto& connection = *connection_result.first;
-
-        /// \todo Handle this better
-        if ( !connection_result.second.empty() )
-        {
-            error(connection, connection_result.second);
-            return Response();
-        }
-
-        std::cout << "Connected to " << connection.remote_address() << '\n';
+    Response get_response(io::Connection& connection, Request&& request) const
+    {
+        process_request(request);
         connection.send_request(request);
+        /// \todo Follow redirects
         return connection.read_response();
+    }
+
+    /**
+     * \brief The timeout for network I/O operations
+     */
+    melanolib::Optional<melanolib::time::seconds> timeout() const
+    {
+        return _basic_client.timeout();
+    }
+
+    void set_timeout(melanolib::time::seconds timeout)
+    {
+        _basic_client.set_timeout(timeout);
+    }
+
+    void clear_timeout()
+    {
+        _basic_client.clear_timeout();
     }
 
 protected:
     /**
      * \brief Handles connection errors
      */
-    virtual void error(const io::Connection& connection, const std::string& what) const
+    virtual void error(const io::Connection& connection, const Request& request) const
     {
-        std::cerr << "Error on " << connection.remote_address() << ": " << what << std::endl;
+        std::cerr << "Error accessing " << request.url.full() << ": " << connection.client_status().message() << std::endl;
+    }
+
+    virtual void process_request(Request& request) const
+    {
+        request.headers["User-Agent"] = _user_agent;
     }
 
 private:
-//     void cleanup_request(Request* request)
-//     {
-//         auto it = std::find_if(pending.begin(), pending.end(),
-//             [request](const auto& c) { return c.get() == request; }
-//         );
-//
-//         if ( it != pending.end() )
-//             pending.erase(it);
-//     }
-
     /**
      * \brief Creates a new connection object
      */
-    std::unique_ptr<io::Connection> create_connection(const Uri& target)
+    virtual melanolib::Movable<io::Connection> create_connection(const Uri& target) const
     {
         /// \todo Handle SSL based on target.scheme
-        return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
+        return melanolib::Movable<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
-    io::BasicClient basic_client;
-//     std::thread thread;
-//     std::list<std::unique_ptr<Request>> pending;
+    io::BasicClient _basic_client;
+    std::string _user_agent;
 };
 
 } // namespace httpony
