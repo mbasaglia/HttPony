@@ -31,79 +31,46 @@ class BasicClient
 {
 public:
     /**
-     * \brief Runs the server synchronously
-     * \tparam OnSuccess Functor accepting a io::Connectio&
-     * \tparam OnFailure Functor accepting a io::Connectio& and a std::string
-     * \tparam OnResolveFailure Functor accepting a Uri and a std::string
      * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
-     * \param on_success Functor called on a successful connection
-     * \param on_resolve_failure Functor called when the client could not resolve
-     *  the target (This happens before the connection is established).
-     *  The first argument is \p target and the second is an error message.
-     * \param on_failure Functor called on a connection that had some issues
      * \param create_connection Function called to create a new connection object
      */
-    template<class OnSuccess, class OnResolveFailure,
-             class OnFailure, class CreateConnection>
-    void queue_request(
-        const Uri& target,
-        const OnSuccess& on_success,
-        const OnResolveFailure& on_resolve_failure,
-        const OnFailure& on_failure,
-        const CreateConnection& create_connection
-    )
+    template<class CreateConnection>
+    std::pair<std::unique_ptr<io::Connection>, std::string>
+        connect(const Uri& target, const CreateConnection& create_connection)
     {
         std::string service = target.scheme;
         if ( target.authority.port )
             service = std::to_string(*target.authority.port);
         boost_tcp::resolver::query query(target.authority.host, service);
-        resolver.async_resolve(query,
-            [this, target, on_success, on_resolve_failure, on_failure, create_connection](
-                const boost::system::error_code& error_code,
-                boost_tcp::resolver::iterator endpoint_iterator
-            )
-            {
-                if ( error_code )
-                    on_resolve_failure(target, error_code.message());
-                else
-                    on_resolve(endpoint_iterator, on_success, on_failure, create_connection);
-            }
-        );
-    }
 
-    void run()
-    {
-        io_service.run();
-    }
+        boost::system::error_code error_code;
+        auto endpoint_iterator = resolver.resolve(query, error_code);
 
-private:
-    template<class OnSuccess, class OnFailure, class CreateConnection>
-    void on_resolve(
-        boost_tcp::resolver::iterator endpoint_iterator,
-        const OnSuccess& on_success,
-        const OnFailure& on_failure,
-        const CreateConnection& create_connection
-    )
-    {
+        if ( error_code )
+        {
+            return std::make_pair<std::unique_ptr<io::Connection>, std::string>({}, error_code.message());
+        }
+
         /// \todo Clean up the pushed connection
-        connections.push_back(create_connection());
-        auto connection = connections.back().get();
+        std::unique_ptr<io::Connection> connection = create_connection();
 
         if ( _timeout )
             connection->socket().set_timeout(*_timeout);
 
-        boost::system::error_code error_code;
+        error_code.clear();
         connection->socket().connect(endpoint_iterator, error_code);
         if ( error_code )
-            on_failure(*connection, error_code.message());
-        else
-            on_success(*connection);
+            return {std::move(connection), error_code.message()};
+
+        return {std::move(connection), ""};
     }
+
+private:
+
 
     melanolib::Optional<melanolib::time::seconds> _timeout;
     boost::asio::io_service io_service;
     boost_tcp::resolver resolver{io_service};
-    std::vector<std::unique_ptr<io::Connection>> connections;
 };
 
 } // namespace io

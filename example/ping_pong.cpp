@@ -103,12 +103,25 @@ private:
     std::string log_format = "SV: %h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
 };
 
-void queue_request(httpony::Client& client, const httpony::Authority& server)
+
+void accept_response(httpony::Response&& response)
 {
-    client.queue_request(httpony::Request(
-        "GET",
-        httpony::Uri("http", server, httpony::Path("ping"), {}, {})
-    ));
+    /// \todo Make sure http::write::response() works properly for input responses as well
+    httpony::http::write::response_line(std::cout, response);
+    httpony::http::write::headers(std::cout, response.headers);
+    std::cout << '\n';
+    std::cout << response.body.read_all() << '\n';
+}
+
+
+void send_request(httpony::Client& client, const httpony::Authority& server)
+{
+    accept_response(
+        client.send_request(httpony::Request(
+            "GET",
+            httpony::Uri("http", server, httpony::Path("ping"), {}, {})
+        ))
+    );
 }
 
 int main(int argc, char** argv)
@@ -131,9 +144,9 @@ int main(int argc, char** argv)
 
     // This starts the client on a separate thread
     httpony::Client client;
-    queue_request(client, sv_auth);
     client.start();
     std::cout << "Client started\n";
+    send_request(client, sv_auth);
 
     // Pause the main thread listening to standard input
     std::cout << "Hit enter to quit\n";

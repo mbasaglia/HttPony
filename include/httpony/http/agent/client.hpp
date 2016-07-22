@@ -37,68 +37,56 @@ public:
 
     void start()
     {
-        thread = std::thread([this](){
+        /*thread = std::thread([this](){
             basic_client.run();
-        });
+        });*/
     }
 
     bool started() const
     {
-        return thread.joinable();
+        return false; //thread.joinable();
     }
 
     void stop()
     {
         if ( started() )
         {
-            thread.join();
+//             thread.join();
         }
     }
 
     /// \todo Overload taking a uri and a callback to generate the request only as needed
     /// (Or make resolve/connect syncronous)
-    void queue_request(Request&& request)
+    Response send_request(Request&& request)
     {
         Uri target = request.url;
         if ( target.scheme.empty() )
             target.scheme = "http";
 
-        pending.push_back(melanolib::New<Request>(std::move(request)));
-        auto pending_request = pending.back().get();
-
-        basic_client.queue_request(
+        auto connection_result = basic_client.connect(
             target,
-            [this, pending_request](io::Connection& connection){
-                /// \todo
-                std::cout << "Connected to " << connection.remote_address() << '\n';
-                connection.send_request(*pending_request);
-                Response response = connection.read_response();
-                handle_response(connection, *pending_request, response);
-                cleanup_request(pending_request);
-            },
-            [this, pending_request](const Uri& target, const std::string& message){
-                /// \todo Virtual function
-                std::cerr << "Could not resolve " << target.full() << ": " << message << std::endl;
-                cleanup_request(pending_request);
-            },
-            [this, pending_request](const io::Connection& connection, const std::string& message){
-                error(connection, message);
-                cleanup_request(pending_request);
-            },
-            [this]{
-                /// \todo Handle SSL based on target.scheme
-                return create_connection();
-            }
+            [this, target] { return create_connection(target); }
         );
-    }
 
-    virtual void handle_response(io::Connection& connection, Request& request, Response& response)
-    {
-        /// \todo Make sure http::write::response() works properly for input responses as well
-        http::write::response_line(std::cout, response);
-        http::write::headers(std::cout, response.headers);
-        std::cout << '\n';
-        std::cout << response.body.read_all() << '\n';
+        /// \todo Handle this better
+        if ( !connection_result.first )
+        {
+            std::cerr << "Could not resolve " << target.full() << ": " << connection_result.second << std::endl;
+            return Response();
+        }
+
+        auto& connection = *connection_result.first;
+
+        /// \todo Handle this better
+        if ( !connection_result.second.empty() )
+        {
+            error(connection, connection_result.second);
+            return Response();
+        }
+
+        std::cout << "Connected to " << connection.remote_address() << '\n';
+        connection.send_request(request);
+        return connection.read_response();
     }
 
 protected:
@@ -111,27 +99,28 @@ protected:
     }
 
 private:
-    void cleanup_request(Request* request)
-    {
-        auto it = std::find_if(pending.begin(), pending.end(),
-            [request](const auto& c) { return c.get() == request; }
-        );
-
-        if ( it != pending.end() )
-            pending.erase(it);
-    }
+//     void cleanup_request(Request* request)
+//     {
+//         auto it = std::find_if(pending.begin(), pending.end(),
+//             [request](const auto& c) { return c.get() == request; }
+//         );
+//
+//         if ( it != pending.end() )
+//             pending.erase(it);
+//     }
 
     /**
      * \brief Creates a new connection object
      */
-    std::unique_ptr<io::Connection> create_connection()
+    std::unique_ptr<io::Connection> create_connection(const Uri& target)
     {
+        /// \todo Handle SSL based on target.scheme
         return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
     io::BasicClient basic_client;
-    std::thread thread;
-    std::list<std::unique_ptr<Request>> pending;
+//     std::thread thread;
+//     std::list<std::unique_ptr<Request>> pending;
 };
 
 } // namespace httpony
