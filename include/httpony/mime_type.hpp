@@ -22,9 +22,11 @@
 #ifndef HTTPONY_MIME_TYPE_HPP
 #define HTTPONY_MIME_TYPE_HPP
 
+/// \cond
 #include <ostream>
 
 #include <melanolib/string/simple_stringutils.hpp>
+/// \endcond
 
 namespace httpony {
 

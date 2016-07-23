@@ -22,10 +22,12 @@
 #ifndef HTTPONY_HEADERS_HPP
 #define HTTPONY_HEADERS_HPP
 
+/// \cond
 #include <melanolib/data_structures/ordered_multimap.hpp>
 #include <melanolib/string/quickstream.hpp>
 #include <melanolib/string/ascii.hpp>
 #include <melanolib/string/stringutils.hpp>
+/// \endcond
 
 namespace httpony {
 

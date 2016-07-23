@@ -22,9 +22,11 @@
 #ifndef HTTPONY_PROTOCOL_HPP
 #define HTTPONY_PROTOCOL_HPP
 
+/// \cond
 #include <string>
 #include <cctype>
 #include <iostream>
+/// \endcond
 
 namespace httpony {
 

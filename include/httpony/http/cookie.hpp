@@ -22,9 +22,10 @@
 #ifndef HTTPONT_COOKIE_HPP
 #define HTTPONT_COOKIE_HPP
 
-#include <melanolib/time/date_time.hpp>
+/// \cond
 #include <melanolib/time/time_string.hpp>
 #include <melanolib/utils/c++-compat.hpp>
+/// \endcond
 
 #include "httpony/uri.hpp"
 

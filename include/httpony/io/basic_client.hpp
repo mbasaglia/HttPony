@@ -21,8 +21,7 @@
 #ifndef HTTPONY_IO_BASIC_CLIENT_HPP
 #define HTTPONY_IO_BASIC_CLIENT_HPP
 
-#include "connection.hpp"
-#include "httpony/http/response.hpp"
+#include "httpony/io/connection.hpp"
 
 namespace httpony {
 namespace io {

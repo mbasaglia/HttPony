@@ -95,7 +95,7 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
     }
 
@@ -106,10 +106,8 @@ private:
 
 void accept_response(httpony::Response&& response)
 {
-    /// \todo Make sure http::write::response() works properly for input responses as well
-    httpony::http::write::response_line(std::cout, response);
-    httpony::http::write::headers(std::cout, response.headers);
-    std::cout << '\n';
+    /// \todo Make sure Http1Formatter::response() works properly for input responses as well
+    httpony::http::Http1Formatter("\n").response(std::cout, response);
     std::cout << response.body.read_all() << '\n';
 }
 

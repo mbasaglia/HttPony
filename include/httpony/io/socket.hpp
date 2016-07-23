@@ -22,7 +22,10 @@
 #define HTTPONY_IO_SOCKET_HPP
 
 #include <boost/asio.hpp>
+
+/// \cond
 #include <melanolib/time/date_time.hpp>
+/// \endcond
 
 namespace httpony {
 namespace io {

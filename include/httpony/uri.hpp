@@ -22,8 +22,11 @@
 #ifndef HTTPONY_URI_HPP
 #define HTTPONY_URI_HPP
 
-#include "httpony/http/headers.hpp"
+/// \cond
 #include <melanolib/utils/c++-compat.hpp>
+/// \endcond
+
+#include "httpony/http/headers.hpp"
 
 namespace httpony {
 

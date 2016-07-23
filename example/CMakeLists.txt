@@ -17,10 +17,12 @@
 
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 
+add_custom_target(examples)
 
 function(example name)
     add_executable(${name} ${name}.cpp)
     target_link_libraries(${name} ${LIBRARY_NAME})
+    add_dependencies(examples ${name})
 endfunction()
 
 

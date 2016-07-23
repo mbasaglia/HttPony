@@ -20,18 +20,16 @@
  */
 #include "httpony.hpp"
 
+void print_response(httpony::Response&& response)
+{
+    /// \todo Make sure Http1Formatter::response() works properly for input responses as well
+    httpony::http::Http1Formatter("\n").response(std::cout, response);
+    std::cout << response.body.read_all() << '\n';
+}
 int main(int argc, char** argv)
 {
     httpony::Client client;
 
-    // This starts the client on a separate thread
-    client.queue_request(httpony::Request("GET", httpony::Uri("http://example.com")));
-    client.start();
-    std::cout << "Client started, hit enter to quit\n";
-    // Pause the main thread listening to standard input
-    std::cin.get();
-    std::cout << "Client stopped\n";
-
-    // The client destructor will stop it and join the thread
+    print_response(client.query(httpony::Request("GET", "http://example.com")));
     return 0;
 }

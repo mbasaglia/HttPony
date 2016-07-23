@@ -22,8 +22,10 @@
 #ifndef HTTPONY_STATUS_HPP
 #define HTTPONY_STATUS_HPP
 
+/// \cond
 #include <string>
 #include <istream>
+/// \endcond
 
 namespace httpony {
 

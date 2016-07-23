@@ -62,7 +62,7 @@ private:
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
         if ( connection.status() == httpony::StatusCode::Continue )
         {
-            connection.send_response(simple_response(connection.status(), request.protocol));
+            send(connection, simple_response(connection.status(), request.protocol));
             connection.set_status(httpony::StatusCode::OK);
         }
 
@@ -171,7 +171,7 @@ private:
         response.clean_body(request);
 
         // Drop the connection if there is some network error on the response
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
     }
 

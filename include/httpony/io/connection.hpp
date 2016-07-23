@@ -21,7 +21,6 @@
 #ifndef HTTPONY_CONNECTION_HPP
 #define HTTPONY_CONNECTION_HPP
 
-#include "httpony/http/format/write.hpp"
 #include "httpony/http/format/read.hpp"
 
 namespace httpony {
@@ -30,6 +29,65 @@ namespace io {
 class Connection
 {
 public:
+    /**
+     * \brief Stream used to send data through the connection
+     * \note There should be only one send stream per connection at a given time
+     * \todo Better async streaming
+     */
+    class SendStream : public std::ostream
+    {
+    public:
+        SendStream(SendStream&& oth)
+            : std::ostream(oth.rdbuf()),
+              connection(oth.connection)
+        {
+            oth.unset();
+        }
+
+        SendStream& operator=(SendStream&& oth)
+        {
+            rdbuf(oth.rdbuf());
+            connection = oth.connection;
+            oth.unset();
+            return *this;
+        }
+
+        ~SendStream()
+        {
+            send();
+        }
+
+        /**
+         * \brief Ensures all data is being sent,
+         * \returns \b true on success
+         * \note If not called, the data will still be sent but you might not be
+         * able to detect whether that has been successful
+         */
+        bool send()
+        {
+            if ( connection && connection->commit_output() )
+                return true;
+            setstate(badbit);
+            return false;
+        }
+
+    private:
+        void unset()
+        {
+            connection = nullptr;
+            rdbuf(nullptr);
+        }
+
+        SendStream(Connection* connection)
+            : std::ostream(&connection->output_buffer()),
+             connection(connection)
+        {}
+
+        friend Connection;
+        Connection* connection;
+    };
+
+
     template<class... SocketArgs>
         explicit Connection(SocketArgs&&... args)
             : _socket(std::forward<SocketArgs>(args)...)
@@ -47,6 +105,8 @@ public:
 
     bool commit_output()
     {
+        if ( _output_buffer.size() == 0 )
+            return true;
         boost::system::error_code error;
         _socket.write(_output_buffer.data(), error);
         _output_buffer.consume(_output_buffer.size());
@@ -76,23 +136,9 @@ public:
         return endpoint_to_ip(endpoint);
     }
 
-    bool send_response(Response& response)
+    SendStream send_stream()
     {
-        std::ostream stream(&_output_buffer);
-        http::write::response(stream, response);
-        return commit_output();
-    }
-
-    bool send_response(Response&& resp)
-    {
-        return send_response(resp);
-    }
-
-    bool send_request(Request& request)
-    {
-        std::ostream stream(&_output_buffer);
-        http::write::request(stream, request);
-        return commit_output();
+        return SendStream(this);
     }
 
     Status read_request(Request& output, http::read::HttpParserFlags parse_flags = http::read::ParseDefault)

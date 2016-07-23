@@ -21,9 +21,11 @@
 #ifndef HTTPONY_HTTP_AGENT_CLIENT_HPP
 #define HTTPONY_HTTP_AGENT_CLIENT_HPP
 
+/// \cond
 #include <list>
 
 #include <melanolib/utils/movable.hpp>
+/// \endcond
 
 #include "httpony/io/basic_client.hpp"
 
@@ -74,13 +76,7 @@ public:
         return get_response(connection, std::move(request));
     }
 
-    Response get_response(io::Connection& connection, Request&& request) const
-    {
-        process_request(request);
-        connection.send_request(request);
-        /// \todo Follow redirects
-        return connection.read_response();
-    }
+    Response get_response(io::Connection& connection, Request&& request) const;
 
     /**
      * \brief The timeout for network I/O operations

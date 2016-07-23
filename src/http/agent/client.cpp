@@ -19,14 +19,21 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTPONY_HPP
-#define HTTPONY_HPP
-
-#include "httpony/http/agent/server.hpp"
 #include "httpony/http/agent/client.hpp"
-#include "httpony/http/agent/logging.hpp"
 #include "httpony/http/formatter.hpp"
-#include "httpony/base_encoding.hpp"
-#include "httpony/multipart.hpp"
 
-#endif // HTTPONY_HPP
+namespace httpony {
+
+
+Response Client::get_response(io::Connection& connection, Request&& request) const
+{
+    process_request(request);
+    auto stream = connection.send_stream();
+    http::Http1Formatter().request(stream, request);
+    stream.send();
+    /// \todo Report send() errors
+    /// \todo Follow redirects
+    return connection.read_response();
+}
+
+} // namespace httpony

@@ -23,6 +23,7 @@
 
 #include "httpony/http/agent/server.hpp"
 #include "httpony/http/agent/logging.hpp"
+#include "httpony/http/formatter.hpp"
 
 namespace httpony {
 
@@ -264,6 +265,15 @@ void Server::set_timeout(melanolib::time::seconds timeout)
 melanolib::Optional<melanolib::time::seconds> Server::timeout() const
 {
     return _listen_server.timeout();
+}
+
+bool Server::send(io::Connection& connection, Response& response) const
+{
+    auto stream = connection.send_stream();
+    /// \todo Switch formatter based on protocol
+    /// (Needs to implement stuff like HTTP/2)
+    http::Http1Formatter().response(stream, response);
+    return stream.send();
 }
 
 } // namespace httpony

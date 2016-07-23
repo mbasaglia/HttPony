@@ -106,7 +106,7 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
     }
 

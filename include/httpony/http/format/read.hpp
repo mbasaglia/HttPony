@@ -22,7 +22,9 @@
 #ifndef HTTPONY_HTTP_PARSER_HPP
 #define HTTPONY_HTTP_PARSER_HPP
 
+/// \cond
 #include <istream>
+/// \endcond
 
 #include "httpony/http/response.hpp"
 

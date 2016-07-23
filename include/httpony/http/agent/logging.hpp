@@ -22,7 +22,9 @@
 #ifndef HTTPONY_LOGGING_HPP
 #define HTTPONY_LOGGING_HPP
 
+/// \cond
 #include <ostream>
+/// \endcond
 
 namespace httpony {
 

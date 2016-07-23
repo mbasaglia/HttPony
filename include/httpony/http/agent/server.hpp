@@ -99,6 +99,13 @@ protected:
         std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
     }
 
+    bool send(io::Connection& connection, Response& response) const;
+    
+    bool send(io::Connection& connection, Response&& response) const
+    {
+        return send(connection, response);
+    }
+
 private:
     /**
      * \brief Creates a new connection object
