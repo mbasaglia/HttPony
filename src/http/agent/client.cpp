@@ -21,19 +21,35 @@
 
 #include "httpony/http/agent/client.hpp"
 #include "httpony/http/formatter.hpp"
+#include "httpony/http/parser.hpp"
 
 namespace httpony {
 
 
-Response Client::get_response(io::Connection& connection, Request&& request) const
+ClientStatus Client::get_response(io::Connection& connection, Request& request, Response& response) const
 {
+    response = Response();
+
     process_request(request);
-    auto stream = connection.send_stream();
-    http::Http1Formatter().request(stream, request);
-    stream.send();
-    /// \todo Report send() errors
+    auto ostream = connection.send_stream();
+    http::Http1Formatter().request(ostream, request);
+    if ( !ostream.send() )
+        return "connection error";
+
+    auto istream = connection.receive_stream();
+    ClientStatus status = Http1Parser().response(istream, response);
+
+    if ( istream.timed_out() )
+        return "timeout";
+
+    if ( status.error() )
+        return status;
+
+    if ( response.body.has_data() )
+        connection.input_buffer().expect_input(response.body.content_length());
+
     /// \todo Follow redirects
-    return connection.read_response();
+    return {};
 }
 
 } // namespace httpony

@@ -24,6 +24,7 @@
 #include "httpony/http/agent/server.hpp"
 #include "httpony/http/agent/logging.hpp"
 #include "httpony/http/formatter.hpp"
+#include "httpony/http/parser.hpp"
 
 namespace httpony {
 
@@ -65,7 +66,16 @@ void Server::start()
             [this](io::Connection& connection){
                 if ( accept(connection) )
                 {
-                    respond(connection, connection.read_request());
+                    /// \todo Switch parser based on protocol
+                    Http1Parser parser;
+                    auto stream = connection.receive_stream();
+                    Request request;
+                    auto status = parser.request(stream, request);
+                    if ( stream.timed_out() )
+                        status = StatusCode::RequestTimeout;
+                    else if ( request.body.has_data() )
+                        connection.input_buffer().expect_input(request.body.content_length());
+                    respond(connection, request, status);
                 }
             },
             [this](io::Connection& connection, const std::string& message){
@@ -201,7 +211,7 @@ void Server::process_log_format(
             break;
         case 'X': // Connection status when response is completed. X = aborted before response; + = Maybe keep alive; - = Close after response.
             // TODO keep alive?
-            output << (connection.status().is_error() ? 'X' : '-');
+            output << (response.status.is_error() ? 'X' : '-');
             break;
     }
 }

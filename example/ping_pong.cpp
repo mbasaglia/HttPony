@@ -29,20 +29,20 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request);
+        httpony::Response response = build_response(connection, request, status);
         log_response(log_format, connection, request, response, std::cout);
         send_response(connection, request, response);
     }
 
 protected:
-    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request) const
+    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) const
     {
         try
         {
-            if ( connection.status().is_error() )
-                return simple_response(connection.status(), request.protocol);
+            if ( status.is_error() )
+                return simple_response(status, request.protocol);
 
             if ( request.method != "GET"  && request.method != "HEAD")
                 return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
@@ -104,7 +104,7 @@ private:
 };
 
 
-void accept_response(httpony::Response&& response)
+void accept_response(httpony::Response& response)
 {
     /// \todo Make sure Http1Formatter::response() works properly for input responses as well
     httpony::http::Http1Formatter("\n").response(std::cout, response);
@@ -114,12 +114,17 @@ void accept_response(httpony::Response&& response)
 
 void send_request(httpony::Client& client, const httpony::Authority& server)
 {
-    accept_response(
-        client.query(httpony::Request(
-            "GET",
-            httpony::Uri("http", server, httpony::Path("ping"), {}, {})
-        ))
+    httpony::Response response;
+    httpony::Request request(
+        "GET",
+        httpony::Uri("http", server, httpony::Path("ping"), {}, {})
     );
+
+    auto status = client.query(request, response);
+    if ( status )
+        accept_response(response);
+    else
+        std::cerr << "Error accessing " << request.url.full() << ": " << status.message() << std::endl;
 }
 
 int main(int argc, char** argv)

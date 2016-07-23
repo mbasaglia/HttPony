@@ -20,7 +20,7 @@
  */
 #include "httpony.hpp"
 
-void print_response(httpony::Response&& response)
+void print_response(httpony::Response& response)
 {
     /// \todo Make sure Http1Formatter::response() works properly for input responses as well
     httpony::http::Http1Formatter("\n").response(std::cout, response);
@@ -30,6 +30,14 @@ int main(int argc, char** argv)
 {
     httpony::Client client;
 
-    print_response(client.query(httpony::Request("GET", "http://example.com")));
+    httpony::Response response;
+    httpony::Request request("GET", "http://example.com");
+
+    auto status = client.query(request, response);
+    if ( status )
+        print_response(response);
+    else
+        std::cerr << "Error accessing " << request.url.full() << ": " << status.message() << std::endl;
+
     return 0;
 }

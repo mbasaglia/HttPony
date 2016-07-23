@@ -23,6 +23,7 @@
 #define HTTPONY_SERVER_HPP
 
 #include "httpony/io/basic_server.hpp"
+#include "httpony/http/response.hpp"
 
 namespace httpony {
 
@@ -78,7 +79,7 @@ public:
     /**
      * \brief Function handling requests
      */
-    virtual void respond(io::Connection& connection, Request&& request) = 0;
+    virtual void respond(io::Connection& connection, Request& request, const Status& status) = 0;
 
     /**
      * \brief Writes a line of log into \p output based on format

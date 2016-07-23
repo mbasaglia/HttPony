@@ -35,12 +35,22 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
     {
-        std::string body = get_body(connection, request);
-
-        httpony::Response response = build_response(connection, request);
-
+        httpony::Response response;
+        std::string body;
+        if ( status.is_error() )
+        {
+            response = simple_response(status, request.protocol);
+        }
+        else
+        {
+            auto body_status = get_body(connection, request, status, body);
+            if ( body_status.is_error() )
+                response = simple_response(status, request.protocol);
+            else
+                response = build_response(connection, request);
+        }
         send_response(connection, request, response);
 
         print_info(connection, request, response, body);
@@ -50,44 +60,38 @@ private:
     /**
      * \brief Returns the whole request body as a string
      */
-    std::string get_body(httpony::io::Connection& connection, httpony::Request& request) const
+    httpony::Status get_body(
+        httpony::io::Connection& connection,
+        httpony::Request& request,
+        const httpony::Status& status,
+        std::string& output
+    ) const
     {
         // Discard requests with a too long of a payload
         if ( request.body.content_length() > max_size )
-        {
-            connection.set_status(httpony::StatusCode::PayloadTooLarge);
-            return "";
-        }
+            return httpony::StatusCode::PayloadTooLarge;
 
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
-        if ( connection.status() == httpony::StatusCode::Continue )
-        {
-            send(connection, simple_response(connection.status(), request.protocol));
-            connection.set_status(httpony::StatusCode::OK);
-        }
+        if ( status == httpony::StatusCode::Continue )
+            send(connection, simple_response(status, request.protocol));
 
         // Parse form data
         if ( request.can_parse_post() )
         {
             if ( !request.parse_post() )
-                connection.set_status(httpony::StatusCode::BadRequest);
-
-            return "";
+                return httpony::StatusCode::BadRequest;
         }
-
         // Check if we have something to read
-        if ( request.body.has_data() )
+        else if ( request.body.has_data() )
         {
             std::string body = request.body.read_all();
 
             // Handle read errors (eg: wrong Content-Length)
             if ( request.body.has_error() )
-                connection.set_status(httpony::StatusCode::BadRequest);
-
-            return body;
+                return httpony::StatusCode::BadRequest;
         }
 
-        return "";
+        return httpony::StatusCode::OK;
     }
 
     /**
@@ -99,10 +103,6 @@ private:
     {
         try
         {
-            if ( connection.status().is_error() )
-                return simple_response(connection.status(), request.protocol);
-
-
             if ( request.url.path.string() == "admin" )
                 return check_auth(request);
 

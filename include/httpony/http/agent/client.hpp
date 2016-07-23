@@ -28,6 +28,7 @@
 /// \endcond
 
 #include "httpony/io/basic_client.hpp"
+#include "httpony/http/response.hpp"
 
 namespace httpony {
 
@@ -62,21 +63,18 @@ public:
         return connection;
     }
 
-    Response query(Request&& request) const
+    ClientStatus query(Request& request, Response& response) const
     {
         ClientStatus status;
         auto connection = connect(request.url, status);
-        connection->set_client_status(status);
 
         if ( status.error() )
-        {
-            error(connection, request);
-            return Response();
-        }
-        return get_response(connection, std::move(request));
+            return status;
+
+        return get_response(connection, request, response);
     }
 
-    Response get_response(io::Connection& connection, Request&& request) const;
+    ClientStatus get_response(io::Connection& connection, Request& request, Response& response) const;
 
     /**
      * \brief The timeout for network I/O operations
@@ -97,13 +95,6 @@ public:
     }
 
 protected:
-    /**
-     * \brief Handles connection errors
-     */
-    virtual void error(const io::Connection& connection, const Request& request) const
-    {
-        std::cerr << "Error accessing " << request.url.full() << ": " << connection.client_status().message() << std::endl;
-    }
 
     virtual void process_request(Request& request) const
     {

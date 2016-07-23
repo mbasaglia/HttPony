@@ -154,42 +154,5 @@ inline std::istream& operator>>(std::istream& in, Status& out)
     return in;
 }
 
-class ClientStatus
-{
-public:
-    ClientStatus() = default;
-
-    ClientStatus(std::string message)
-        : _message(std::move(message))
-    {}
-
-    ClientStatus(const char* message)
-        : _message(message)
-    {}
-
-    const std::string& message() const
-    {
-        return _message;
-    }
-
-    explicit operator bool() const
-    {
-        return ! _message.empty();
-    }
-
-    bool operator!() const
-    {
-        return _message.empty();
-    }
-
-    bool error() const
-    {
-        return !_message.empty();
-    }
-
-private:
-    std::string _message;
-};
-
 } // namespace httpony
 #endif // HTTPONY_STATUS_HPP

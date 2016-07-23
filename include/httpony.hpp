@@ -26,6 +26,7 @@
 #include "httpony/http/agent/client.hpp"
 #include "httpony/http/agent/logging.hpp"
 #include "httpony/http/formatter.hpp"
+#include "httpony/http/parser.hpp"
 #include "httpony/base_encoding.hpp"
 
 #endif // HTTPONY_HPP

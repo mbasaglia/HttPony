@@ -26,6 +26,9 @@ namespace httpony {
 
 Status Http1Parser::request(std::istream& stream, Request& request) const
 {
+    if ( stream.fail() || stream.bad() )
+        return StatusCode::BadRequest;
+
     request = Request();
 
     /// \todo Some way to switch parser based on the protocol
@@ -77,6 +80,9 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
 
 ClientStatus Http1Parser::response(std::istream& stream, Response& response) const
 {
+    if ( stream.fail() || stream.bad() )
+        return "network error";
+
     response = Response();
 
     /// \todo Some way to switch parser based on the protocol

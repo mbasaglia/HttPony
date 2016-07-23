@@ -22,6 +22,8 @@
 #define HTTPONY_IO_BASIC_CLIENT_HPP
 
 #include "httpony/io/connection.hpp"
+#include "httpony/http/client_status.hpp"
+#include "httpony/uri.hpp"
 
 namespace httpony {
 namespace io {

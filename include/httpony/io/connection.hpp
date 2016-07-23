@@ -21,7 +21,12 @@
 #ifndef HTTPONY_CONNECTION_HPP
 #define HTTPONY_CONNECTION_HPP
 
-#include "httpony/http/parser.hpp"
+/// \cond
+#include <iostream>
+/// \endcond
+
+#include "httpony/io/buffer.hpp"
+#include "httpony/ip_address.hpp"
 
 namespace httpony {
 namespace io {
@@ -87,8 +92,49 @@ public:
         Connection* connection;
     };
 
-    class ReceiveStream
+    class ReceiveStream : public std::istream
     {
+    public:
+        ReceiveStream(ReceiveStream&& oth)
+            : std::istream(oth.rdbuf()),
+              connection(oth.connection)
+        {
+            oth.unset();
+        }
+
+        ReceiveStream& operator=(ReceiveStream&& oth)
+        {
+            rdbuf(oth.rdbuf());
+            connection = oth.connection;
+            oth.unset();
+            return *this;
+        }
+
+        bool timed_out() const
+        {
+            return connection->_socket.timed_out();
+        }
+
+    private:
+        void unset()
+        {
+            connection = nullptr;
+            rdbuf(nullptr);
+        }
+
+        ReceiveStream(Connection* connection)
+            : std::istream(&connection->input_buffer()),
+             connection(connection)
+        {
+            boost::system::error_code error;
+            /// \todo Avoid magic number, keep reading if needed
+            auto sz = connection->_input_buffer.read_some(1024, error);
+            if ( error || sz <= 0 )
+                setstate(badbit);
+        }
+
+        friend Connection;
+        Connection* connection;
     };
 
 
@@ -145,114 +191,16 @@ public:
         return SendStream(this);
     }
 
-    Status read_request(Request& output)
+    ReceiveStream receive_stream()
     {
-        Status status;
-
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-            status = Http1Parser().request(stream, output);
-
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            return StatusCode::RequestTimeout;
-        }
-        else
-        {
-            return StatusCode::BadRequest;
-        }
-
-        return status;
+        return ReceiveStream(this);
     }
-
-    ClientStatus read_response(Response& output)
-    {
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-
-            if ( !Http1Parser().response(stream, output) );
-                return "malformed response";
-
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            return "timeout";
-        }
-        else if ( error )
-        {
-            return error.message();
-        }
-        else if ( sz > 0 )
-        {
-            return "no content";
-        }
-
-        return {};
-    }
-
 
     TimeoutSocket& socket()
     {
         return _socket;
     }
 
-    /**
-     * \brief Reads request data from the socket
-     *
-     * Sets \c status() to an error code if the request is malformed
-     */
-    Request read_request()
-    {
-        Request output;
-        set_status(read_request(output));
-        return output;
-    }
-
-    Status status() const
-    {
-        return _status;
-    }
-
-    void set_status(const Status& status)
-    {
-        _status = status;
-    }
-
-    /**
-     * \brief Reads response data from the socket
-     *
-     * Sets \c client_status() to an error if the response is malformed
-     */
-    Response read_response()
-    {
-        Response output;
-        set_client_status(read_response(output));
-        return output;
-    }
-
-    ClientStatus client_status() const
-    {
-        return _client_status;
-    }
-
-    void set_client_status(const ClientStatus& status)
-    {
-        _client_status = status;
-    }
 
 private:
     /**
@@ -270,8 +218,6 @@ private:
     TimeoutSocket       _socket;
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
-    Status              _status;
-    ClientStatus        _client_status;
 };
 
 

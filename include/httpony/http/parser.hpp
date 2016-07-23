@@ -24,6 +24,7 @@
 
 #include "httpony/http/response.hpp"
 #include "httpony/multipart.hpp"
+#include "httpony/http/client_status.hpp"
 
 namespace httpony {
 
