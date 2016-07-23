@@ -21,7 +21,7 @@
 
 #include "httpony/mime_type.hpp"
 
-#include "httpony/http/format/read.hpp"
+#include "httpony/http/parser.hpp"
 
 
 namespace httpony {
@@ -36,7 +36,7 @@ MimeType::MimeType(const std::string& string)
     ));
 
     Headers parameters;
-    http::read::header_parameters(stream, parameters);
+    Http1Parser().header_parameters(stream, parameters);
     if ( !parameters.empty() )
         set_parameter(parameters.front());
 }

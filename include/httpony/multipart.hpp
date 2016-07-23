@@ -41,21 +41,10 @@ struct Multipart
         std::string content;
     };
 
-    /**
-     * \brief Whether the string is a valid boundary
-     */
-    static bool valid_boundary(const std::string& boundary);
-
     explicit Multipart(std::string boundary)
         : boundary(std::move(boundary))
     {}
-
-    /**
-     * \brief Populates the multipart data from a stream
-     * \returns \b true on success
-     */
-    bool read(std::istream& stream);
-
+    
     std::string boundary;
     std::vector<Part> parts;
 };

@@ -21,7 +21,7 @@
 #ifndef HTTPONY_CONNECTION_HPP
 #define HTTPONY_CONNECTION_HPP
 
-#include "httpony/http/format/read.hpp"
+#include "httpony/http/parser.hpp"
 
 namespace httpony {
 namespace io {
@@ -87,6 +87,10 @@ public:
         Connection* connection;
     };
 
+    class ReceiveStream
+    {
+    };
+
 
     template<class... SocketArgs>
         explicit Connection(SocketArgs&&... args)
@@ -141,10 +145,8 @@ public:
         return SendStream(this);
     }
 
-    Status read_request(Request& output, http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    Status read_request(Request& output)
     {
-        output = Request();
-
         Status status;
 
         boost::system::error_code error;
@@ -153,7 +155,8 @@ public:
         if ( !error && sz > 0 )
         {
             std::istream stream(&_input_buffer);
-            output = http::read::request(stream, parse_flags, status);
+            status = Http1Parser().request(stream, output);
+
             if ( output.body.has_data() )
                 _input_buffer.expect_input(output.body.content_length());
         }
@@ -169,10 +172,8 @@ public:
         return status;
     }
 
-    ClientStatus read_response(Response& output, http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    ClientStatus read_response(Response& output)
     {
-        output = Response();
-
         boost::system::error_code error;
         /// \todo Avoid magic number, keep reading if needed
         auto sz = _input_buffer.read_some(1024, error);
@@ -181,7 +182,7 @@ public:
         {
             std::istream stream(&_input_buffer);
 
-            if ( !http::read::response(stream, parse_flags, output) );
+            if ( !Http1Parser().response(stream, output) );
                 return "malformed response";
 
             if ( output.body.has_data() )
@@ -214,10 +215,10 @@ public:
      *
      * Sets \c status() to an error code if the request is malformed
      */
-    Request read_request(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    Request read_request()
     {
         Request output;
-        set_status(read_request(output, parse_flags));
+        set_status(read_request(output));
         return output;
     }
 
@@ -236,10 +237,10 @@ public:
      *
      * Sets \c client_status() to an error if the response is malformed
      */
-    Response read_response(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    Response read_response()
     {
         Response output;
-        set_client_status(read_response(output, parse_flags));
+        set_client_status(read_response(output));
         return output;
     }
 

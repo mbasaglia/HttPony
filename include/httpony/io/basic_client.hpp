@@ -83,7 +83,6 @@ public:
         return _timeout;
     }
 
-
 private:
     melanolib::Optional<melanolib::time::seconds> _timeout;
 };
