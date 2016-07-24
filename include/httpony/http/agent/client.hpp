@@ -73,6 +73,8 @@ public:
         if ( status.error() )
             return status;
 
+        /// \bug \b connection will be destructed, together withthe response buffer
+        /// Maybe the connection should be stored in a shared_ptr in both request and response
         return get_response(connection, request, response);
     }
 
@@ -109,7 +111,6 @@ protected:
      */
     virtual melanolib::Movable<io::Connection> create_connection(const Uri& target) const
     {
-        /// \todo Handle SSL based on target.scheme
         return melanolib::Movable<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 

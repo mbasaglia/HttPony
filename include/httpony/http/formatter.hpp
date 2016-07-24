@@ -63,8 +63,7 @@ public:
     void request(std::ostream& stream, Request& request) const override
     {
         request_line(stream, request);
-        headers(stream, request.headers);
-        stream << endl;
+        request_headers(stream, request);
         request.body.write_to(stream);
     }
 
@@ -108,7 +107,7 @@ private:
 
     void request_line(std::ostream& stream, Request& request) const
     {
-        stream << request.method << ' ' << request.url.path.url_encoded()
+        stream << request.method << ' ' << request.url.path.url_encoded(true)
                << request.url.query_string(true) << ' ' << request.protocol << endl;
     }
 
@@ -116,6 +115,9 @@ private:
     template<class OrderedContainer>
         void header_parameters(std::ostream& stream, const OrderedContainer& input, const std::string& delimiter = ", ") const
     {
+        if ( input.empty() )
+            return;
+        
         header_parameter(stream, input.front().first, input.front().second);
 
         for ( auto it = input.begin() + 1; it != input.end(); ++it )
@@ -195,6 +197,37 @@ private:
             
             if ( !response.headers.contains("Content-Length") )
                 header(stream, "Content-Length", response.body.content_length());
+        }
+
+        stream << endl;
+    }
+
+    /**
+     * \brief Writes all request headers, including the blank line at the end
+     */
+    void request_headers(std::ostream& stream, const Request& request) const
+    {
+        headers(stream, request.headers);
+
+        if ( !request.headers.contains("Host") )
+            header(stream, "Host", request.url.authority.host);
+
+        if ( !request.headers.contains("Cookie") )
+        {
+            stream << "Cookie" << ": ";
+            header_parameters(stream, request.cookies, "; ");
+            stream << endl;
+        }
+
+        /// \todo authentication
+
+        if ( request.body.has_data() )
+        {
+            if ( !request.headers.contains("Content-Type") )
+                header(stream, "Content-Type", request.body.content_type());
+
+            if ( !request.headers.contains("Content-Length") )
+                header(stream, "Content-Length", request.body.content_length());
         }
 
         stream << endl;

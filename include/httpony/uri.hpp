@@ -196,18 +196,25 @@ public:
 // To string
     /**
      * \brief Converts the path to a string
+     * \param empty_root Whether to add the initial "/" if the path is empty
      */
-    std::string string() const
+    std::string string(bool empty_root = false) const
     {
-        return melanolib::string::implode("/", data);
+        if ( empty_root && empty() )
+            return "/";
+        return "/" + melanolib::string::implode("/", data);
     }
 
     /**
      * \brief Converts the path to a string, url-encoding each segment
      * This will \b not convert / to %2F
+     * \param empty_root Whether to add the initial "/" if the path is empty
      */
-    std::string url_encoded() const
+    std::string url_encoded(bool empty_root = false) const
     {
+        if ( empty_root && empty() )
+            return "/";
+
         std::string result;
         for ( const auto& segment : data )
             result += '/' + urlencode(segment);
@@ -217,12 +224,12 @@ public:
     /**
      * \brief Converts the path to an urlencoded string
      * This will also convert / to %2F
+     * \param empty_root Whether to add the initial "/" if the path is empty
      */
-    std::string full_url_encoded() const
+    std::string full_url_encoded(bool empty_root = false) const
     {
-        return urlencode(string());
+        return urlencode(string(empty_root));
     }
-
 
 private:
     container_type data;
