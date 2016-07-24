@@ -1,0 +1,42 @@
+/**
+ * \example example/simple_server.cpp
+ * This example shows a very simple server implementation.
+ *
+ * The created server only supports GET and HEAD methods.
+ *
+ * It returns "Hello, World" in plain text for successful requests and an
+ * appropriate error response if the request could not be handled.
+ */
+/**
+ * \example example/hello_server.cpp
+ * A more complex server example that reads the request payload and logs some
+ * of the data in the request object to standard output.
+ */
+/**
+ * \example example/file_browser.cpp
+ * A sever implementation that serves files from a local directory.
+ *
+ * It will list directories as a HTML page linking to the various files and
+ * uses libmagic to serve files with the proper content-type.
+ *
+ * \note It requires libmagic and boost::filesystem.
+ */
+/**
+ * \example example/ssl_server.cpp
+ * Similar to \ref example/simple_server.cpp but implementing HTTPS (HTTP over SSL)
+ *
+ * \note It requires OpenSSL
+ */
+/**
+ * \example example/hello_client.cpp
+ * This example demonstrates very simple usage of a synchronous client.
+ *
+ * It performs an HTTP request and prints the response to stdout.
+ */
+/**
+ * \example example/ping_pong.cpp
+ * This example contains both a server and and asynchronous client
+ * where the client sends requests to the server at regular intervals.
+ *
+ * The server logs incoming requests and the client logs received responses.
+ */

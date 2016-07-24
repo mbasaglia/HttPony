@@ -26,12 +26,19 @@ void print_response(httpony::Response& response)
     httpony::http::Http1Formatter("\n").response(std::cout, response);
     std::cout << response.body.read_all() << '\n';
 }
+
 int main(int argc, char** argv)
 {
+    std::string url;
+    if ( argc > 1 )
+        url = argv[1];
+    else
+        url = "http://example.com";
+
     httpony::Client client;
 
     httpony::Response response;
-    httpony::Request request("GET", "http://example.com");
+    httpony::Request request("GET", url);
 
     auto status = client.query(request, response);
     if ( status )

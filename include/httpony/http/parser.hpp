@@ -36,7 +36,7 @@ public:
     /**
      * \brief Reads a full request object from the stream
      * \param[in]  stream   Input stream
-     * \param[out] request  Output status code
+     * \param[out] request  Object to populate
      * \return Recommended status code
      * \note If it returns an error code, it's likely the request contain only
      *       partially parsed data
@@ -46,7 +46,7 @@ public:
     /**
      * \brief Reads a full response object from the stream
      * \param[in]  stream   Input stream
-     * \param[out] request  Output status code
+     * \param[out] response Object to populate
      * \return Recommended status code
      * \note If it returns an error code, it's likely the response contain only
      *       partially parsed data
@@ -57,7 +57,6 @@ public:
      * \brief Reads all headers and the empty line following them
      * \param stream        Input stream
      * \param headers       Header container to update
-     * \param parse_folded  Whether to parse or reject folded headers
      * \returns \b true on success
      */
     virtual bool headers(std::istream& stream, httpony::Headers& headers) const = 0;
@@ -221,7 +220,7 @@ private:
                         char delim = ':', bool at_end = false) const;
 
     /**
-     * \brief Skips spaces (except \r)
+     * \brief Skips spaces (except "\r")
      * \param stream Input to read from
      * \param at_end Whether the value can be at the end of the line
      * \returns \b true on success

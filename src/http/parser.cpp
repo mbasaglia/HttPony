@@ -317,7 +317,7 @@ static MultipartLineType multipart_line_type(const std::string& line, const std:
 /**
  * \brief Cleans up after a boundary line has been found
  *
- * The \r\n found before a boundary are considered part of the boundary line so
+ * The "\r\n" found before a boundary are considered part of the boundary line so
  * they need to be stripped from the data.
  */
 static bool multipart_cleanup_boundary(std::istream& stream, Multipart& output)
