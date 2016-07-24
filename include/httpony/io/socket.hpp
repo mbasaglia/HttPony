@@ -235,7 +235,6 @@ public:
         return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), error);
     }
 
-
     bool connect(
         boost_tcp::resolver::iterator endpoint_iterator,
         boost::system::error_code& error
@@ -263,8 +262,6 @@ public:
         boost::system::error_code& error
     )
     {
-        boost_tcp::resolver resolver(_io_service);
-
         boost_tcp::resolver::iterator result;
         resolver.async_resolve(
             query,
@@ -281,6 +278,66 @@ public:
         io_loop(&error);
 
         return result;
+    }
+
+    bool process_async()
+    {
+        boost::system::error_code error;
+        _io_service.run_one(error);
+        return !error;
+    }
+
+    /**
+     * \brief Queues an async connection
+     * \tparam Callback A functor accepting a boost::system::error_code
+     *                  and a boost_tcp::resolver::iterator
+     * \note You must run process_asyncfor this to get handled
+     */
+    template<class Callback>
+        void async_connect(
+            boost_tcp::resolver::iterator endpoint_iterator,
+            const Callback& callback)
+    {
+        boost::asio::async_connect(raw_socket(), endpoint_iterator, callback);
+    }
+
+    /**
+     * \brief Queues an async name resolution
+     * \tparam Callback A functor accepting a boost::system::error_code
+     *                  and a boost_tcp::resolver::iterator
+     * \note You must run process_asyncfor this to get handled
+     */
+    template<class Callback>
+        void async_resolve(
+            const boost_tcp::resolver::query& query,
+            const Callback& callback)
+    {
+        resolver.async_resolve(query, callback);
+    }
+
+    /**
+     * \brief Queues an async name resolution and connection
+     * \tparam Callback A functor accepting a boost::system::error_code
+     *                  and a boost_tcp::resolver::iterator
+     * \note You must run process_asyncfor this to get handled
+     */
+    template<class Callback>
+        void async_connect(
+            const boost_tcp::resolver::query& query,
+            const Callback& callback)
+    {
+        async_resolve(
+            query,
+            [this, callback](
+                const boost::system::error_code& error_code,
+                const boost_tcp::resolver::iterator& endpoint_iterator)
+            {
+                if ( error_code )
+                    callback(error_code, endpoint_iterator);
+                else
+                    async_connect(endpoint_iterator, callback);
+            }
+        );
     }
 
 private:
@@ -327,6 +384,7 @@ private:
     boost::asio::io_service _io_service;
     std::unique_ptr<SocketWrapper> _socket;
     boost::asio::deadline_timer _deadline{_io_service};
+    boost_tcp::resolver resolver{_io_service};
 };
 
 } // namespace io

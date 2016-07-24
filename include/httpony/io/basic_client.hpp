@@ -33,17 +33,11 @@ class BasicClient
 public:
 
     /**
-     * \todo Async connect
+     * \todo Sync connect
      */
     ClientStatus connect(const Uri& target, io::Connection& connection) const
     {
-        if ( _timeout )
-            connection.socket().set_timeout(*_timeout);
-
-        std::string service = target.scheme;
-        if ( target.authority.port )
-            service = std::to_string(*target.authority.port);
-        boost_tcp::resolver::query query(target.authority.host, service);
+        boost_tcp::resolver::query query = make_query(target, connection);
 
         boost::system::error_code error_code;
         auto endpoint_iterator = connection.socket().resolve(query, error_code);
@@ -85,7 +79,38 @@ public:
         return _timeout;
     }
 
+    template<class OnConnect, class OnError>
+    void async_connect(const Uri& target, io::Connection& connection, const OnConnect& on_connect, const OnError& on_error)
+    {
+        boost_tcp::resolver::query query = make_query(target, connection);
+        connection.socket().async_connect(
+            query,
+            [on_error, on_connect](
+                const boost::system::error_code& error_code,
+                const boost_tcp::resolver::iterator&)
+            {
+                if ( error_code )
+                    on_error(ClientStatus(error_code.message()));
+                else
+                    on_connect();
+            }
+        );
+    }
+
 private:
+    boost_tcp::resolver::query make_query(const Uri& target, io::Connection& connection) const
+    {
+        if ( _timeout )
+            connection.socket().set_timeout(*_timeout);
+
+        std::string service = target.scheme;
+        if ( target.authority.port )
+            service = std::to_string(*target.authority.port);
+
+        return boost_tcp::resolver::query(target.authority.host, service);
+    }
+
+
     melanolib::Optional<melanolib::time::seconds> _timeout;
 };
 
