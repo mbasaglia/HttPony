@@ -47,7 +47,11 @@ find_package(OpenSSL QUIET)
 if(OPENSSL_FOUND)
     example(ssl_server)
     target_link_libraries(ssl_server ${OPENSSL_LIBRARIES})
+
+    example(ssl_client)
+    target_link_libraries(ssl_client ${OPENSSL_LIBRARIES})
 else()
-    message(STATUS "ssl_server example disabled (You need OpenSSL for this)")
+    message(STATUS "ssl_server and ssl_client examples disabled (You need OpenSSL for them)")
 endif()
+
 

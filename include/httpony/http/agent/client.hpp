@@ -62,6 +62,9 @@ public:
         auto connection = create_connection(target);
         status = _basic_client.connect(target, *connection);
 
+        if ( !status.error() )
+            status = on_connect(target, *connection);
+
         return connection;
     }
 
@@ -100,7 +103,6 @@ public:
 
 
 protected:
-
     virtual void process_request(Request& request) const
     {
         request.headers["User-Agent"] = _user_agent;
@@ -115,6 +117,11 @@ protected:
     }
 
 private:
+    virtual ClientStatus on_connect(const Uri& target, io::Connection& connection) const
+    {
+        return {};
+    }
+
     template<class ClientT>
         friend class BasicAsyncClient;
 
