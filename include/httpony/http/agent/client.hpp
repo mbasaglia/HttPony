@@ -35,12 +35,12 @@ namespace httpony {
 class Client
 {
 public:
-
     /**
      * \todo Add more semantic properties to user_agent, and add it as a request attribute
      */
-    explicit Client(const std::string& user_agent)
-        : _user_agent(user_agent)
+    explicit Client(const std::string& user_agent, int max_redirects = 0)
+        : _user_agent(user_agent),
+          _max_redirects(melanolib::math::max(0, max_redirects))
     {}
 
     Client() : Client("HttPony/1.0") {}
@@ -102,11 +102,40 @@ public:
         _basic_client.clear_timeout();
     }
 
+    const std::string& user_agent() const
+    {
+        return _user_agent;
+    }
+
+    void set_user_agent(const std::string& user_agent)
+    {
+        _user_agent = user_agent;
+    }
+
+    void set_max_redirects(int max_redirects)
+    {
+        _max_redirects = melanolib::math::max(0, max_redirects);
+    }
+
+    int max_redirects() const
+    {
+        return _max_redirects;
+    }
+
 
 protected:
     virtual void process_request(Request& request) const
     {
         request.headers["User-Agent"] = _user_agent;
+    }
+
+    virtual void on_redirect(Response& response) const
+    {
+    }
+
+    virtual bool is_redirect(const Response& response) const
+    {
+        return response.status.type() == StatusType::Redirection && response.headers.contains("Location");
     }
 
     /**
@@ -123,12 +152,14 @@ private:
         return {};
     }
 
+    ClientStatus get_response_redirect(int redirection, Request& request, Response& response) const;
+
     template<class ClientT>
         friend class BasicAsyncClient;
 
-
     io::BasicClient _basic_client;
     std::string _user_agent;
+    int _max_redirects = 0;
 };
 
 template<class ClientT>

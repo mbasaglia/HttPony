@@ -28,19 +28,25 @@ namespace httpony {
 
 ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const
 {
-    response = Response();
-    response.connection = request.connection = connection;
+    request.connection = connection;
+    return get_response_redirect(0, request, response);
+}
 
-    if ( !connection )
+ClientStatus Client::get_response_redirect(int redirection, Request& request, Response& response) const
+{
+    response = Response();
+    response.connection = request.connection;
+
+    if ( !request.connection )
         return "client not connected";
 
     process_request(request);
-    auto ostream = connection->send_stream();
+    auto ostream = request.connection->send_stream();
     http::Http1Formatter().request(ostream, request);
     if ( !ostream.send() )
         return "connection error";
 
-    auto istream = connection->receive_stream();
+    auto istream = request.connection->receive_stream();
     ClientStatus status = Http1Parser().response(istream, response);
 
     if ( istream.timed_out() )
@@ -50,9 +56,34 @@ ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connect
         return status;
 
     if ( response.body.has_data() )
-        connection->input_buffer().expect_input(response.body.content_length());
+        request.connection->input_buffer().expect_input(response.body.content_length());
 
-    /// \todo Follow redirects
+    /// \todo Also handle on async client
+    if ( is_redirect(response) )
+    {
+        if ( redirection >= _max_redirects )
+            return "too many redirects";
+
+        on_redirect(response);
+        Uri target = response.headers["Location"];
+        if ( request.url.authority.host != target.authority.host ||
+             request.url.authority.port != target.authority.port )
+        {
+            ClientStatus status;
+            request.connection = connect(target, status);
+            if ( status.error() )
+                return status;
+        }
+
+        request.url = target;
+        /// \todo Handle 307 differently (keeping POST)
+        if ( request.method == "POST" )
+            request.method = "GET";
+        request.body.stop_output();
+
+        return get_response_redirect(redirection + 1, request, response);
+    }
+
     return {};
 }
 
