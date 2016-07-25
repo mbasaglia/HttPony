@@ -23,6 +23,7 @@
 
 /// \cond
 #include <list>
+#include <stdexcept>
 /// \endcond
 
 #include "httpony/io/connection.hpp"
@@ -103,7 +104,7 @@ public:
      * \brief Runs the server synchronously
      * \tparam OnSuccess Functor accepting a io::Connectio&
      * \tparam OnFailure Functor accepting a io::Connectio& and a std::string
-     * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
+     * \tparam CreateConnection Function returning a std::shared_ptr<Connection>
      * \param on_success Functor called on a successful connection
      * \param on_failure Functor called on a connection that had some issues
      * \param create_connection Function called to create a new connection object
@@ -162,31 +163,34 @@ private:
                     if ( !acceptor.is_open() )
                         return;
 
+                    auto conn_iter = std::find_if(
+                        connections.begin(), connections.end(),
+                        [connection](const auto& c) { return c.get() == connection; }
+                    );
+
+                    // Should never be == end
+                    if ( conn_iter == connections.end() )
+                        throw std::logic_error("Connection vanished");
+
                     if ( _timeout )
                         connection->socket().set_timeout(*_timeout);
 
                     if ( !error_code )
-                        on_success(*connection);
+                        on_success(*conn_iter);
                     else
-                        on_failure(*connection, error_code.message());
+                        on_failure(**conn_iter, error_code.message());
 
                     /// \todo Keep the connection alive if needed
-                    auto it = std::find_if(connections.begin(), connections.end(),
-                        [connection](const auto& c) { return c.get() == connection; }
-                    );
-                    if ( it != connections.end() ) // Should never be == end
-                        connections.erase(it);
-
+                    connections.erase(conn_iter);
                     accept(on_success, on_failure, create_connection);
                 }
             );
-
         }
 
     melanolib::Optional<melanolib::time::seconds> _timeout;
-    boost::asio::io_service             io_service;
-    boost_tcp::acceptor      acceptor{io_service};
-    std::list<std::unique_ptr<io::Connection>> connections;
+    boost::asio::io_service                       io_service;
+    boost_tcp::acceptor                           acceptor{io_service};
+    std::list<std::shared_ptr<io::Connection>>    connections;
 };
 
 } // namespace io

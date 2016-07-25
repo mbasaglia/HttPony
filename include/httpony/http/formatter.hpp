@@ -180,7 +180,7 @@ private:
 
         headers(stream, response.headers);
 
-        if ( !response.headers.contains("Set-Cookie") )
+        if ( !response.cookies.empty() && !response.headers.contains("Set-Cookie") )
             for ( const auto& cookie : response.cookies )
                 header(stream, "Set-Cookie", cookie);
 
@@ -212,7 +212,7 @@ private:
         if ( !request.headers.contains("Host") )
             header(stream, "Host", request.url.authority.host);
 
-        if ( !request.headers.contains("Cookie") )
+        if ( !request.cookies.empty() && !request.headers.contains("Cookie") )
         {
             stream << "Cookie" << ": ";
             header_parameters(stream, request.cookies, "; ");

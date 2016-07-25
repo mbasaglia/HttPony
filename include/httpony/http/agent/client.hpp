@@ -54,7 +54,7 @@ public:
      * \param[in]  target URI of the server to connect to
      * \param[out] status Status of the operation
      */
-    melanolib::Movable<io::Connection> connect(Uri target, ClientStatus& status) const
+    std::shared_ptr<io::Connection> connect(Uri target, ClientStatus& status) const
     {
         if ( target.scheme.empty() )
             target.scheme = "http";
@@ -76,12 +76,13 @@ public:
         if ( status.error() )
             return status;
 
-        /// \bug \b connection will be destructed, together withthe response buffer
-        /// Maybe the connection should be stored in a shared_ptr in both request and response
         return get_response(connection, request, response);
     }
 
-    ClientStatus get_response(io::Connection& connection, Request& request, Response& response) const;
+    /**
+     * \brief Writes the request and retrieves the response over a connection object
+     */
+    ClientStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const;
 
     /**
      * \brief The timeout for network I/O operations
@@ -111,9 +112,9 @@ protected:
     /**
      * \brief Creates a new connection object
      */
-    virtual melanolib::Movable<io::Connection> create_connection(const Uri& target) const
+    virtual std::shared_ptr<io::Connection> create_connection(const Uri& target) const
     {
-        return melanolib::Movable<io::Connection>(io::SocketTag<io::PlainSocket>{});
+        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
 private:
@@ -137,7 +138,7 @@ private:
     struct AsyncItem
     {
         AsyncItem(
-            melanolib::Movable<io::Connection> connection,
+            std::shared_ptr<io::Connection> connection,
             melanolib::Optional<Request> request = {}
         ) : connection(std::move(connection)),
             request(std::move(request))
@@ -145,10 +146,10 @@ private:
 
         io::Connection* connection_ptr()
         {
-            return &(io::Connection&)connection;
+            return connection.get();
         }
 
-        melanolib::Movable<io::Connection> connection;
+        std::shared_ptr<io::Connection> connection;
         melanolib::Optional<Request> request;
     };
 
@@ -262,7 +263,7 @@ public:
         auto& item = items.back();
         lock.unlock();
 
-        ClientT::_basic_client.async_connect(item.request->url, item.connection,
+        ClientT::_basic_client.async_connect(item.request->url, *item.connection,
             [this, on_response, on_error, &item](){
                 Response response;
                 auto status = ClientT::get_response(item.connection, *item.request, response);

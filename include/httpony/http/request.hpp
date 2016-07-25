@@ -29,6 +29,8 @@
 
 namespace httpony {
 
+namespace io { class Connection; }
+
 
 /**
  * \brief HTTP Authentication credentials
@@ -71,6 +73,8 @@ struct Request
     io::ContentStream body;
 
     melanolib::time::DateTime received_date;
+
+    std::shared_ptr<io::Connection> connection;
 
     bool can_parse_post() const;
     bool parse_post();

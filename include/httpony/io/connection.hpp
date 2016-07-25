@@ -200,7 +200,6 @@ public:
 
 
 private:
-
     TimeoutSocket       _socket;
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;

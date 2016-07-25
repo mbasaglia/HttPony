@@ -121,6 +121,8 @@ struct Response
     melanolib::time::DateTime date;
     std::vector<AuthChallenge> www_authenticate;
     std::vector<AuthChallenge> proxy_authenticate;
+
+    std::shared_ptr<io::Connection> connection;
 };
 
 } // namespace httpony

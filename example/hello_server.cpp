@@ -35,7 +35,7 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
+    void respond(httpony::Request& request, const httpony::Status& status) override
     {
         httpony::Response response;
         std::string body;
@@ -45,15 +45,15 @@ public:
         }
         else
         {
-            auto body_status = get_body(connection, request, status, body);
+            auto body_status = get_body(request, status, body);
             if ( body_status.is_error() )
                 response = simple_response(status, request.protocol);
             else
-                response = build_response(connection, request);
+                response = build_response(request);
         }
-        send_response(connection, request, response);
+        send_response(request, response);
 
-        print_info(connection, request, response, body);
+        print_info(request, response, body);
     }
 
 private:
@@ -61,7 +61,6 @@ private:
      * \brief Returns the whole request body as a string
      */
     httpony::Status get_body(
-        httpony::io::Connection& connection,
         httpony::Request& request,
         const httpony::Status& status,
         std::string& output
@@ -73,7 +72,7 @@ private:
 
         // Handle HTTP/1.1 requests with an Expect: 100-continue header
         if ( status == httpony::StatusCode::Continue )
-            send(connection, simple_response(status, request.protocol));
+            send(request.connection, simple_response(status, request.protocol));
 
         // Parse form data
         if ( request.can_parse_post() )
@@ -97,9 +96,7 @@ private:
     /**
      * \brief Returns a response for the given request
      */
-    httpony::Response build_response(
-        httpony::io::Connection& connection,
-        httpony::Request& request) const
+    httpony::Response build_response(httpony::Request& request) const
     {
         try
         {
@@ -154,8 +151,7 @@ private:
     /**
      * \brief Sends the response back to the client
      */
-    void send_response(httpony::io::Connection& connection,
-                       httpony::Request& request,
+    void send_response(httpony::Request& request,
                        httpony::Response& response) const
     {
         // We are not going to keep the connection open
@@ -171,8 +167,8 @@ private:
         response.clean_body(request);
 
         // Drop the connection if there is some network error on the response
-        if ( !send(connection, response) )
-            connection.close();
+        if ( !send(request.connection, response) )
+            request.connection->close();
     }
 
     /**
@@ -189,13 +185,12 @@ private:
     /**
      * \brief Logs info on the current request/response
      */
-    void print_info(httpony::io::Connection& connection,
-                    const httpony::Request& request,
+    void print_info(const httpony::Request& request,
                     const httpony::Response& response,
                     std::string& body) const
     {
         std::cout << '\n';
-        log_response(log_format, connection, request, response, std::cout);
+        log_response(log_format, request, response, std::cout);
 
         show_headers("Headers", request.headers);
         show_headers("Cookies", request.cookies);

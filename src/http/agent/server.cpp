@@ -63,19 +63,20 @@ void Server::start()
 
     _thread = std::thread([this](){
         _listen_server.run(
-            [this](io::Connection& connection){
-                if ( accept(connection) )
+            [this](const std::shared_ptr<io::Connection>& connection){
+                if ( accept(*connection) )
                 {
                     /// \todo Switch parser based on protocol
                     Http1Parser parser;
-                    auto stream = connection.receive_stream();
+                    auto stream = connection->receive_stream();
                     Request request;
                     auto status = parser.request(stream, request);
                     if ( stream.timed_out() )
                         status = StatusCode::RequestTimeout;
                     else if ( request.body.has_data() )
-                        connection.input_buffer().expect_input(request.body.content_length());
-                    respond(connection, request, status);
+                        connection->input_buffer().expect_input(request.body.content_length());
+                    request.connection = connection;
+                    respond(request, status);
                 }
             },
             [this](io::Connection& connection, const std::string& message){
@@ -100,7 +101,6 @@ void Server::stop()
 void Server::process_log_format(
         char label,
         const std::string& argument,
-        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output
@@ -115,10 +115,10 @@ void Server::process_log_format(
             break;
         case 'h': // Remote host
         case 'a': // Remote IP-address
-            output << connection.remote_address().string;
+            output << request.connection->remote_address().string;
             break;
         case 'A': // Local IP-address
-            output << connection.local_address().string;
+            output << request.connection->local_address().string;
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
             output << response.body.content_length();
@@ -161,9 +161,9 @@ void Server::process_log_format(
             break;
         case 'p':
             if ( argument == "remote" )
-                output << connection.remote_address().port;
+                output << request.connection->remote_address().port;
             else if ( argument == "local" )
-                output << connection.local_address().port;
+                output << request.connection->local_address().port;
             else // canonical
                 output << _listen_address.port;
             break;
@@ -218,7 +218,6 @@ void Server::process_log_format(
 
 void Server::log_response(
         const std::string& format,
-        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output
@@ -256,7 +255,7 @@ void Server::log_response(
             start++;
         }
 
-        process_log_format(label, argument, connection, request, response, output);
+        process_log_format(label, argument, request, response, output);
 
     }
     output << std::endl;
@@ -277,9 +276,11 @@ melanolib::Optional<melanolib::time::seconds> Server::timeout() const
     return _listen_server.timeout();
 }
 
-bool Server::send(io::Connection& connection, Response& response) const
+bool Server::send(Response& response) const
 {
-    auto stream = connection.send_stream();
+    if ( !response.connection )
+        return false;
+    auto stream = response.connection->send_stream();
     /// \todo Switch formatter based on protocol
     /// (Needs to implement stuff like HTTP/2)
     http::Http1Formatter().response(stream, response);

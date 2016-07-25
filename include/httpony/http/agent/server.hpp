@@ -79,14 +79,13 @@ public:
     /**
      * \brief Function handling requests
      */
-    virtual void respond(io::Connection& connection, Request& request, const Status& status) = 0;
+    virtual void respond(Request& request, const Status& status) = 0;
 
     /**
      * \brief Writes a line of log into \p output based on format
      */
     void log_response(
         const std::string& format,
-        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output) const;
@@ -100,9 +99,15 @@ protected:
         std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
     }
 
-    bool send(io::Connection& connection, Response& response) const;
+    bool send(Response& response) const;
+
+    bool send(const std::shared_ptr<io::Connection>& connection, Response& response) const
+    {
+        response.connection = connection;
+        return send(response);
+    }
     
-    bool send(io::Connection& connection, Response&& response) const
+    bool send(const std::shared_ptr<io::Connection>& connection, Response&& response) const
     {
         return send(connection, response);
     }
@@ -111,9 +116,9 @@ private:
     /**
      * \brief Creates a new connection object
      */
-    virtual std::unique_ptr<io::Connection> create_connection()
+    virtual std::shared_ptr<io::Connection> create_connection()
     {
-        return melanolib::New<io::Connection>(io::SocketTag<io::PlainSocket>{});
+        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
     /**
@@ -132,7 +137,6 @@ private:
     virtual void process_log_format(
         char label,
         const std::string& argument,
-        const io::Connection& connection,
         const Request& request,
         const Response& response,
         std::ostream& output

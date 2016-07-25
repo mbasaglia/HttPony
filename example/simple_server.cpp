@@ -35,11 +35,11 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
+    void respond(httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request, status);
-        log_response(log_format, connection, request, response, std::cout);
-        send_response(connection, request, response);
+        httpony::Response response = build_response(request, status);
+        log_response(log_format, request, response, std::cout);
+        send_response(request, response);
     }
 
 protected:
@@ -47,7 +47,6 @@ protected:
      * \brief Returns a response for the given request
      */
     httpony::Response build_response(
-        httpony::io::Connection& connection,
         httpony::Request& request,
         const httpony::Status& status) const
     {
@@ -91,8 +90,7 @@ protected:
     /**
      * \brief Sends the response back to the client
      */
-    void send_response(httpony::io::Connection& connection,
-                       httpony::Request& request,
+    void send_response(httpony::Request& request,
                        httpony::Response& response) const
     {
         // We are not going to keep the connection open
@@ -107,8 +105,8 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !send(connection, response) )
-            connection.close();
+        if ( !send(request.connection, response) )
+            request.connection->close();
     }
 
 private:

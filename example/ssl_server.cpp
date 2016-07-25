@@ -40,11 +40,11 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
+    void respond(httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request, status);
-        send_response(connection, request, response);
-        log_response(log_format, connection, request, response, std::cout);
+        httpony::Response response = build_response(request, status);
+        send_response(request, response);
+        log_response(log_format, request, response, std::cout);
     }
 
 private:
@@ -52,7 +52,6 @@ private:
      * \brief Returns a response for the given request
      */
     httpony::Response build_response(
-        httpony::io::Connection& connection,
         httpony::Request& request,
         const httpony::Status& status) const
     {
@@ -90,8 +89,7 @@ private:
     /**
      * \brief Sends the response back to the client
      */
-    void send_response(httpony::io::Connection& connection,
-                       httpony::Request& request,
+    void send_response(httpony::Request& request,
                        httpony::Response& response) const
     {
         // We are not going to keep the connection open
@@ -107,8 +105,8 @@ private:
         response.clean_body(request);
 
         // Drop the connection if there is some network error on the response
-        if ( !send(connection, response) )
-            connection.close();
+        if ( !send(request.connection, response) )
+            request.connection->close();
     }
 
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";

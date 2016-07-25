@@ -29,15 +29,15 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
+    void respond(httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request, status);
+        httpony::Response response = build_response(request, status);
 
         std::cout << "=============\nServer:\n";
         httpony::http::Http1Formatter("\n").request(std::cout, request);
         std::cout << "\n=============\n";
 
-        send_response(connection, request, response);
+        send_response(request, response);
     }
 
     ~PingPongServer()
@@ -46,7 +46,7 @@ public:
     }
 
 protected:
-    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) const
+    httpony::Response build_response(httpony::Request& request, const httpony::Status& status) const
     {
         try
         {
@@ -56,7 +56,7 @@ protected:
             if ( request.method != "GET"  && request.method != "HEAD")
                 return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
 
-            if ( request.url.path.string() != "ping" )
+            if ( request.url.path.string() != "/ping" )
                 return simple_response(httpony::StatusCode::NotFound, request.protocol);
 
             httpony::Response response(request.protocol);
@@ -88,8 +88,7 @@ protected:
     /**
      * \brief Sends the response back to the client
      */
-    void send_response(httpony::io::Connection& connection,
-                       httpony::Request& request,
+    void send_response(httpony::Request& request,
                        httpony::Response& response) const
     {
         // We are not going to keep the connection open
@@ -104,8 +103,8 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !send(connection, response) )
-            connection.close();
+        if ( !send(request.connection, response) )
+            request.connection->close();
     }
 };
 

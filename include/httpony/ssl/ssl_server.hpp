@@ -64,9 +64,9 @@ private:
     /**
      * \brief Creates a connection linked to a SSL socket
      */
-    std::unique_ptr<io::Connection> create_connection() final
+    std::shared_ptr<io::Connection> create_connection() final
     {
-        return melanolib::New<io::Connection>(io::SocketTag<SslSocket>{}, context);
+        return std::make_shared<io::Connection>(io::SocketTag<SslSocket>{}, context);
     }
 
     /**

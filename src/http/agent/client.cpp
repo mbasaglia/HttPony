@@ -26,17 +26,21 @@
 namespace httpony {
 
 
-ClientStatus Client::get_response(io::Connection& connection, Request& request, Response& response) const
+ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const
 {
     response = Response();
+    response.connection = request.connection = connection;
+
+    if ( !connection )
+        return "client not connected";
 
     process_request(request);
-    auto ostream = connection.send_stream();
+    auto ostream = connection->send_stream();
     http::Http1Formatter().request(ostream, request);
     if ( !ostream.send() )
         return "connection error";
 
-    auto istream = connection.receive_stream();
+    auto istream = connection->receive_stream();
     ClientStatus status = Http1Parser().response(istream, response);
 
     if ( istream.timed_out() )
@@ -46,7 +50,7 @@ ClientStatus Client::get_response(io::Connection& connection, Request& request, 
         return status;
 
     if ( response.body.has_data() )
-        connection.input_buffer().expect_input(response.body.content_length());
+        connection->input_buffer().expect_input(response.body.content_length());
 
     /// \todo Follow redirects
     return {};

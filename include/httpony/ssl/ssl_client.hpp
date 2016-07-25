@@ -37,11 +37,11 @@ public:
         {}
 
 protected:
-    melanolib::Movable<io::Connection> create_connection(const Uri& target) const final
+    std::shared_ptr<io::Connection> create_connection(const Uri& target) const final
     {
         if ( target.scheme == "https" )
-            return melanolib::Movable<io::Connection>(io::SocketTag<SslSocket>{}, context);
-        return melanolib::Movable<io::Connection>(io::SocketTag<io::PlainSocket>{});
+            return std::make_shared<io::Connection>(io::SocketTag<SslSocket>{}, context);
+        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
 private:
