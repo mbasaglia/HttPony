@@ -474,7 +474,7 @@ private:
 
     bool decode_group(byte data, byte& output) const override
     {
-        if (  data <= '9' )
+        if ( melanolib::string::ascii::is_digit(data) )
             output = data - '0';
         else if ( melanolib::string::ascii::is_lower(data) && data <= 'v' )
             output = data - 'a' + 10;
