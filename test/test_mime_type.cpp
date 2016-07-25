@@ -70,6 +70,13 @@ BOOST_AUTO_TEST_CASE( test_stream )
     BOOST_CHECK( output.is_equal( "text/plain;charset=utf-8" ) );
 }
 
+BOOST_AUTO_TEST_CASE( test_string )
+{
+    boost::test_tools::output_test_stream output;
+    BOOST_CHECK( MimeType("text/plain").string() == "text/plain" );
+    BOOST_CHECK( MimeType("text/plain;charset=utf-8").string() == "text/plain;charset=utf-8" );
+}
+
 BOOST_AUTO_TEST_CASE( test_set_parameter )
 {
     MimeType mime("text", "plain");
