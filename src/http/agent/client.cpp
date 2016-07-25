@@ -29,10 +29,10 @@ namespace httpony {
 ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const
 {
     request.connection = connection;
-    return get_response_redirect(0, request, response);
+    return get_response_attempt(0, request, response);
 }
 
-ClientStatus Client::get_response_redirect(int redirection, Request& request, Response& response) const
+ClientStatus Client::get_response_attempt(int attempt, Request& request, Response& response) const
 {
     response = Response();
     response.connection = request.connection;
@@ -58,18 +58,22 @@ ClientStatus Client::get_response_redirect(int redirection, Request& request, Re
     if ( response.body.has_data() )
         request.connection->input_buffer().expect_input(response.body.content_length());
 
+    return on_attempt(request, response, attempt);
+}
+
+ClientStatus Client::on_attempt(Request& request, Response& response, int attempt) const
+{
     /// \todo Try again on 408 (Request Timeout)
     /// \todo Handle 426 (Upgrade Required) for known protocol versions
     /// \todo Also handle on async client
-    if ( is_redirect(response) )
+    if ( response.status.type() == StatusType::Redirection && response.headers.contains("Location") )
     {
-        if ( redirection >= _max_redirects )
+        if ( attempt >= _max_redirects )
             return "too many redirects";
 
-        on_redirect(response);
         Uri target = response.headers["Location"];
         if ( request.url.authority.host != target.authority.host ||
-             request.url.authority.port != target.authority.port )
+            request.url.authority.port != target.authority.port )
         {
             ClientStatus status;
             request.connection = connect(target, status);
@@ -83,7 +87,7 @@ ClientStatus Client::get_response_redirect(int redirection, Request& request, Re
             request.method = "GET";
         request.body.stop_output();
 
-        return get_response_redirect(redirection + 1, request, response);
+        return get_response_attempt(attempt + 1, request, response);
     }
 
     return {};

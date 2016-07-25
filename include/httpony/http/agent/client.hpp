@@ -129,14 +129,7 @@ protected:
         request.headers["User-Agent"] = _user_agent;
     }
 
-    virtual void on_redirect(Response& response) const
-    {
-    }
-
-    virtual bool is_redirect(const Response& response) const
-    {
-        return response.status.type() == StatusType::Redirection && response.headers.contains("Location");
-    }
+    virtual ClientStatus on_attempt(Request& request, Response& response, int attempt_number) const;
 
     /**
      * \brief Creates a new connection object
@@ -146,13 +139,13 @@ protected:
         return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
+    ClientStatus get_response_attempt(int attempt, Request& request, Response& response) const;
+    
 private:
     virtual ClientStatus on_connect(const Uri& target, io::Connection& connection) const
     {
         return {};
     }
-
-    ClientStatus get_response_redirect(int redirection, Request& request, Response& response) const;
 
     template<class ClientT>
         friend class BasicAsyncClient;
