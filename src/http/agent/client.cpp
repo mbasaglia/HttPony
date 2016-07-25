@@ -58,6 +58,8 @@ ClientStatus Client::get_response_redirect(int redirection, Request& request, Re
     if ( response.body.has_data() )
         request.connection->input_buffer().expect_input(response.body.content_length());
 
+    /// \todo Try again on 408 (Request Timeout)
+    /// \todo Handle 426 (Upgrade Required) for known protocol versions
     /// \todo Also handle on async client
     if ( is_redirect(response) )
     {

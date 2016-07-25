@@ -55,6 +55,7 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
     if ( request.headers.contains("Authorization") )
         auth(request.headers.get("Authorization"), request.auth);
 
+
     if ( request.headers.contains("Content-Length") )
     {
         if ( !request.body.start_input(stream.rdbuf(), request.headers) )
@@ -64,6 +65,10 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
         {
             return StatusCode::Continue;
         }
+    }
+    else if ( request.headers.contains("Transfer-Encoding") )
+    {
+        return StatusCode::NotImplemented;
     }
     else if ( !stream.eof() && stream.peek() != std::istream::traits_type::eof() )
     {
@@ -114,6 +119,10 @@ ClientStatus Http1Parser::response(std::istream& stream, Response& response) con
     {
         if ( !response.body.start_input(stream.rdbuf(), response.headers) )
             return "invalid payload";
+    }
+    else if ( response.headers.contains("Transfer-Encoding") )
+    {
+        return "not implemented";
     }
 
     return {};
