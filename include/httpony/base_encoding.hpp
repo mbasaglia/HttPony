@@ -22,10 +22,12 @@
 #ifndef HTTPONY_BASE_ENCODING_HPP
 #define HTTPONY_BASE_ENCODING_HPP
 
+/// \cond
+#include <stdexcept>
+
 #include <melanolib/utils/gsl.hpp>
 #include <melanolib/string/ascii.hpp>
-
-#include <stdexcept>
+/// \endcond
 
 namespace httpony {
 

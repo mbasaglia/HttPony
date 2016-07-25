@@ -19,26 +19,37 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "httpony/mime_type.hpp"
-
+#include "httpony/http/agent/client.hpp"
+#include "httpony/http/formatter.hpp"
 #include "httpony/http/parser.hpp"
-
 
 namespace httpony {
 
 
-MimeType::MimeType(const std::string& string)
+ClientStatus Client::get_response(io::Connection& connection, Request& request, Response& response) const
 {
-    melanolib::string::QuickStream stream(string);
-    set_type(stream.get_line('/'));
-    set_subtype(stream.get_until(
-        [](char c){ return melanolib::string::ascii::is_space(c) || c ==';'; }
-    ));
+    response = Response();
 
-    Headers parameters;
-    Http1Parser().header_parameters(stream, parameters);
-    if ( !parameters.empty() )
-        set_parameter(parameters.front());
+    process_request(request);
+    auto ostream = connection.send_stream();
+    http::Http1Formatter().request(ostream, request);
+    if ( !ostream.send() )
+        return "connection error";
+
+    auto istream = connection.receive_stream();
+    ClientStatus status = Http1Parser().response(istream, response);
+
+    if ( istream.timed_out() )
+        return "timeout";
+
+    if ( status.error() )
+        return status;
+
+    if ( response.body.has_data() )
+        connection.input_buffer().expect_input(response.body.content_length());
+
+    /// \todo Follow redirects
+    return {};
 }
 
 } // namespace httpony

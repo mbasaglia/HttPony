@@ -45,9 +45,13 @@ public:
             magic_close(magic_cookie);
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request);
+        httpony::Response response;
+        if ( status.is_error() )
+            response = simple_response(status, request.protocol);
+        else
+            response = build_response(connection, request);
         log_response(log_format, connection, request, response, std::cout);
         send_response(connection, request, response);
     }
@@ -58,10 +62,8 @@ protected:
         try
         {
             if ( request.method != "GET"  && request.method != "HEAD")
-                connection.set_status(httpony::StatusCode::MethodNotAllowed);
+                return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
 
-            if ( connection.status().is_error() )
-                return simple_response(connection.status(), request.protocol);
 
             auto file = root;
             for ( const auto & dir : request.url.path )
@@ -148,7 +150,7 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
     }
 

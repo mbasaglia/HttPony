@@ -23,6 +23,7 @@
 #define HTTPONY_SERVER_HPP
 
 #include "httpony/io/basic_server.hpp"
+#include "httpony/http/response.hpp"
 
 namespace httpony {
 
@@ -78,7 +79,7 @@ public:
     /**
      * \brief Function handling requests
      */
-    virtual void respond(io::Connection& connection, Request&& request) = 0;
+    virtual void respond(io::Connection& connection, Request& request, const Status& status) = 0;
 
     /**
      * \brief Writes a line of log into \p output based on format
@@ -97,6 +98,13 @@ protected:
     virtual void error(io::Connection& connection, const std::string& what) const
     {
         std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
+    }
+
+    bool send(io::Connection& connection, Response& response) const;
+    
+    bool send(io::Connection& connection, Response&& response) const
+    {
+        return send(connection, response);
     }
 
 private:

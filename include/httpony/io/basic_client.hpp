@@ -21,8 +21,9 @@
 #ifndef HTTPONY_IO_BASIC_CLIENT_HPP
 #define HTTPONY_IO_BASIC_CLIENT_HPP
 
-#include "connection.hpp"
-#include "httpony/http/response.hpp"
+#include "httpony/io/connection.hpp"
+#include "httpony/http/client_status.hpp"
+#include "httpony/uri.hpp"
 
 namespace httpony {
 namespace io {
@@ -30,47 +31,87 @@ namespace io {
 class BasicClient
 {
 public:
+
     /**
-     * \tparam CreateConnection Function returning a std::unique_ptr<Connection>
-     * \param create_connection Function called to create a new connection object
+     * \todo Sync connect
      */
-    template<class CreateConnection>
-    std::pair<std::unique_ptr<io::Connection>, std::string>
-        connect(const Uri& target, const CreateConnection& create_connection)
+    ClientStatus connect(const Uri& target, io::Connection& connection) const
     {
-        std::string service = target.scheme;
-        if ( target.authority.port )
-            service = std::to_string(*target.authority.port);
-        boost_tcp::resolver::query query(target.authority.host, service);
+        boost_tcp::resolver::query query = make_query(target, connection);
 
         boost::system::error_code error_code;
-        auto endpoint_iterator = resolver.resolve(query, error_code);
+        auto endpoint_iterator = connection.socket().resolve(query, error_code);
 
         if ( error_code )
-        {
-            return std::make_pair<std::unique_ptr<io::Connection>, std::string>({}, error_code.message());
-        }
+            return error_code.message();
 
-        /// \todo Clean up the pushed connection
-        std::unique_ptr<io::Connection> connection = create_connection();
-
-        if ( _timeout )
-            connection->socket().set_timeout(*_timeout);
-
-        error_code.clear();
-        connection->socket().connect(endpoint_iterator, error_code);
+        connection.socket().connect(endpoint_iterator, error_code);
         if ( error_code )
-            return {std::move(connection), error_code.message()};
+            return error_code.message();
 
-        return {std::move(connection), ""};
+        return {};
+    }
+
+    /**
+     * \brief Remove timeouts, connections will block indefinitely
+     * \see set_timeout(), timeout()
+     */
+    void clear_timeout()
+    {
+        _timeout = {};
+    }
+
+    /**
+     * \brief Sets the connection timeout
+     * \see clear_timeout(), timeout()
+     */
+    void set_timeout(melanolib::time::seconds timeout)
+    {
+        _timeout = timeout;
+    }
+
+    /**
+     * \brief The timeout for network I/O operations
+     * \see set_timeout(), clear_timeout()
+     */
+    melanolib::Optional<melanolib::time::seconds> timeout() const
+    {
+        return _timeout;
+    }
+
+    template<class OnConnect, class OnError>
+    void async_connect(const Uri& target, io::Connection& connection, const OnConnect& on_connect, const OnError& on_error)
+    {
+        boost_tcp::resolver::query query = make_query(target, connection);
+        connection.socket().async_connect(
+            query,
+            [on_error, on_connect](
+                const boost::system::error_code& error_code,
+                const boost_tcp::resolver::iterator&)
+            {
+                if ( error_code )
+                    on_error(ClientStatus(error_code.message()));
+                else
+                    on_connect();
+            }
+        );
     }
 
 private:
+    boost_tcp::resolver::query make_query(const Uri& target, io::Connection& connection) const
+    {
+        if ( _timeout )
+            connection.socket().set_timeout(*_timeout);
+
+        std::string service = target.scheme;
+        if ( target.authority.port )
+            service = std::to_string(*target.authority.port);
+
+        return boost_tcp::resolver::query(target.authority.host, service);
+    }
 
 
     melanolib::Optional<melanolib::time::seconds> _timeout;
-    boost::asio::io_service io_service;
-    boost_tcp::resolver resolver{io_service};
 };
 
 } // namespace io

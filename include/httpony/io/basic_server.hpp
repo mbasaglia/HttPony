@@ -21,9 +21,11 @@
 #ifndef HTTPONY_IO_LISTEN_SERVER_HPP
 #define HTTPONY_IO_LISTEN_SERVER_HPP
 
-#include "httpony/io/connection.hpp"
-
+/// \cond
 #include <list>
+/// \endcond
+
+#include "httpony/io/connection.hpp"
 
 namespace httpony {
 namespace io {

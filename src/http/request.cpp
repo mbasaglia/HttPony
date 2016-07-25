@@ -20,11 +20,7 @@
  */
 
 #include "httpony/http/request.hpp"
-
-#include "httpony/multipart.hpp"
-#include "httpony/base_encoding.hpp"
-
-#include "httpony/http/format/read.hpp"
+#include "httpony/http/parser.hpp"
 
 namespace httpony {
 
@@ -53,14 +49,17 @@ bool Request::parse_post()
         if ( body.content_type().parameter().first != "boundary" )
             return false;
 
+        /// \todo Change parser based on the protocol
+        Http1Parser parser;
+
         Multipart form_data(body.content_type().parameter().second);
-        if ( !form_data.read(body) )
+        if ( !parser.multipart(body, form_data) )
             return false;
 
         for ( const auto& part : form_data.parts )
         {
             CompoundHeader disposition;
-            if ( !http::read::compound_header(part.headers.get("content-disposition"), disposition) )
+            if ( !parser.compound_header(part.headers.get("content-disposition"), disposition) )
                 return false;
             if ( disposition.value != "form-data" || !disposition.parameters.contains("name") )
                 return false;
@@ -73,24 +72,6 @@ bool Request::parse_post()
     /// \todo multipart/mixed ?
 
     return false;
-}
-
-Auth::Auth(const std::string& header_contents)
-{
-    melanolib::string::QuickStream stream(header_contents);
-    auth_scheme = stream.get_until(melanolib::string::ascii::is_space);
-    stream.ignore_if(melanolib::string::ascii::is_space);
-    auth_string = stream.get_until(melanolib::string::ascii::is_space);
-    http::read::header_parameters(stream, parameters);
-    realm = parameters.get("realm");
-    parameters.erase("realm");
-
-    if ( auth_scheme == "Basic" )
-    {
-        stream.str(Base64().decode(auth_string));
-        user = stream.get_line(':');
-        password = stream.get_remaining();
-    }
 }
 
 } // namespace httpony

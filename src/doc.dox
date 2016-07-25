@@ -1,0 +1,53 @@
+/**
+ * \mainpage
+ *
+ * A modern C++ HTTP library.
+ *
+ * \section Information
+ *
+ *  \subsection Features
+ *  * HTTP/1.x
+ *  * Optional SSL/HTTPS support (Requires to link against OpenSSL)
+ *  * Threaded server implementation
+ *  * Synchronous and asynchronous client implementation
+ *  * Abstraction over low-level aspects of the protocol
+ *  * Implementation of related RFCs (URI, base encoding and others)
+ *
+ * \subsection License
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * \section Compiling
+ *
+ * \subsection Dependencies
+ * \par Libraries
+ *  * [Melanolib](https://github.com/mbasaglia/Melanolib) (Included as a sub-module)
+ *  * [Boost ASIO](http://boost.org)
+ *
+ * If you want SSL support you need to link your executable against
+ * [OpenSSL](https://www.openssl.org/).
+ *
+ * \par Tools
+ *  * [CMake](https://cmake.org/)
+ *  * [Git](https://git-scm.com/)
+ *  * A C++14 compiler (Like [g++](https://gcc.gnu.org/))
+ *
+ * \subsection Building
+ * \code{.sh}
+ * mkdir build && cd build && cmake .. && make
+ * \endcode
+ *
+ * \section Documentation
+ *  * <a href="examples.html">Examples</a>
+ *  * <a href="annotated.html">Classes</a>
+ */

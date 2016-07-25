@@ -21,8 +21,12 @@
 #ifndef HTTPONY_CONNECTION_HPP
 #define HTTPONY_CONNECTION_HPP
 
-#include "httpony/http/format/write.hpp"
-#include "httpony/http/format/read.hpp"
+/// \cond
+#include <iostream>
+/// \endcond
+
+#include "httpony/io/buffer.hpp"
+#include "httpony/ip_address.hpp"
 
 namespace httpony {
 namespace io {
@@ -30,6 +34,110 @@ namespace io {
 class Connection
 {
 public:
+    /**
+     * \brief Stream used to send data through the connection
+     * \note There should be only one send stream per connection at a given time
+     * \todo Better async streaming
+     */
+    class SendStream : public std::ostream
+    {
+    public:
+        SendStream(SendStream&& oth)
+            : std::ostream(oth.rdbuf()),
+              connection(oth.connection)
+        {
+            oth.unset();
+        }
+
+        SendStream& operator=(SendStream&& oth)
+        {
+            rdbuf(oth.rdbuf());
+            connection = oth.connection;
+            oth.unset();
+            return *this;
+        }
+
+        ~SendStream()
+        {
+            send();
+        }
+
+        /**
+         * \brief Ensures all data is being sent,
+         * \returns \b true on success
+         * \note If not called, the data will still be sent but you might not be
+         * able to detect whether that has been successful
+         */
+        bool send()
+        {
+            if ( connection && connection->commit_output() )
+                return true;
+            setstate(badbit);
+            return false;
+        }
+
+    private:
+        void unset()
+        {
+            connection = nullptr;
+            rdbuf(nullptr);
+        }
+
+        SendStream(Connection* connection)
+            : std::ostream(&connection->output_buffer()),
+             connection(connection)
+        {}
+
+        friend Connection;
+        Connection* connection;
+    };
+
+    class ReceiveStream : public std::istream
+    {
+    public:
+        ReceiveStream(ReceiveStream&& oth)
+            : std::istream(oth.rdbuf()),
+              connection(oth.connection)
+        {
+            oth.unset();
+        }
+
+        ReceiveStream& operator=(ReceiveStream&& oth)
+        {
+            rdbuf(oth.rdbuf());
+            connection = oth.connection;
+            oth.unset();
+            return *this;
+        }
+
+        bool timed_out() const
+        {
+            return connection->_socket.timed_out();
+        }
+
+    private:
+        void unset()
+        {
+            connection = nullptr;
+            rdbuf(nullptr);
+        }
+
+        ReceiveStream(Connection* connection)
+            : std::istream(&connection->input_buffer()),
+             connection(connection)
+        {
+            boost::system::error_code error;
+            /// \todo Avoid magic number, keep reading if needed
+            auto sz = connection->_input_buffer.read_some(1024, error);
+            if ( error || sz <= 0 )
+                setstate(badbit);
+        }
+
+        friend Connection;
+        Connection* connection;
+    };
+
+
     template<class... SocketArgs>
         explicit Connection(SocketArgs&&... args)
             : _socket(std::forward<SocketArgs>(args)...)
@@ -40,13 +148,15 @@ public:
         return _input_buffer;
     }
 
-    boost::asio::streambuf& output_buffer()
+    NetworkOutputBuffer& output_buffer()
     {
         return _output_buffer;
     }
 
     bool commit_output()
     {
+        if ( _output_buffer.size() == 0 )
+            return true;
         boost::system::error_code error;
         _socket.write(_output_buffer.data(), error);
         _output_buffer.consume(_output_buffer.size());
@@ -68,23 +178,9 @@ public:
         return _socket.local_address();
     }
 
-    bool send_response(Response& response)
+    SendStream send_stream()
     {
-        std::ostream stream(&_output_buffer);
-        http::write::response(stream, response);
-        return commit_output();
-    }
-
-    bool send_response(Response&& resp)
-    {
-        return send_response(resp);
-    }
-
-    bool send_request(Request& request)
-    {
-        std::ostream stream(&_output_buffer);
-        http::write::request(stream, request);
-        return commit_output();
+        return SendStream(this);
     }
 
     bool connected() const
@@ -92,73 +188,9 @@ public:
         return _socket.is_open();
     }
 
-    /**
-     * \brief Reads request data from the socket
-     *
-     * Sets \c output.status to an error code if the request is malformed
-     */
-    Request read_request(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
+    ReceiveStream receive_stream()
     {
-        Request output;
-
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-            output = http::read::request(stream, parse_flags, _status);
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            _status = StatusCode::RequestTimeout;
-        }
-        else
-        {
-            _status = StatusCode::BadRequest;
-        }
-
-        return output;
-    }
-
-    Response read_response(http::read::HttpParserFlags parse_flags = http::read::ParseDefault)
-    {
-        Response output;
-
-        boost::system::error_code error;
-        /// \todo Avoid magic number, keep reading if needed
-        auto sz = _input_buffer.read_some(1024, error);
-
-        _status = StatusCode::BadRequest;
-
-        if ( !error && sz > 0 )
-        {
-            std::istream stream(&_input_buffer);
-
-            if ( http::read::response(stream, parse_flags, output) );
-                _status = output.status;
-
-            if ( output.body.has_data() )
-                _input_buffer.expect_input(output.body.content_length());
-        }
-        else if ( _socket.timed_out() )
-        {
-            _status = StatusCode::RequestTimeout;
-        }
-
-        return output;
-    }
-
-    Status status() const
-    {
-        return _status;
-    }
-
-    void set_status(const Status& status)
-    {
-        _status = status;
+        return ReceiveStream(this);
     }
 
     TimeoutSocket& socket()
@@ -166,13 +198,14 @@ public:
         return _socket;
     }
 
+
 private:
 
     TimeoutSocket       _socket;
     NetworkInputBuffer  _input_buffer{_socket};
     NetworkOutputBuffer _output_buffer;
-    Status              _status;
 };
+
 
 } // namespace io
 } // namespace httpony

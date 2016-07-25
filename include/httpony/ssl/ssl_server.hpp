@@ -21,7 +21,6 @@
 #ifndef HTTPONY_SSL_SERVER_HPP
 #define HTTPONY_SSL_SERVER_HPP
 
-
 #include "httpony/ssl/ssl_socket.hpp"
 #include "httpony/http/agent/server.hpp"
 

@@ -17,10 +17,12 @@
 
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 
+add_custom_target(examples)
 
 function(example name)
     add_executable(${name} ${name}.cpp)
     target_link_libraries(${name} ${LIBRARY_NAME})
+    add_dependencies(examples ${name})
 endfunction()
 
 
@@ -45,7 +47,11 @@ find_package(OpenSSL QUIET)
 if(OPENSSL_FOUND)
     example(ssl_server)
     target_link_libraries(ssl_server ${OPENSSL_LIBRARIES})
+
+    example(ssl_client)
+    target_link_libraries(ssl_client ${OPENSSL_LIBRARIES})
 else()
-    message(STATUS "ssl_server example disabled (You need OpenSSL for this)")
+    message(STATUS "ssl_server and ssl_client examples disabled (You need OpenSSL for them)")
 endif()
+
 

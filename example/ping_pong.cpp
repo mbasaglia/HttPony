@@ -29,20 +29,29 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request);
-        log_response(log_format, connection, request, response, std::cout);
+        httpony::Response response = build_response(connection, request, status);
+
+        std::cout << "=============\nServer:\n";
+        httpony::http::Http1Formatter("\n").request(std::cout, request);
+        std::cout << "\n=============\n";
+
         send_response(connection, request, response);
     }
 
+    ~PingPongServer()
+    {
+        std::cout << "Server stopped\n";
+    }
+
 protected:
-    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request) const
+    httpony::Response build_response(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) const
     {
         try
         {
-            if ( connection.status().is_error() )
-                return simple_response(connection.status(), request.protocol);
+            if ( status.is_error() )
+                return simple_response(status, request.protocol);
 
             if ( request.method != "GET"  && request.method != "HEAD")
                 return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
@@ -95,34 +104,55 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
+    }
+};
+
+class PingPongClient : public httpony::AsyncClient
+{
+public:
+    PingPongClient(const httpony::Authority& server)
+        : uri("http", server, httpony::Path("ping"), {}, {})
+    {}
+
+    ~PingPongClient()
+    {
+        std::cout << "Client stopped\n";
+    }
+
+    void create_request()
+    {
+        async_query(
+            httpony::Request("GET", uri),
+            [this](httpony::Request&, httpony::Response& response){
+                accept_response(response);
+
+            },
+            &client_error
+        );
     }
 
 private:
-    std::string log_format = "SV: %h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";
+    void accept_response( httpony::Response& response)
+    {
+        /// \todo Make sure Http1Formatter::response() works properly for input responses as well
+        std::cout << "=============\nClient:\n";
+        httpony::http::Http1Formatter("\n").response(std::cout, response);
+        std::cout << response.body.read_all();
+        std::cout << "\n=============\n";
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        create_request();
+    }
+
+    static void client_error(httpony::Request& request, const httpony::ClientStatus& status)
+    {
+        std::cerr << "Error accessing " << request.url.full() << ": " << status.message() << std::endl;
+    }
+
+    httpony::Uri uri;
 };
 
-
-void accept_response(httpony::Response&& response)
-{
-    /// \todo Make sure http::write::response() works properly for input responses as well
-    httpony::http::write::response_line(std::cout, response);
-    httpony::http::write::headers(std::cout, response.headers);
-    std::cout << '\n';
-    std::cout << response.body.read_all() << '\n';
-}
-
-
-void send_request(httpony::Client& client, const httpony::Authority& server)
-{
-    accept_response(
-        client.send_request(httpony::Request(
-            "GET",
-            httpony::Uri("http", server, httpony::Path("ping"), {}, {})
-        ))
-    );
-}
 
 int main(int argc, char** argv)
 {
@@ -143,16 +173,14 @@ int main(int argc, char** argv)
     std::cout << "Server started on port " << server.listen_address().port << "\n";
 
     // This starts the client on a separate thread
-    httpony::Client client;
+    PingPongClient client(sv_auth);
     client.start();
     std::cout << "Client started\n";
-    send_request(client, sv_auth);
+    client.create_request();
 
     // Pause the main thread listening to standard input
     std::cout << "Hit enter to quit\n";
     std::cin.get();
-    std::cout << "Client stopped\n";
-    std::cout << "Server stopped\n";
 
     // The destructors will stop client and server and join the thread
     return 0;

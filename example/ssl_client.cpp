@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include "httpony.hpp"
+#include "httpony/ssl/ssl.hpp"
 
 void print_response(httpony::Response& response)
 {
@@ -33,9 +33,9 @@ int main(int argc, char** argv)
     if ( argc > 1 )
         url = argv[1];
     else
-        url = "http://example.com";
+        url = "https://example.com";
 
-    httpony::Client client;
+    httpony::ssl::SslClient client;
 
     httpony::Response response;
     httpony::Request request("GET", url);

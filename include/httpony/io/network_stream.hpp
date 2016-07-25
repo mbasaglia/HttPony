@@ -22,7 +22,9 @@
 #ifndef HTTPONY_NETWORK_STREAM_HPP
 #define HTTPONY_NETWORK_STREAM_HPP
 
+/// \cond
 #include <iostream>
+/// \endcond
 
 #include "httpony/mime_type.hpp"
 #include "httpony/http/headers.hpp"

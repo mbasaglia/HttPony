@@ -19,26 +19,52 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "httpony/mime_type.hpp"
+#ifndef HTTPONY_CLIENT_STATUS_HPP
+#define HTTPONY_CLIENT_STATUS_HPP
 
-#include "httpony/http/parser.hpp"
-
+/// \cond
+#include <string>
+/// \endcond
 
 namespace httpony {
 
 
-MimeType::MimeType(const std::string& string)
+class ClientStatus
 {
-    melanolib::string::QuickStream stream(string);
-    set_type(stream.get_line('/'));
-    set_subtype(stream.get_until(
-        [](char c){ return melanolib::string::ascii::is_space(c) || c ==';'; }
-    ));
+public:
+    ClientStatus() = default;
 
-    Headers parameters;
-    Http1Parser().header_parameters(stream, parameters);
-    if ( !parameters.empty() )
-        set_parameter(parameters.front());
-}
+    ClientStatus(std::string message)
+        : _message(std::move(message))
+    {}
+
+    ClientStatus(const char* message)
+        : _message(message)
+    {}
+
+    const std::string& message() const
+    {
+        return _message;
+    }
+
+    explicit operator bool() const
+    {
+        return !error();
+    }
+
+    bool operator!() const
+    {
+        return error();
+    }
+
+    bool error() const
+    {
+        return !_message.empty();
+    }
+
+private:
+    std::string _message;
+};
 
 } // namespace httpony
+#endif // HTTPONY_CLIENT_STATUS_HPP

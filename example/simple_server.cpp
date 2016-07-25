@@ -35,9 +35,9 @@ public:
         set_timeout(melanolib::time::seconds(16));
     }
 
-    void respond(httpony::io::Connection& connection, httpony::Request&& request) override
+    void respond(httpony::io::Connection& connection, httpony::Request& request, const httpony::Status& status) override
     {
-        httpony::Response response = build_response(connection, request);
+        httpony::Response response = build_response(connection, request, status);
         log_response(log_format, connection, request, response, std::cout);
         send_response(connection, request, response);
     }
@@ -48,12 +48,13 @@ protected:
      */
     httpony::Response build_response(
         httpony::io::Connection& connection,
-        httpony::Request& request) const
+        httpony::Request& request,
+        const httpony::Status& status) const
     {
         try
         {
-            if ( connection.status().is_error() )
-                return simple_response(connection.status(), request.protocol);
+            if ( status.is_error() )
+                return simple_response(status, request.protocol);
 
             if ( request.method != "GET" && request.method != "HEAD")
                 return simple_response(httpony::StatusCode::MethodNotAllowed, request.protocol);
@@ -106,7 +107,7 @@ protected:
         // This removes the response body when mandated by HTTP
         response.clean_body(request);
 
-        if ( !connection.send_response(response) )
+        if ( !send(connection, response) )
             connection.close();
     }
 

@@ -22,9 +22,11 @@
 #ifndef HTTPONY_IP_ADDRESS_HPP
 #define HTTPONY_IP_ADDRESS_HPP
 
+/// \cond
 #include <string>
 #include <cstdint>
 #include <ostream>
+/// \endcond
 
 namespace httpony {
 
