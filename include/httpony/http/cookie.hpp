@@ -31,6 +31,10 @@
 
 namespace httpony {
 
+/**
+ * \brief Set-Cookie value
+ * \see https://tools.ietf.org/html/rfc6265
+ */
 struct Cookie
 {
     Cookie(
@@ -100,6 +104,103 @@ inline std::ostream& operator<<(std::ostream& os, CookieJar::const_reference coo
 
     return os;
 }
+
+/**
+ * \brief Cookie as stored on the client
+ */
+class ClientCookie
+{
+public:
+    ClientCookie(const Cookie& cookie)
+        : domain(cookie.domain),
+          path(cookie.path),
+          secure(cookie.secure),
+          http_only(cookie.http_only)
+    {
+        if ( cookie.max_age )
+        {
+            if ( cookie.max_age->count() <= 0 )
+                expiry_time = melanolib::time::DateTime{
+                    melanolib::time::DateTime::Time::min()
+                };
+            else
+                expiry_time = melanolib::time::DateTime{} + *cookie.max_age;
+        }
+        else if ( cookie.expires )
+        {
+            expiry_time = *cookie.expires;
+        }
+    }
+
+    /**
+     * \brief Whether the cookie can be sent to the given uri
+     */
+    bool matches_uri(const Uri& uri) const
+    {
+        return matches_domain(uri.authority.host) && matches_path(path);
+    }
+
+    /**
+     * \brief Whether the domain string matches
+     * \see https://tools.ietf.org/html/rfc6265#section-5.1.3
+     */
+    bool matches_domain(const std::string& string) const
+    {
+        /// \todo canonicalize domains ( https://tools.ietf.org/html/rfc6265#section-5.1.2 )
+        if ( domain == string )
+            return true;
+        if ( !melanolib::string::ends_with(string, '.' + domain) )
+            return false;
+        /// \todo Check if the string is an IP address
+        return true;
+    }
+
+    /**
+     * \brief Whether the path matches
+     * \see https://tools.ietf.org/html/rfc6265#section-5.1.4
+     */
+    bool matches_path(const Path& other_path) const
+    {
+        if ( other_path.size() < path.size() )
+            return false;
+        return std::equal(
+            path.begin(),
+            path.end(),
+            other_path.begin(),
+            other_path.begin() + path.size()
+        );
+    }
+
+    bool expired(const melanolib::time::DateTime& date = {}) const
+    {
+        return expiry_time < date;
+    }
+
+    bool is_session() const
+    {
+        return !expiry_time;
+    }
+
+    void update_access()
+    {
+        last_access = {};
+    }
+
+    std::string value;
+    melanolib::Optional<melanolib::time::DateTime> expiry_time;
+    std::string domain;
+    Path path;
+    bool secure = false;
+    bool http_only = false;
+    melanolib::time::DateTime creation_time;
+    melanolib::time::DateTime last_access;
+};
+
+/**
+ * \todo Order as from https://tools.ietf.org/html/rfc6265#section-5.4 (2.)
+ */
+using ClientCookieJar = melanolib::OrderedMultimap<std::string, ClientCookie>;
+
 
 
 } // namespace httpony
