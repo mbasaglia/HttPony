@@ -116,6 +116,15 @@ public:
         return _content_type;
     }
 
+    /**
+     * \brief Writes the payload to a stream
+     */
+    void write_to(std::ostream& output)
+    {
+        if ( has_data() )
+            output << rdbuf();
+    }
+
 private:
     std::size_t _content_length = 0;
     MimeType _content_type;
@@ -301,10 +310,13 @@ public:
         return true;
     }
 
+    /**
+     * \brief Writes the payload to a stream
+     */
     void write_to(std::ostream& output)
     {
-        if ( _mode == OpenMode::Output )
-            _output.write_to(output);
+        if ( has_data() )
+            output << rdbuf();
     }
 
 // Both

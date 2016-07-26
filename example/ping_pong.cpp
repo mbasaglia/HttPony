@@ -35,7 +35,7 @@ public:
 
         std::cout << "=============\nServer:\n";
         httpony::http::Http1Formatter("\n").request(std::cout, request);
-        std::cout << "\n=============\n";
+        std::cout << "=============\n";
 
         send_response(request, response);
     }
@@ -61,7 +61,7 @@ protected:
 
             httpony::Response response(request.protocol);
             response.body.start_output("text/plain");
-            response.body << "pong";
+            response.body << "pong\n";
             return response;
         }
         catch ( const std::exception& )
@@ -138,8 +138,7 @@ private:
         /// \todo Make sure Http1Formatter::response() works properly for input responses as well
         std::cout << "=============\nClient:\n";
         httpony::http::Http1Formatter("\n").response(std::cout, response);
-        std::cout << response.body.read_all();
-        std::cout << "\n=============\n";
+        std::cout << "=============\n";
         std::this_thread::sleep_for(std::chrono::seconds(1));
         create_request();
     }

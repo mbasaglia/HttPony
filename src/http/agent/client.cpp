@@ -68,7 +68,7 @@ ClientStatus Client::on_attempt(Request& request, Response& response, int attemp
     /// \todo Also handle on async client
     if ( response.status.type() == StatusType::Redirection && response.headers.contains("Location") )
     {
-        if ( attempt >= _max_redirects )
+        if ( attempt > _max_redirects )
             return "too many redirects";
 
         Uri target = response.headers["Location"];
@@ -87,7 +87,8 @@ ClientStatus Client::on_attempt(Request& request, Response& response, int attemp
             request.method = "GET";
         request.body.stop_output();
 
-        return get_response_attempt(attempt + 1, request, response);
+        if ( _max_redirects > 0 )
+            return get_response_attempt(attempt + 1, request, response);
     }
 
     return {};

@@ -175,7 +175,7 @@ private:
      */
     void response_headers(std::ostream& stream, const Response& response) const
     {
-        if ( response.headers.contains("Date") )
+        if ( !response.headers.contains("Date") )
             header(stream, "Date", melanolib::time::strftime(response.date, "%r GMT"));
 
         headers(stream, response.headers);

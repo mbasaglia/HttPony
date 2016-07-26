@@ -22,9 +22,7 @@
 
 void print_response(httpony::Response& response)
 {
-    /// \todo Make sure Http1Formatter::response() works properly for input responses as well
     httpony::http::Http1Formatter("\n").response(std::cout, response);
-    std::cout << response.body.read_all() << '\n';
 }
 
 int main(int argc, char** argv)
