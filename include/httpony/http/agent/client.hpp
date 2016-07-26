@@ -43,6 +43,7 @@ public:
           _max_redirects(melanolib::math::max(0, max_redirects))
     {}
 
+    /// \todo Some way to build the default user agent
     Client() : Client("HttPony/1.0") {}
 
     virtual ~Client()
@@ -124,9 +125,19 @@ public:
 
 
 protected:
+    /**
+     * \brief Called right before a request is sent to the connection
+     */
     virtual void process_request(Request& request) const
     {
         request.headers["User-Agent"] = _user_agent;
+    }
+
+    /**
+     * \brief Called right after a request is successfully received from the connection
+     */
+    virtual void process_response(Response& response) const
+    {
     }
 
     virtual ClientStatus on_attempt(Request& request, Response& response, int attempt_number) const;
@@ -245,8 +256,10 @@ public:
     }
 
     template<class GetRequest, class OnResponse, class OnError>
-    void async_query(Uri target, const GetRequest& get_request,
-                       const OnResponse& on_response, const OnError& on_error)
+    void async_query(Uri target,
+                     const GetRequest& get_request,
+                     const OnResponse& on_response,
+                     const OnError& on_error)
     {
         auto connection = ClientT::create_connection(target);
 
@@ -255,16 +268,24 @@ public:
         auto& item = items.back();
         lock.unlock();
 
+        auto on_connect = [this, target, get_request, on_response, on_error, &item]()
+        {
+            Response response;
+            auto status = ClientT::get_response(item.connection, get_request(), response);
+            if ( status.error() )
+            {
+                on_error(target, status);
+            }
+            else
+            {
+                ClientT::process_response(response);
+                on_response(target, response);
+            }
+            drop_connection(item.connection_ptr());
+        };
+
         ClientT::_basic_client.async_connect(target, item.connection,
-            [this, target, get_request, on_response, on_error, &item](){
-                Response response;
-                auto status = ClientT::get_response(item.connection, get_request(), response);
-                if ( status.error() )
-                    on_error(target, status);
-                else
-                    on_response(target, response);
-                drop_connection(item.connection_ptr());
-            },
+            on_connect,
             [this, on_error, target, &item](const ClientStatus& status)
             {
                 on_error(target, status);
@@ -287,16 +308,24 @@ public:
         auto& item = items.back();
         lock.unlock();
 
+        auto on_connect = [this, on_response, on_error, &item]()
+        {
+            Response response;
+            auto status = ClientT::get_response(item.connection, *item.request, response);
+            if ( status.error() )
+            {
+                on_error(*item.request, status);
+            }
+            else
+            {
+                ClientT::process_response(response);
+                on_response(*item.request, response);
+            }
+            drop_connection(item.connection_ptr());
+        };
+
         ClientT::_basic_client.async_connect(item.request->url, *item.connection,
-            [this, on_response, on_error, &item](){
-                Response response;
-                auto status = ClientT::get_response(item.connection, *item.request, response);
-                if ( status.error() )
-                    on_error(*item.request, status);
-                else
-                    on_response(*item.request, response);
-                drop_connection(item.connection_ptr());
-            },
+            on_connect,
             [this, on_error, &item](const ClientStatus& status)
             {
                 on_error(*item.request, status);

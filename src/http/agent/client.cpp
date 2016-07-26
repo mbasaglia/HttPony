@@ -34,20 +34,27 @@ ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connect
 
 ClientStatus Client::get_response_attempt(int attempt, Request& request, Response& response) const
 {
-    response = Response();
-    response.connection = request.connection;
 
     if ( !request.connection )
+    {
+        response = Response();
+        response.connection = request.connection;
         return "client not connected";
+    }
 
     process_request(request);
     auto ostream = request.connection->send_stream();
     http::Http1Formatter().request(ostream, request);
     if ( !ostream.send() )
+    {
+        response = Response();
+        response.connection = request.connection;
         return "connection error";
+    }
 
     auto istream = request.connection->receive_stream();
     ClientStatus status = Http1Parser().response(istream, response);
+    response.connection = request.connection;
 
     if ( istream.timed_out() )
         return "timeout";
@@ -56,7 +63,8 @@ ClientStatus Client::get_response_attempt(int attempt, Request& request, Respons
         return status;
 
     if ( response.body.has_data() )
-        request.connection->input_buffer().expect_input(response.body.content_length());
+        response.connection->input_buffer().expect_input(response.body.content_length());
+    process_response(response);
 
     return on_attempt(request, response, attempt);
 }

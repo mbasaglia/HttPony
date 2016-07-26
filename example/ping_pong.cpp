@@ -126,7 +126,6 @@ public:
             httpony::Request("GET", uri),
             [this](httpony::Request&, httpony::Response& response){
                 accept_response(response);
-
             },
             &client_error
         );

@@ -39,6 +39,9 @@ std::string urldecode(const std::string& input, bool plus_spaces = false);
  *
  * Paths segments are separated by forward slashes
  * \todo Test
+ *
+ * \todo Path should distinguish /foo/bar/ from /foo/bar
+ *       Perhaps this can be achieved by appending an empty string for filename
  */
 class Path
 {
