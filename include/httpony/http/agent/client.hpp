@@ -23,8 +23,10 @@
 
 /// \cond
 #include <list>
+#include <type_traits>
 
 #include <melanolib/utils/movable.hpp>
+#include <melanolib/utils/functional.hpp>
 /// \endcond
 
 #include "httpony/io/basic_client.hpp"
@@ -55,7 +57,7 @@ public:
      * \param[in]  target URI of the server to connect to
      * \param[out] status Status of the operation
      */
-    std::shared_ptr<io::Connection> connect(Uri target, ClientStatus& status) const
+    std::shared_ptr<io::Connection> connect(Uri target, ClientStatus& status)
     {
         if ( target.scheme.empty() )
             target.scheme = "http";
@@ -69,7 +71,7 @@ public:
         return connection;
     }
 
-    ClientStatus query(Request& request, Response& response) const
+    ClientStatus query(Request& request, Response& response)
     {
         ClientStatus status;
         auto connection = connect(request.url, status);
@@ -83,7 +85,7 @@ public:
     /**
      * \brief Writes the request and retrieves the response over a connection object
      */
-    ClientStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const;
+    ClientStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response);
 
     /**
      * \brief The timeout for network I/O operations
@@ -128,7 +130,7 @@ protected:
     /**
      * \brief Called right before a request is sent to the connection
      */
-    virtual void process_request(Request& request) const
+    virtual void process_request(Request& request)
     {
         request.headers["User-Agent"] = _user_agent;
     }
@@ -136,24 +138,24 @@ protected:
     /**
      * \brief Called right after a request is successfully received from the connection
      */
-    virtual void process_response(Response& response) const
+    virtual void process_response(Request& request, Response& response)
     {
     }
 
-    virtual ClientStatus on_attempt(Request& request, Response& response, int attempt_number) const;
+    virtual ClientStatus on_attempt(Request& request, Response& response, int attempt_number);
 
     /**
      * \brief Creates a new connection object
      */
-    virtual std::shared_ptr<io::Connection> create_connection(const Uri& target) const
+    virtual std::shared_ptr<io::Connection> create_connection(const Uri& target)
     {
         return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
-    ClientStatus get_response_attempt(int attempt, Request& request, Response& response) const;
+    ClientStatus get_response_attempt(int attempt, Request& request, Response& response);
     
 private:
-    virtual ClientStatus on_connect(const Uri& target, io::Connection& connection) const
+    virtual ClientStatus on_connect(const Uri& target, io::Connection& connection)
     {
         return {};
     }
@@ -169,24 +171,8 @@ private:
 template<class ClientT>
 class BasicAsyncClient : public ClientT
 {
-private:
-    struct AsyncItem
-    {
-        AsyncItem(
-            std::shared_ptr<io::Connection> connection,
-            melanolib::Optional<Request> request = {}
-        ) : connection(std::move(connection)),
-            request(std::move(request))
-        {}
-
-        io::Connection* connection_ptr()
-        {
-            return connection.get();
-        }
-
-        std::shared_ptr<io::Connection> connection;
-        melanolib::Optional<Request> request;
-    };
+    static_assert(std::is_base_of<Client, ClientT>::value, "Client class expected");
+    using item_iterator = typename std::list<Request>::iterator;
 
 public:
     template<class... Args>
@@ -239,121 +225,107 @@ public:
             connections.reserve(items.size());
 
             for ( auto& item : items )
-                connections.push_back(item.connection_ptr());
+                connections.push_back(item.connection.get());
 
             lock.unlock();
             for ( auto connection : connections )
                 connection->socket().process_async();
             lock.lock();
 
-            std::unique_lock<std::mutex> old_lock(old_connections_mutex);
+            std::unique_lock<std::mutex> old_lock(old_requests_mutex);
             for ( auto it_conn = items.begin(); it_conn != items.end(); )
             {
                 it_conn = remove_old(it_conn);
             }
-
         }
     }
 
-    template<class GetRequest, class OnResponse, class OnError>
-    void async_query(Uri target,
-                     const GetRequest& get_request,
-                     const OnResponse& on_response,
-                     const OnError& on_error)
+    template<class OnResponse, class OnConnect, class OnError>
+        void async_query(
+            Request&& request,
+            const OnResponse& on_response,
+            const OnConnect& on_connect,
+            const OnError& on_error)
     {
-        auto connection = ClientT::create_connection(target);
+        request.connection = ClientT::create_connection(request.url);
 
         std::unique_lock<std::mutex> lock(mutex);
-        items.push_back(std::move(connection));
+        items.emplace_back(std::move(request));
         auto& item = items.back();
         lock.unlock();
 
-        auto on_connect = [this, target, get_request, on_response, on_error, &item]()
-        {
-            Response response;
-            auto status = ClientT::get_response(item.connection, get_request(), response);
-            if ( status.error() )
+        basic_client().async_connect(item.url, *item.connection,
+            [this, on_response, on_connect, on_error, &item]()
             {
-                on_error(target, status);
-            }
-            else
+                melanolib::callback(on_connect, item);
+                Response response;
+                /// \todo get_response is not async
+                auto status = ClientT::get_response(item.connection, item, response);
+                if ( status.error() )
+                {
+                    this->on_error(item, status);
+                    melanolib::callback(on_error, item, status);
+                }
+                else
+                {
+                    //this->process_response(item, response);
+                    melanolib::callback(on_response, item, response);
+                }
+                clean_request(&item);
+            },
+            [this, on_error, &item](const ClientStatus& status)
             {
-                ClientT::process_response(response);
-                on_response(target, response);
-            }
-            drop_connection(item.connection_ptr());
-        };
-
-        ClientT::_basic_client.async_connect(target, item.connection,
-            on_connect,
-            [this, on_error, target, &item](const ClientStatus& status)
-            {
-                on_error(target, status);
-                drop_connection(item.connection_ptr());
+                this->on_error(item, status);
+                melanolib::callback(on_error, item, status);
+                clean_request(&item);
             }
         );
 
         condition.notify_one();
     }
 
-    template<class OnResponse, class OnError>
-    void async_query(Request&& request,
-                     const OnResponse& on_response,
-                     const OnError& on_error)
+    void async_query(Request&& request)
     {
-        auto connection = ClientT::create_connection(request.url);
-
-        std::unique_lock<std::mutex> lock(mutex);
-        items.emplace_back(std::move(connection), std::move(request));
-        auto& item = items.back();
-        lock.unlock();
-
-        auto on_connect = [this, on_response, on_error, &item]()
-        {
-            Response response;
-            auto status = ClientT::get_response(item.connection, *item.request, response);
-            if ( status.error() )
-            {
-                on_error(*item.request, status);
-            }
-            else
-            {
-                ClientT::process_response(response);
-                on_response(*item.request, response);
-            }
-            drop_connection(item.connection_ptr());
-        };
-
-        ClientT::_basic_client.async_connect(item.request->url, *item.connection,
-            on_connect,
-            [this, on_error, &item](const ClientStatus& status)
-            {
-                on_error(*item.request, status);
-                drop_connection(item.connection_ptr());
-            }
+        async_query(
+            std::move(request),
+            [this](Request& request, Response& response){
+                return on_response(request, response);
+            },
+            melanolib::Noop(),
+            melanolib::Noop()
         );
-
-        condition.notify_one();
     }
 
 private:
-    using item_iterator = typename std::list<AsyncItem>::iterator;
 
-    void drop_connection(io::Connection* connection)
+    io::BasicClient& basic_client()
     {
-        std::unique_lock<std::mutex> lock(old_connections_mutex);
-        old_connections.push_back(connection);
+        return this->_basic_client;
+    }
+
+    virtual void on_error(Request& request, const ClientStatus& status)
+    {
+    }
+
+    virtual void on_response(Request& request, Response& response)
+    {
+    }
+
+    void clean_request(Request* request)
+    {
+        std::unique_lock<std::mutex> lock(old_requests_mutex);
+        old_requests.push_back(request);
         lock.unlock();
         condition.notify_one();
     }
 
     item_iterator remove_old(item_iterator iter)
     {
-        for ( auto it_old = old_connections.begin(); it_old != old_connections.end(); )
+        for ( auto it_old = old_requests.begin(); it_old != old_requests.end(); )
         {
-            if ( *it_old == iter->connection_ptr() )
+            if ( *it_old == &*iter )
             {
-                old_connections.erase(it_old);
+                old_requests.erase(it_old);
                 iter->connection->close();
                 return items.erase(iter);
             }
@@ -366,10 +338,10 @@ private:
 
     std::mutex mutex;
     std::atomic<bool> should_run = true;
-    std::list<AsyncItem> items;
+    std::list<Request> items;
 
-    std::mutex old_connections_mutex;
-    std::list<io::Connection*> old_connections;
+    std::mutex old_requests_mutex;
+    std::list<Request*> old_requests;
 };
 
 using AsyncClient = BasicAsyncClient<Client>;

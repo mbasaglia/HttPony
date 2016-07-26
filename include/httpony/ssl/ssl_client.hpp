@@ -37,7 +37,7 @@ public:
         {}
 
 protected:
-    std::shared_ptr<io::Connection> create_connection(const Uri& target) const final
+    std::shared_ptr<io::Connection> create_connection(const Uri& target) final
     {
         if ( target.scheme == "https" )
             return std::make_shared<io::Connection>(io::SocketTag<SslSocket>{}, context);
@@ -45,7 +45,7 @@ protected:
     }
 
 private:
-    ClientStatus on_connect(const Uri& target, io::Connection& connection) const override
+    ClientStatus on_connect(const Uri& target, io::Connection& connection) override
     {
         if ( target.scheme == "https" )
         {
@@ -61,7 +61,7 @@ private:
         return {};
     }
 
-    mutable boost_ssl::context context;
+    boost_ssl::context context;
 };
 
 

@@ -26,13 +26,13 @@
 namespace httpony {
 
 
-ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response) const
+ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response)
 {
     request.connection = connection;
     return get_response_attempt(0, request, response);
 }
 
-ClientStatus Client::get_response_attempt(int attempt, Request& request, Response& response) const
+ClientStatus Client::get_response_attempt(int attempt, Request& request, Response& response)
 {
 
     if ( !request.connection )
@@ -64,17 +64,18 @@ ClientStatus Client::get_response_attempt(int attempt, Request& request, Respons
 
     if ( response.body.has_data() )
         response.connection->input_buffer().expect_input(response.body.content_length());
-    process_response(response);
+
+    process_response(request, response);
 
     return on_attempt(request, response, attempt);
 }
 
-ClientStatus Client::on_attempt(Request& request, Response& response, int attempt) const
+ClientStatus Client::on_attempt(Request& request, Response& response, int attempt)
 {
     /// \todo Try again on 408 (Request Timeout)
     /// \todo Handle 426 (Upgrade Required) for known protocol versions
     /// \todo Also handle on async client
-    if ( response.status.type() == StatusType::Redirection && response.headers.contains("Location") )
+    if ( _max_redirects > 0 && response.status.type() == StatusType::Redirection && response.headers.contains("Location") )
     {
         if ( attempt > _max_redirects )
             return "too many redirects";
@@ -95,8 +96,7 @@ ClientStatus Client::on_attempt(Request& request, Response& response, int attemp
             request.method = "GET";
         request.body.stop_output();
 
-        if ( _max_redirects > 0 )
-            return get_response_attempt(attempt + 1, request, response);
+        return get_response_attempt(attempt + 1, request, response);
     }
 
     return {};

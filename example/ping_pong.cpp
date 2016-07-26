@@ -122,29 +122,26 @@ public:
 
     void create_request()
     {
-        async_query(
-            httpony::Request("GET", uri),
-            [this](httpony::Request&, httpony::Response& response){
-                accept_response(response);
-            },
-            &client_error
-        );
+        async_query(httpony::Request("GET", uri));
     }
 
-private:
-    void accept_response( httpony::Response& response)
+protected:
+    void process_response(httpony::Request& request, httpony::Response& response) override
     {
-        /// \todo Make sure Http1Formatter::response() works properly for input responses as well
         std::cout << "=============\nClient:\n";
         httpony::http::Http1Formatter("\n").response(std::cout, response);
         std::cout << "=============\n";
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        create_request();
     }
 
-    static void client_error(httpony::Request& request, const httpony::ClientStatus& status)
+    void on_error(httpony::Request& request, const httpony::ClientStatus& status) override
     {
         std::cerr << "Error accessing " << request.url.full() << ": " << status.message() << std::endl;
+    }
+
+    void on_response(httpony::Request& request, httpony::Response& response) override
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        create_request();
     }
 
     httpony::Uri uri;
