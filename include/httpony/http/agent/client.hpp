@@ -326,7 +326,6 @@ private:
             if ( *it_old == &*iter )
             {
                 old_requests.erase(it_old);
-                iter->connection->close();
                 return items.erase(iter);
             }
         }

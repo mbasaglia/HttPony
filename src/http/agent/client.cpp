@@ -81,8 +81,15 @@ ClientStatus Client::on_attempt(Request& request, Response& response, int attemp
             return "too many redirects";
 
         Uri target = response.headers["Location"];
-        if ( request.url.authority.host != target.authority.host ||
-            request.url.authority.port != target.authority.port )
+        if ( target.authority.empty() )
+        {
+            target.authority = request.url.authority;
+        }
+        /// \todo Implement keeping the connection open on the server side
+        if ( response.headers["Connection"] == "close" ||
+             !request.connection->connected() ||
+             request.url.authority.host != target.authority.host ||
+             request.url.authority.port != target.authority.port )
         {
             ClientStatus status;
             request.connection = connect(target, status);
