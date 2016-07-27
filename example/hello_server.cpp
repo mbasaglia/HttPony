@@ -47,7 +47,7 @@ public:
         {
             auto body_status = get_body(request, status, body);
             if ( body_status.is_error() )
-                response = simple_response(status, request.protocol);
+                response = simple_response(body_status, request.protocol);
             else
                 response = build_response(request);
         }
