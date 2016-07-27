@@ -23,6 +23,7 @@
 #define HTTPONY_HTTP_WRITE_HPP
 
 #include "httpony/http/response.hpp"
+#include "httpony/multipart.hpp"
 
 namespace httpony {
 namespace http {
@@ -36,6 +37,12 @@ public:
     virtual void request(std::ostream& stream, Request& request) const = 0;
     virtual void headers(std::ostream& stream, const Headers& headers) const = 0;
     virtual void auth_challenge(std::ostream& stream, const AuthChallenge& challenge) const = 0;
+    virtual void multipart(std::ostream& stream, const Multipart& multipart) const = 0;
+
+    /**
+     * \brief Converts a compound header into a string
+     */
+    virtual std::string compound_header(const CompoundHeader& header) const = 0;
 };
 
 /**
@@ -91,6 +98,37 @@ public:
             stream << ' ';
             header_parameters(stream, challenge.parameters);
         }
+    }
+
+    std::string compound_header(const CompoundHeader& header) const override
+    {
+        return compound_header(header, "; ");
+    }
+
+    std::string compound_header(const CompoundHeader& header, const std::string& delimiter) const
+    {
+        std::ostringstream result;
+        result << header.value;
+        if ( !header.parameters.empty() )
+        {
+            result << delimiter;
+            header_parameters(result, header.parameters, delimiter);
+        }
+
+        return result.str();
+    }
+
+    void multipart(std::ostream& stream, const Multipart& multipart) const override
+    {
+        for ( const auto& part : multipart.parts )
+        {
+            stream << endl << "--" << multipart.boundary << endl;
+            headers(stream, part.headers);
+            stream << endl;
+            stream.write(part.content.data(), part.content.size());
+        }
+
+        stream << endl << "--" << multipart.boundary << "--" << endl;
     }
 
 private:

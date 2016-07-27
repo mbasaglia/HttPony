@@ -27,6 +27,9 @@
 #include "httpony/http/agent/logging.hpp"
 #include "httpony/http/formatter.hpp"
 #include "httpony/http/parser.hpp"
+#include "httpony/http/post/post.hpp"
+#include "httpony/http/post/form_data.hpp"
+#include "httpony/http/post/urlencoded.hpp"
 #include "httpony/base_encoding.hpp"
 
 #endif // HTTPONY_HPP

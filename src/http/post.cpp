@@ -18,24 +18,18 @@
  *  You should have received a copy of the GNU Affero General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
-#include "httpony/http/request.hpp"
 #include "httpony/http/post/post.hpp"
+#include "httpony/http/post/urlencoded.hpp"
+#include "httpony/http/post/form_data.hpp"
 
 namespace httpony {
+namespace post {
 
-bool Request::can_parse_post() const
+void FormatRegistry::load_default()
 {
-    return body.has_data() &&
-        httpony::post::FormatRegistry::instance().can_parse(body.content_type());
+    register_format<UrlEncoded>();
+    register_format<FormData>();
 }
 
-bool Request::parse_post()
-{
-    if ( !body.has_data() )
-        return false;
-
-    return httpony::post::FormatRegistry::instance().parse(*this);
-}
-
+} // namespace post
 } // namespace httpony

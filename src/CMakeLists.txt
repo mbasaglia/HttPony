@@ -20,6 +20,7 @@ set(SOURCES
 http/agent/server.cpp
 http/agent/client.cpp
 http/parser.cpp
+http/post.cpp
 http/protocol.cpp
 http/request.cpp
 http/status.cpp
