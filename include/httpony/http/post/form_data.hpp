@@ -36,17 +36,14 @@ namespace post {
  */
 class FormData final : public PostFormat
 {
-public:
-    bool matches(const MimeType& mime) const override
+private:
+    bool do_can_parse(const Request& request) const override
     {
-        return mime.matches_type("multipart", "form-data");
+        return request.body.content_type().matches_type("multipart", "form-data");
     }
 
-    bool parse(Request& request) const override
+    bool do_parse(Request& request) const override
     {
-        if ( !matches(request.body.content_type()) )
-            return false;
-
         if ( request.body.content_type().parameter().first != "boundary" )
             return false;
 
@@ -70,7 +67,12 @@ public:
         return true;
     }
 
-    bool format(Request& request) const override
+    bool do_can_format(const Request& request) const override
+    {
+        return true;
+    }
+
+    bool do_format(Request& request) const override
     {
         std::string boundary = generate_boundary(request.post);
         request.body.start_output(

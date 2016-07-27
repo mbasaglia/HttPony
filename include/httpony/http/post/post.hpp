@@ -34,21 +34,70 @@ public:
     virtual ~PostFormat(){}
 
     /**
-     * \brief Whether this format chan handle data provided in the given mime type
+     * \brief Whether this format chan handle data provided in the given request
      */
-    virtual bool matches(const MimeType& mime) const = 0;
+    bool can_parse(const Request& request) const
+    {
+        if ( !request.body.has_input() )
+            return false;
+        return do_can_parse(request);
+    }
 
     /**
      * \brief Parses the given data according to its mime type
      * \returns \b true on success
      */
-    virtual bool parse(Request& request) const = 0;
+    bool parse(Request& request) const
+    {
+        if ( !can_parse(request) )
+            return false;
+        return do_parse(request);
+    }
+
+    /**
+     * \brief Whether this format chan handle data provided in the given request
+     */
+    bool can_format(const Request& request) const
+    {
+        if ( !request.body.has_input() )
+            return false;
+        return do_can_format(request);
+    }
 
     /**
      * \brief Formats the request post data
      * \returns \b true on success
      */
-    virtual bool format(Request& request) const = 0;
+    bool format(Request& request) const
+    {
+        if ( !can_format(request) )
+            return false;
+        return do_format(request);
+    }
+
+private:
+
+    /**
+     * \brief Whether this format chan handle data provided in the given request
+     */
+    virtual bool do_can_parse(const Request& request) const = 0;
+
+    /**
+     * \brief Parses the given data according to its mime type
+     * \returns \b true on success
+     */
+    virtual bool do_parse(Request& request) const = 0;
+
+    /**
+     * \brief Whether this format chan handle data provided in the given request
+     */
+    virtual bool do_can_format(const Request& request) const = 0;
+
+    /**
+     * \brief Formats the request post data
+     * \returns \b true on success
+     */
+    virtual bool do_format(Request& request) const = 0;
 };
 
 class FormatRegistry : public melanolib::Singleton<FormatRegistry>
@@ -67,13 +116,13 @@ public:
 
     void load_default();
 
-    bool can_parse(const MimeType& mime)
+    bool can_parse(const Request& request)
     {
         if ( formats.empty() )
             load_default();
 
         for ( const auto& format : formats )
-            if ( format->matches(mime) )
+            if ( format->can_parse(request) )
                 return true;
 
         return false;
@@ -85,8 +134,20 @@ public:
             load_default();
 
         for ( const auto& format : formats )
-            if ( format->matches(request.body.content_type()) )
+            if ( format->can_parse(request) )
                 return format->parse(request);
+
+        return false;
+    }
+
+    bool can_format(const Request& request)
+    {
+        if ( formats.empty() )
+            load_default();
+
+        for ( const auto& format : formats )
+            if ( format->can_format(request) )
+                return true;
 
         return false;
     }
@@ -97,7 +158,7 @@ public:
             load_default();
 
         for ( const auto& format : formats )
-            if ( format->matches(request.body.content_type()) )
+            if ( format->can_format(request) )
                 return format->format(request);
 
         return false;

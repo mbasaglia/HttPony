@@ -26,15 +26,11 @@ namespace httpony {
 
 bool Request::can_parse_post() const
 {
-    return body.has_data() &&
-        httpony::post::FormatRegistry::instance().can_parse(body.content_type());
+    return httpony::post::FormatRegistry::instance().can_parse(*this);
 }
 
 bool Request::parse_post()
 {
-    if ( !body.has_data() )
-        return false;
-
     return httpony::post::FormatRegistry::instance().parse(*this);
 }
 

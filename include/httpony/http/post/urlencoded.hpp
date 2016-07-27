@@ -30,23 +30,26 @@ namespace post {
 
 class UrlEncoded final : public PostFormat
 {
-public:
-    bool matches(const MimeType& mime) const override
+private:
+    bool do_can_parse(const Request& request) const override
     {
-        return mime.matches_type("application", "x-www-form-urlencoded");
+        return request.body.content_type().matches_type("application", "x-www-form-urlencoded");
     }
 
-    bool parse(Request& request) const override
+    bool do_parse(Request& request) const override
     {
-        if ( matches(request.body.content_type()) )
-        {
-            request.post = parse_query_string(request.body.read_all());
-            return true;
-        }
-        return false;
+        request.post = parse_query_string(request.body.read_all());
+        return true;
     }
 
-    bool format(Request& request) const override
+    /// \todo Once files are supported this shall return false for requests that have file data
+    bool do_can_format(const Request& request) const override
+    {
+        return true;
+    }
+
+
+    bool do_format(Request& request) const override
     {
         request.body.start_output("application/x-www-form-urlencoded");
         request.body << build_query_string(request.post);
