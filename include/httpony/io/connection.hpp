@@ -126,10 +126,10 @@ public:
             : std::istream(&connection->input_buffer()),
              connection(connection)
         {
-            boost::system::error_code error;
+            OperationStatus _status;
             /// \todo Avoid magic number, keep reading if needed
-            auto sz = connection->_input_buffer.read_some(1024, error);
-            if ( error || sz <= 0 )
+            auto sz = connection->_input_buffer.read_some(1024, _status);
+            if ( _status.error() || sz <= 0 )
                 setstate(badbit);
         }
 
@@ -153,14 +153,14 @@ public:
         return _output_buffer;
     }
 
-    bool commit_output()
+    OperationStatus commit_output()
     {
         if ( _output_buffer.size() == 0 )
-            return true;
-        boost::system::error_code error;
-        _socket.write(_output_buffer.data(), error);
+            return {};
+        OperationStatus status;
+        _socket.write(_output_buffer.data(), status);
         _output_buffer.consume(_output_buffer.size());
-        return !error;
+        return status;
     }
 
     void close()

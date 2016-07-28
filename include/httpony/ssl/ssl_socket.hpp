@@ -44,10 +44,11 @@ public:
     {
     }
 
-    void close() override
+    OperationStatus close() override
     {
         boost::system::error_code error;
         raw_socket().close(error);
+        return io::error_to_status(error);
     }
 
     raw_socket_type& raw_socket() override

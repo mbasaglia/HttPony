@@ -158,7 +158,7 @@ private:
             acceptor.async_accept(
                 connection->socket().raw_socket(),
                 [this, connection, on_success, on_failure, create_connection]
-                (boost::system::error_code error_code)
+                (boost::system::error_code error)
                 {
                     if ( !acceptor.is_open() )
                         return;
@@ -175,10 +175,10 @@ private:
                     if ( _timeout )
                         connection->socket().set_timeout(*_timeout);
 
-                    if ( !error_code )
+                    if ( !error )
                         on_success(*conn_iter);
                     else
-                        on_failure(**conn_iter, error_code.message());
+                        on_failure(**conn_iter, error_to_status(error));
 
                     /// \todo Keep the connection alive if needed
                     connections.erase(conn_iter);

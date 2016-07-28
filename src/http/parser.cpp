@@ -83,7 +83,7 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
     return StatusCode::OK;
 }
 
-ClientStatus Http1Parser::response(std::istream& stream, Response& response) const
+OperationStatus Http1Parser::response(std::istream& stream, Response& response) const
 {
     if ( stream.fail() || stream.bad() )
         return "network error";

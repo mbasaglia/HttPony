@@ -24,7 +24,6 @@
 
 #include "httpony/http/response.hpp"
 #include "httpony/multipart.hpp"
-#include "httpony/http/client_status.hpp"
 
 namespace httpony {
 
@@ -51,7 +50,7 @@ public:
      * \note If it returns an error code, it's likely the response contain only
      *       partially parsed data
      */
-    virtual ClientStatus response(std::istream& stream, Response& response) const = 0;
+    virtual OperationStatus response(std::istream& stream, Response& response) const = 0;
 
     /**
      * \brief Reads all headers and the empty line following them
@@ -114,7 +113,7 @@ public:
     Status request(std::istream& stream, Request& request) const override;
 
 
-    ClientStatus response(std::istream& stream, Response& response) const override;
+    OperationStatus response(std::istream& stream, Response& response) const override;
 
     bool headers(std::istream& stream, httpony::Headers& headers) const override;
 

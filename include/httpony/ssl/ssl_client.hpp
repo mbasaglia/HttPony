@@ -45,17 +45,16 @@ protected:
     }
 
 private:
-    ClientStatus on_connect(const Uri& target, io::Connection& connection) override
+    OperationStatus on_connect(const Uri& target, io::Connection& connection) override
     {
         if ( target.scheme == "https" )
         {
             /// \todo dynamic_cast? create_connection() might be best to not be final here
             SslSocket& socket = static_cast<SslSocket&>(connection.socket().socket_wrapper());
-            boost::system::error_code error_code;
+            boost::system::error_code error;
             /// \todo Async handshake
-            socket.ssl_socket().handshake(boost_ssl::stream_base::server, error_code);
-            if ( error_code )
-                return error_code.message();
+            socket.ssl_socket().handshake(boost_ssl::stream_base::server, error);
+            return io::error_to_status(error);
         }
 
         return {};

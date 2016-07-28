@@ -79,8 +79,8 @@ void Server::start()
                     respond(request, status);
                 }
             },
-            [this](io::Connection& connection, const std::string& message){
-                error(connection, message);
+            [this](io::Connection& connection, const OperationStatus& status){
+                error(connection, status);
             },
             [this]{
                 return create_connection();

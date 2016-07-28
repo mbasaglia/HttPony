@@ -19,26 +19,27 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef HTTPONY_CLIENT_STATUS_HPP
-#define HTTPONY_CLIENT_STATUS_HPP
+#ifndef HTTPONY_OPERATION_STATUS_HPP
+#define HTTPONY_OPERATION_STATUS_HPP
 
 /// \cond
 #include <string>
+#include <ostream>
 /// \endcond
 
 namespace httpony {
 
 
-class ClientStatus
+class OperationStatus
 {
 public:
-    ClientStatus() = default;
+    OperationStatus() = default;
 
-    ClientStatus(std::string message)
+    OperationStatus(std::string message)
         : _message(std::move(message))
     {}
 
-    ClientStatus(const char* message)
+    OperationStatus(const char* message)
         : _message(message)
     {}
 
@@ -66,5 +67,10 @@ private:
     std::string _message;
 };
 
+inline std::ostream& operator<<(std::ostream& stream, const OperationStatus& status)
+{
+    return stream << status.message();
+}
+
 } // namespace httpony
-#endif // HTTPONY_CLIENT_STATUS_HPP
+#endif // HTTPONY_OPERATION_STATUS_HPP

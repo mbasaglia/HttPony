@@ -72,19 +72,17 @@ private:
     /**
      * \brief Performs the SSL handshake
      */
-    bool accept(io::Connection& connection) final
+    OperationStatus accept(io::Connection& connection) final
     {
         SslSocket& socket = socket_cast(connection.socket());
 
-        boost::system::error_code error_code;
-        socket.ssl_socket().handshake(boost_ssl::stream_base::server, error_code);
-        if ( error_code )
-        {
-            error(connection, error_code.message());
-            return false;
-        }
+        boost::system::error_code error;
+        socket.ssl_socket().handshake(boost_ssl::stream_base::server, error);
 
-        return true;
+        if ( error )
+            this->error(connection, error.message());
+
+        return io::error_to_status(error);
     }
 
     /**

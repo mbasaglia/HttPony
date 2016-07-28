@@ -94,7 +94,7 @@ protected:
     /**
      * \brief Handles connection errors
      */
-    virtual void error(io::Connection& connection, const std::string& what) const
+    virtual void error(io::Connection& connection, const OperationStatus& what) const
     {
         std::cerr << "Error " << connection.remote_address() << ' ' << what << std::endl;
     }
@@ -126,9 +126,9 @@ private:
      *
      * At this stage no data has been read from \p connection
      */
-    virtual bool accept(io::Connection& connection)
+    virtual OperationStatus accept(io::Connection& connection)
     {
-        return true;
+        return {};
     }
 
     /**

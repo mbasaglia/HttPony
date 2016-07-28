@@ -194,7 +194,7 @@ protected:
     }
 
 private:
-    void on_error(httpony::Request& request, const httpony::ClientStatus& status) override
+    void on_error(httpony::Request& request, const httpony::OperationStatus& status) override
     {
         std::cerr << "Error accessing " << request.url.full() << ": " << status.message() << std::endl;
     }

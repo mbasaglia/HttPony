@@ -26,13 +26,13 @@
 namespace httpony {
 
 
-ClientStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response)
+OperationStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response)
 {
     request.connection = connection;
     return get_response_attempt(0, request, response);
 }
 
-ClientStatus Client::get_response_attempt(int attempt, Request& request, Response& response)
+OperationStatus Client::get_response_attempt(int attempt, Request& request, Response& response)
 {
 
     if ( !request.connection )
@@ -53,7 +53,7 @@ ClientStatus Client::get_response_attempt(int attempt, Request& request, Respons
     }
 
     auto istream = request.connection->receive_stream();
-    ClientStatus status = Http1Parser().response(istream, response);
+    OperationStatus status = Http1Parser().response(istream, response);
     response.connection = request.connection;
 
     if ( istream.timed_out() )
@@ -70,7 +70,7 @@ ClientStatus Client::get_response_attempt(int attempt, Request& request, Respons
     return on_attempt(request, response, attempt);
 }
 
-ClientStatus Client::on_attempt(Request& request, Response& response, int attempt)
+OperationStatus Client::on_attempt(Request& request, Response& response, int attempt)
 {
     /// \todo Try again on 408 (Request Timeout)
     /// \todo Handle 426 (Upgrade Required) for known protocol versions
@@ -91,7 +91,7 @@ ClientStatus Client::on_attempt(Request& request, Response& response, int attemp
              request.url.authority.host != target.authority.host ||
              request.url.authority.port != target.authority.port )
         {
-            ClientStatus status;
+            OperationStatus status;
             request.connection = connect(target, status);
             if ( status.error() )
                 return status;

@@ -22,7 +22,6 @@
 #define HTTPONY_IO_BASIC_CLIENT_HPP
 
 #include "httpony/io/connection.hpp"
-#include "httpony/http/client_status.hpp"
 #include "httpony/uri.hpp"
 
 namespace httpony {
@@ -35,21 +34,17 @@ public:
     /**
      * \todo Sync connect
      */
-    ClientStatus connect(const Uri& target, io::Connection& connection) const
+    OperationStatus connect(const Uri& target, io::Connection& connection) const
     {
         boost_tcp::resolver::query query = make_query(target, connection);
 
-        boost::system::error_code error_code;
-        auto endpoint_iterator = connection.socket().resolve(query, error_code);
+        OperationStatus status;
+        auto endpoint_iterator = connection.socket().resolve(query, status);
 
-        if ( error_code )
-            return error_code.message();
+        if ( status.error() )
+            return status;
 
-        connection.socket().connect(endpoint_iterator, error_code);
-        if ( error_code )
-            return error_code.message();
-
-        return {};
+        return connection.socket().connect(endpoint_iterator);
     }
 
     /**
@@ -86,13 +81,13 @@ public:
         connection.socket().async_connect(
             query,
             [on_error, on_connect](
-                const boost::system::error_code& error_code,
+                const OperationStatus& status,
                 const boost_tcp::resolver::iterator&)
             {
-                if ( error_code )
-                    on_error(ClientStatus(error_code.message()));
-                else
+                if ( status )
                     on_connect();
+                else
+                    on_error(status);
             }
         );
     }

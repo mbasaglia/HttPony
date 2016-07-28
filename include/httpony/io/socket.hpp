@@ -28,11 +28,21 @@
 /// \endcond
 
 #include "httpony/ip_address.hpp"
+#include "httpony/util/operation_status.hpp"
 
 namespace httpony {
 namespace io {
 
 using boost_tcp = boost::asio::ip::tcp;
+
+inline OperationStatus error_to_status(const boost::system::error_code& error)
+{
+    if ( error == boost::asio::error::would_block )
+        return "timeout";
+    if ( error )
+        return error.message();
+    return {};
+}
 
 class SocketWrapper
 {
@@ -45,21 +55,21 @@ public:
     class AsyncCallback
     {
     public:
-        AsyncCallback(boost::system::error_code& error_code, std::size_t& bytes_transferred)
-            : error_code(&error_code), bytes_transferred(&bytes_transferred)
+        AsyncCallback(boost::system::error_code& error, std::size_t& bytes_transferred)
+            : error(&error), bytes_transferred(&bytes_transferred)
         {
-            *this->error_code = boost::asio::error::would_block;
+            *this->error = boost::asio::error::would_block;
             *this->bytes_transferred = 0;
         }
 
         void operator()(const boost::system::error_code& ec, std::size_t bt) const
         {
-            *error_code = ec;
+            *error = ec;
             *bytes_transferred += bt;
         }
 
     private:
-        boost::system::error_code* error_code;
+        boost::system::error_code* error;
         std::size_t* bytes_transferred;
     };
 
@@ -70,7 +80,7 @@ public:
      *
      * It shouldn't throw an exception on failure
      */
-    virtual void close() = 0;
+    virtual OperationStatus close() = 0;
 
     /**
      * \brief Returns the low-level socket object
@@ -136,10 +146,11 @@ public:
         : socket(io_service)
     {}
 
-    void close() override
+    OperationStatus close() override
     {
         boost::system::error_code error;
         socket.close(error);
+        return error_to_status(error);
     }
 
     raw_socket_type& raw_socket() override
@@ -259,9 +270,9 @@ public:
      * \returns The number of bytes written to the destination
      */
     template<class MutableBufferSequence>
-        std::size_t read_some(MutableBufferSequence&& buffer, boost::system::error_code& error)
+        std::size_t read_some(MutableBufferSequence&& buffer, OperationStatus& status)
     {
-        return io_operation(&SocketWrapper::async_read_some, boost::asio::buffer(buffer), error);
+        return io_operation(&SocketWrapper::async_read_some, boost::asio::buffer(buffer), status);
     }
 
     /**
@@ -269,17 +280,14 @@ public:
      * \returns The number of bytes read from the source
      */
     template<class ConstBufferSequence>
-        std::size_t write(ConstBufferSequence&& buffer, boost::system::error_code& error)
+        std::size_t write(ConstBufferSequence&& buffer, OperationStatus& status)
     {
-        return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), error);
+        return io_operation(&SocketWrapper::async_write, boost::asio::buffer(buffer), status);
     }
 
-    bool connect(
-        boost_tcp::resolver::iterator endpoint_iterator,
-        boost::system::error_code& error
-    )
+    OperationStatus connect(boost_tcp::resolver::iterator endpoint_iterator)
     {
-        error = boost::asio::error::would_block;
+        boost::system::error_code error = boost::asio::error::would_block;
 
         boost::asio::async_connect(raw_socket(), endpoint_iterator,
             [this, &error](
@@ -293,14 +301,14 @@ public:
 
         io_loop(&error);
 
-        return !error;
+        return error_to_status(error);
     }
 
     boost_tcp::resolver::iterator resolve(
         const boost_tcp::resolver::query& query,
-        boost::system::error_code& error
-    )
+        OperationStatus& status)
     {
+        boost::system::error_code error;
         boost_tcp::resolver::iterator result;
         resolver.async_resolve(
             query,
@@ -316,14 +324,15 @@ public:
 
         io_loop(&error);
 
+        status = error_to_status(error);
         return result;
     }
 
-    bool process_async()
+    OperationStatus process_async()
     {
         boost::system::error_code error;
         _io_service.run_one(error);
-        return !error;
+        return error_to_status(error);
     }
 
     bool is_open() const
@@ -343,7 +352,7 @@ public:
 
     /**
      * \brief Queues an async connection
-     * \tparam Callback A functor accepting a boost::system::error_code
+     * \tparam Callback A functor accepting an OperationStatus
      *                  and a boost_tcp::resolver::iterator
      * \note You must run process_asyncfor this to get handled
      */
@@ -352,12 +361,22 @@ public:
             boost_tcp::resolver::iterator endpoint_iterator,
             const Callback& callback)
     {
-        boost::asio::async_connect(raw_socket(), endpoint_iterator, callback);
+        boost::asio::async_connect(
+            raw_socket(),
+            endpoint_iterator,
+            [this, callback](
+                const boost::system::error_code& error,
+                const boost_tcp::resolver::iterator& endpoint_iterator
+            )
+            {
+                callback(error_to_status(error), endpoint_iterator);
+            }
+        );
     }
 
     /**
      * \brief Queues an async name resolution
-     * \tparam Callback A functor accepting a boost::system::error_code
+     * \tparam Callback A functor accepting an OperationStatus
      *                  and a boost_tcp::resolver::iterator
      * \note You must run process_asyncfor this to get handled
      */
@@ -366,12 +385,21 @@ public:
             const boost_tcp::resolver::query& query,
             const Callback& callback)
     {
-        resolver.async_resolve(query, callback);
+        resolver.async_resolve(
+            query,
+            [this, callback](
+                const boost::system::error_code& error,
+                const boost_tcp::resolver::iterator& endpoint_iterator
+            )
+            {
+                callback(error_to_status(error), endpoint_iterator);
+            }
+        );
     }
 
     /**
      * \brief Queues an async name resolution and connection
-     * \tparam Callback A functor accepting a boost::system::error_code
+     * \tparam Callback A functor accepting an OperationStatus
      *                  and a boost_tcp::resolver::iterator
      * \note You must run process_asyncfor this to get handled
      */
@@ -383,11 +411,11 @@ public:
         async_resolve(
             query,
             [this, callback](
-                const boost::system::error_code& error_code,
+                const OperationStatus& status,
                 const boost_tcp::resolver::iterator& endpoint_iterator)
             {
-                if ( error_code )
-                    callback(error_code, endpoint_iterator);
+                if ( status.error() )
+                    callback(status, endpoint_iterator);
                 else
                     async_connect(endpoint_iterator, callback);
             }
@@ -403,15 +431,17 @@ private:
     std::size_t io_operation(
         void (SocketWrapper::*func)(Buffer&, const SocketWrapper::AsyncCallback&),
         Buffer&& buffer,
-        boost::system::error_code& error
+        OperationStatus& status
     )
     {
+        boost::system::error_code error;
         std::size_t read_size;
 
         ((*_socket).*func)(buffer, SocketWrapper::AsyncCallback(error, read_size));
 
         io_loop(&error);
 
+        status = error_to_status(error);
         return read_size;
     }
 

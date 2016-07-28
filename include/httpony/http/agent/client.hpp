@@ -57,7 +57,7 @@ public:
      * \param[in]  target URI of the server to connect to
      * \param[out] status Status of the operation
      */
-    std::shared_ptr<io::Connection> connect(Uri target, ClientStatus& status)
+    std::shared_ptr<io::Connection> connect(Uri target, OperationStatus& status)
     {
         if ( target.scheme.empty() )
             target.scheme = "http";
@@ -71,9 +71,9 @@ public:
         return connection;
     }
 
-    ClientStatus query(Request& request, Response& response)
+    OperationStatus query(Request& request, Response& response)
     {
-        ClientStatus status;
+        OperationStatus status;
         auto connection = connect(request.url, status);
 
         if ( status.error() )
@@ -85,7 +85,7 @@ public:
     /**
      * \brief Writes the request and retrieves the response over a connection object
      */
-    ClientStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response);
+    OperationStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response);
 
     /**
      * \brief The timeout for network I/O operations
@@ -142,7 +142,7 @@ protected:
     {
     }
 
-    virtual ClientStatus on_attempt(Request& request, Response& response, int attempt_number);
+    virtual OperationStatus on_attempt(Request& request, Response& response, int attempt_number);
 
     /**
      * \brief Creates a new connection object
@@ -152,10 +152,10 @@ protected:
         return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
     }
 
-    ClientStatus get_response_attempt(int attempt, Request& request, Response& response);
+    OperationStatus get_response_attempt(int attempt, Request& request, Response& response);
     
 private:
-    virtual ClientStatus on_connect(const Uri& target, io::Connection& connection)
+    virtual OperationStatus on_connect(const Uri& target, io::Connection& connection)
     {
         return {};
     }
@@ -273,7 +273,7 @@ public:
                 }
                 clean_request(&item);
             },
-            [this, on_error, &item](const ClientStatus& status)
+            [this, on_error, &item](const OperationStatus& status)
             {
                 this->on_error(item, status);
                 melanolib::callback(on_error, item, status);
@@ -303,7 +303,7 @@ private:
         return this->_basic_client;
     }
 
-    virtual void on_error(Request& request, const ClientStatus& status)
+    virtual void on_error(Request& request, const OperationStatus& status)
     {
     }
 

@@ -41,7 +41,7 @@ public:
     /**
      * \brief Reads up to size from the socket
      */
-    std::size_t read_some(std::size_t size, boost::system::error_code& error)
+    std::size_t read_some(std::size_t size, OperationStatus& status)
     {
         auto prev_size = this->size();
         if ( size <= prev_size )
@@ -50,7 +50,7 @@ public:
 
         auto in_buffer = prepare(size);
 
-        auto read_size = _socket.read_some(in_buffer, error);
+        auto read_size = _socket.read_some(in_buffer, status);
 
         commit(read_size);
 
@@ -73,9 +73,14 @@ public:
         return _expected_input;
     }
 
-    boost::system::error_code error() const
+    OperationStatus status() const
     {
-        return _error;
+        return _status;
+    }
+
+    bool error() const
+    {
+        return _status.error();
     }
 
 protected:
@@ -84,15 +89,13 @@ protected:
         int_type ret = boost::asio::streambuf::underflow();
         if ( ret == traits_type::eof() && _expected_input > 0 )
         {
-            auto read_size = read_some(_expected_input, _error);
+            auto read_size = read_some(_expected_input, _status);
 
             if ( read_size <= _expected_input )
                 _expected_input -= read_size;
             else
                 /// \todo This should trigger a bad request
-                _error = boost::system::errc::make_error_code(
-                    boost::system::errc::file_too_large
-                );
+                _status = "unexpected data in the stream";
 
             ret = boost::asio::streambuf::underflow();
         }
@@ -103,7 +106,7 @@ private:
 
     TimeoutSocket& _socket;
     std::size_t _expected_input = 0;
-    boost::system::error_code _error;
+    OperationStatus _status;
 };
 
 using NetworkOutputBuffer = boost::asio::streambuf;
