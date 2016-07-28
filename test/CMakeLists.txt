@@ -60,4 +60,6 @@ if (BUILD_TESTING)
     melanotest(test_protocol)
     target_link_libraries(test_protocol ${COMMON_LIBRARIES})
 
+    melanotest(test_quick_xml)
+
 endif()
