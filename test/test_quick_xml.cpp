@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( test_attribute )
     BOOST_CHECK( attribute.value() == "world" );
     boost::test_tools::output_test_stream output;
     output << attribute;
-    BOOST_CHECK( output.is_equal( "hello='world'" ) );
+    BOOST_CHECK( output.is_equal( " hello='world'" ) );
 }
 
 BOOST_AUTO_TEST_CASE( test_attributes )
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE( test_attributes )
     Attributes attributes({{"hello", "world"}, {"foo", "bar"}});
     boost::test_tools::output_test_stream output;
     output << attributes;
-    BOOST_CHECK( output.is_equal( "hello='world' foo='bar'" ) );
+    BOOST_CHECK( output.is_equal( " hello='world' foo='bar'" ) );
 }
 
 BOOST_AUTO_TEST_CASE( test_doctype )

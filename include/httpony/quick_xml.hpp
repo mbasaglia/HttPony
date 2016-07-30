@@ -29,6 +29,32 @@
 namespace httpony {
 namespace quick_xml {
 
+struct Indentation
+{
+    int  level = 0;
+    int  depth = 4;
+    char character = ' ';
+    bool elements = false;
+    bool attributes = false;
+
+    void indent(std::ostream& out, bool attribute = false) const
+    {
+        if ( attribute && !attributes )
+        {
+            out << ' ';
+        }
+        else if ( elements )
+        {
+            out << '\n' << std::string(level*depth, character);
+        }
+    }
+
+    Indentation next() const
+    {
+        return Indentation{level+1, depth, character, elements, attributes};
+    }
+};
+
 class Node
 {
 public:
@@ -45,7 +71,7 @@ public:
         return _children;
     }
 
-    virtual void print(std::ostream& out) const = 0;
+    virtual void print(std::ostream& out, const Indentation& indent) const = 0;
 
     virtual bool is_attribute() const
     {
@@ -86,7 +112,7 @@ private:
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node)
 {
-    node.print(stream);
+    node.print(stream, {});
     return stream;
 }
 
@@ -104,17 +130,18 @@ public:
         return _tag_name;
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
+        indent.indent(out);
         out << '<' << tag_name();
         for ( const auto& child : children() )
             if ( child->is_attribute() )
-                out << ' ' << *child;
+                child->print(out, indent.next());
         out << '>';
 
         for ( const auto& child : children() )
             if ( !child->is_attribute() )
-                out << *child;
+                child->print(out, indent.next());
 
         out << "</" << tag_name() << '>';
     }
@@ -129,16 +156,17 @@ public:
     using BlockElement::BlockElement;
 
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
         for ( const auto& child : children() )
             if ( !child->is_attribute() )
-                return BlockElement::print(out);
+                return BlockElement::print(out, indent);
 
+        indent.indent(out);
         out << '<' << tag_name();
         for ( const auto& child : children() )
             if ( child->is_attribute() )
-                out << ' ' << *child;
+                child->print(out, indent.next());
         out << "/>";
     }
 };
@@ -161,8 +189,9 @@ public:
         return _value;
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
+        indent.indent(out, true);
         out << _name << "='" << _value << '\'';
     }
 
@@ -184,14 +213,14 @@ public:
         append_range(attributes);
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
         if ( children().empty() )
             return;
         auto iter = children().begin();
-        out << **iter;
+        (**iter).print(out, indent.next());
         for ( ++iter; iter != children().end(); ++iter )
-                out << ' ' << **iter;
+                (**iter).print(out, indent.next());
     }
 
     bool is_attribute() const override
@@ -212,7 +241,7 @@ public:
         return _contents;
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
         out << _contents;
     }
@@ -239,7 +268,7 @@ public:
         return _encoding;
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
         out << "<?xml version='" << _version << '\'';
         if ( !_encoding.empty() )
@@ -264,7 +293,7 @@ public:
         return _string;
     }
 
-    void print(std::ostream& out) const override
+    void print(std::ostream& out, const Indentation& indent) const override
     {
         out << "<!DOCTYPE " << _string << ">";
     }
