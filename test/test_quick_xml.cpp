@@ -106,13 +106,40 @@ BOOST_AUTO_TEST_CASE( test_element_full )
     BOOST_CHECK( output.is_equal( "<foo hello='world'>foo<bar/></foo>" ) );
 }
 
-
 BOOST_AUTO_TEST_CASE( test_block_element_full )
 {
-    BlockElement elem("foo", Attribute{"hello", "world"}, Text{"foo"}, Element{"bar"});
+    BlockElement elem("foo",  Text{"foo"}, Attribute{"hello", "world"}, Element{"bar"});
     boost::test_tools::output_test_stream output;
     output << elem;
     BOOST_CHECK( output.is_equal( "<foo hello='world'>foo<bar/></foo>" ) );
+}
+
+Node html_document()
+{
+    return Node{
+        DocType{"html"},
+        Element{"html",
+            Element{"head",
+                Element{"title", Text{"Hello"}},
+            },
+            Element{"body",
+                Element{"p", Attribute{"id", "content"}, Text{"hello world"}},
+            },
+        },
+    };
+}
+
+BOOST_AUTO_TEST_CASE( test_node )
+{
+    boost::test_tools::output_test_stream output;
+    output << html_document();
+    BOOST_CHECK( output.is_equal(
+        "<!DOCTYPE html><html>"
+        "<head><title>Hello</title></head>"
+        "<body><p id='content'>hello world</p></body>"
+        "</html>"
+    ) );
+
 }
 
 

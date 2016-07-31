@@ -71,7 +71,11 @@ public:
         return _children;
     }
 
-    virtual void print(std::ostream& out, const Indentation& indent) const = 0;
+    virtual void print(std::ostream& out, const Indentation& indent) const
+    {
+        for ( const auto& child : _children )
+            child->print(out, indent);
+    }
 
     virtual bool is_attribute() const
     {
