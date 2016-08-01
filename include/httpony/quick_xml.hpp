@@ -29,13 +29,21 @@
 namespace httpony {
 namespace quick_xml {
 
-struct Indentation
+class Indentation
 {
-    int  level = 0;
-    int  depth = 4;
-    char character = ' ';
-    bool elements = false;
-    bool attributes = false;
+public:
+    explicit Indentation(
+        bool elements = false,
+        bool attributes = false,
+        int  depth = 4,
+        char character = ' ',
+        int  level = 0)
+        : elements(elements),
+        attributes(attributes),
+        depth(depth),
+        character(character),
+        level(level)
+    {}
 
     void indent(std::ostream& out, bool attribute = false) const
     {
@@ -51,8 +59,15 @@ struct Indentation
 
     Indentation next() const
     {
-        return Indentation{level+1, depth, character, elements, attributes};
+        return Indentation{elements, attributes, depth, character, level+1};
     }
+
+private:
+    bool elements;
+    bool attributes;
+    int  depth;
+    char character;
+    int  level;
 };
 
 class Node
@@ -78,6 +93,11 @@ public:
     }
 
     virtual bool is_attribute() const
+    {
+        return false;
+    }
+
+    virtual bool is_element() const
     {
         return false;
     }
@@ -116,7 +136,7 @@ private:
 
 inline std::ostream& operator<<(std::ostream& stream, const Node& node)
 {
-    node.print(stream, {});
+    node.print(stream, Indentation{});
     return stream;
 }
 
@@ -143,11 +163,26 @@ public:
                 child->print(out, indent.next());
         out << '>';
 
-        for ( const auto& child : children() )
-            if ( !child->is_attribute() )
-                child->print(out, indent.next());
+        bool has_element = false;
 
+        for ( const auto& child : children() )
+        {
+            if ( !child->is_attribute() )
+            {
+                child->print(out, indent.next());
+                if ( child->is_element() )
+                    has_element = true;
+            }
+        }
+
+        if ( has_element )
+            indent.indent(out);
         out << "</" << tag_name() << '>';
+    }
+
+    bool is_element() const override
+    {
+        return true;
     }
 
 private:

@@ -139,7 +139,22 @@ BOOST_AUTO_TEST_CASE( test_node )
         "<body><p id='content'>hello world</p></body>"
         "</html>"
     ) );
-
 }
 
+BOOST_AUTO_TEST_CASE( test_indent_elements )
+{
+    boost::test_tools::output_test_stream output;
+    html_document().print(output, Indentation{true});
+    BOOST_CHECK( output.is_equal(
+R"(<!DOCTYPE html>
+<html>
+    <head>
+        <title>Hello</title>
+    </head>
+    <body>
+        <p id='content'>hello world</p>
+    </body>
+</html>)"
+    ) );
+}
 
