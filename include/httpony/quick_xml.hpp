@@ -62,6 +62,11 @@ public:
         return Indentation{elements, attributes, depth, character, level+1};
     }
 
+    bool indents_attributes() const
+    {
+        return attributes;
+    }
+
 private:
     bool elements;
     bool attributes;
@@ -158,13 +163,20 @@ public:
     {
         indent.indent(out);
         out << '<' << tag_name();
+        bool has_attribute = false;
         for ( const auto& child : children() )
+        {
             if ( child->is_attribute() )
+            {
                 child->print(out, indent.next());
+                has_attribute = true;
+            }
+        }
+        if ( has_attribute && indent.indents_attributes() )
+            indent.indent(out);
         out << '>';
 
         bool has_element = false;
-
         for ( const auto& child : children() )
         {
             if ( !child->is_attribute() )
@@ -174,9 +186,9 @@ public:
                     has_element = true;
             }
         }
-
         if ( has_element )
             indent.indent(out);
+
         out << "</" << tag_name() << '>';
     }
 
