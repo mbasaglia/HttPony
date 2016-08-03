@@ -117,13 +117,25 @@ public:
     }
 
 protected:
+    template<class NodeT>
+        void append(std::shared_ptr<NodeT> child)
+        {
+            _children.push_back(std::move(child));
+        }
+
+    template<class NodeT>
+        void append(NodeT&& child)
+        {
+            _children.push_back(
+                std::make_shared<std::remove_cv_t<std::remove_reference_t<NodeT>>>(
+                    std::forward<NodeT>(child)
+            ));
+        }
+
     template<class Head, class... Tail>
         void append(Head&& head, Tail&&... tail)
         {
-            _children.push_back(
-                std::make_shared<std::remove_cv_t<std::remove_reference_t<Head>>>(
-                    std::forward<Head>(head)
-            ));
+            append(head);
             append(std::forward<Tail>(tail)...);
         }
 
@@ -142,8 +154,7 @@ protected:
         }
 
 private:
-    void append()
-    {}
+    void append(){}
 
     std::vector<std::shared_ptr<Node>> _children;
 };
@@ -302,6 +313,11 @@ public:
         return _contents;
     }
 
+    void set_contents(const std::string& text)
+    {
+        _contents = text;
+    }
+
     void print(std::ostream& out, const Indentation& indent) const override
     {
         /// \todo Escape special characters
@@ -389,6 +405,44 @@ public:
 
 private:
     std::string _contents;
+};
+
+class HtmlDocument : public Node
+{
+public:
+    HtmlDocument(std::string title, BlockElement body = BlockElement{"body"})
+        : _title(std::make_shared<Text>(std::move(title))),
+          _head(std::make_shared<BlockElement>("head", BlockElement{"title", _title})),
+          _body(std::make_shared<BlockElement>(std::move(body)))
+    {
+        append(DocType{"html"}, BlockElement{"html", _head, _body});
+    }
+
+    std::string title() const
+    {
+        return _title->contents();
+    }
+
+    void set_title(const std::string& title)
+    {
+        _title->set_contents(title);
+    }
+
+    BlockElement& head()
+    {
+        return *_head;
+    }
+
+    BlockElement& body()
+    {
+        return *_body;
+    }
+
+
+private:
+    std::shared_ptr<Text> _title;
+    std::shared_ptr<BlockElement> _head;
+    std::shared_ptr<BlockElement> _body;
 };
 
 } // namespace quick_xml

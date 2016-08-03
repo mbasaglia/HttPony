@@ -114,31 +114,28 @@ BOOST_AUTO_TEST_CASE( test_block_element_full )
     BOOST_CHECK( output.is_equal( "<foo hello='world'>foo<bar/></foo>" ) );
 }
 
-Node html_document()
+HtmlDocument html_document()
 {
-    return Node{
-        DocType{"html"},
-        Element{"html",
-            Element{"head",
-                Element{"title", Text{"Hello"}},
-            },
+    return HtmlDocument{
+        "Hello",
+        Element{"body",
             Comment{"This is an example"},
-            Element{"body",
-                Element{"p", Attribute{"id", "content"}, Text{"hello world"}},
-            },
+            Element{"p", Attribute{"id", "content"}, Text{"hello world"}},
         },
     };
 }
 
-BOOST_AUTO_TEST_CASE( test_node )
+BOOST_AUTO_TEST_CASE( test_html_document )
 {
     boost::test_tools::output_test_stream output;
     output << html_document();
     BOOST_CHECK( output.is_equal(
         "<!DOCTYPE html><html>"
         "<head><title>Hello</title></head>"
+        "<body>"
         "<!--This is an example-->"
-        "<body><p id='content'>hello world</p></body>"
+        "<p id='content'>hello world</p>"
+        "</body>"
         "</html>"
     ) );
 }
@@ -153,8 +150,8 @@ R"(<!DOCTYPE html>
     <head>
         <title>Hello</title>
     </head>
-    <!--This is an example-->
     <body>
+        <!--This is an example-->
         <p id='content'>hello world</p>
     </body>
 </html>)"
@@ -171,8 +168,8 @@ R"(<!DOCTYPE html>
     <head>
         <title>Hello</title>
     </head>
-    <!--This is an example-->
     <body>
+        <!--This is an example-->
         <p
             id='content'
         >hello world</p>
@@ -192,10 +189,10 @@ R"(<!DOCTYPE html>
     <head>
         <title>Hello</title>
     </head>
-    <!--
-        This is an example
-    -->
     <body>
+        <!--
+            This is an example
+        -->
         <p id='content'>hello world</p>
     </body>
 </html>)"
