@@ -23,6 +23,7 @@
 
 #include <ostream>
 #include <vector>
+#include <type_traits>
 
 #include <melanolib/utils/c++-compat.hpp>
 
@@ -32,44 +33,52 @@ namespace quick_xml {
 class Indentation
 {
 public:
+    enum NodeType
+    {
+        Nothing     = 0x0,
+        Element     = 0x1,
+        Attribute   = 0x2,
+        Comment     = 0x4,
+        CommentText = 0x8,
+    };
+
+    using NodeTypes = std::underlying_type_t<NodeType>;
+
     explicit Indentation(
-        bool elements = false,
-        bool attributes = false,
+        NodeTypes what = Nothing,
         int  depth = 4,
         char character = ' ',
         int  level = 0)
-        : elements(elements),
-        attributes(attributes),
+        : what(what),
         depth(depth),
         character(character),
         level(level)
     {}
 
-    void indent(std::ostream& out, bool attribute = false) const
+    void indent(std::ostream& out, NodeType type = Element) const
     {
-        if ( attribute && !attributes )
-        {
-            out << ' ';
-        }
-        else if ( elements )
+        if ( type & what )
         {
             out << '\n' << std::string(level*depth, character);
+        }
+        else if ( type == Attribute )
+        {
+            out << ' ';
         }
     }
 
     Indentation next() const
     {
-        return Indentation{elements, attributes, depth, character, level+1};
+        return Indentation{what, depth, character, level+1};
     }
 
     bool indents_attributes() const
     {
-        return attributes;
+        return what & Attribute;
     }
 
 private:
-    bool elements;
-    bool attributes;
+    NodeTypes what;
     int  depth;
     char character;
     int  level;
@@ -242,7 +251,7 @@ public:
 
     void print(std::ostream& out, const Indentation& indent) const override
     {
-        indent.indent(out, true);
+        indent.indent(out, Indentation::Attribute);
         /// \todo Escape special characters
         out << _name << "='" << _value << '\'';
     }
@@ -370,7 +379,12 @@ public:
     void print(std::ostream& out, const Indentation& indent) const override
     {
         /// \todo Remove/escape --
-        out << "<!--" << _contents << "-->";
+        indent.indent(out, Indentation::Comment);
+        out << "<!--";
+        indent.next().indent(out, Indentation::CommentText);
+        out << _contents;
+        indent.indent(out, Indentation::CommentText);
+        out<< "-->";
     }
 
 private:

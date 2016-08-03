@@ -122,6 +122,7 @@ Node html_document()
             Element{"head",
                 Element{"title", Text{"Hello"}},
             },
+            Comment{"This is an example"},
             Element{"body",
                 Element{"p", Attribute{"id", "content"}, Text{"hello world"}},
             },
@@ -136,6 +137,7 @@ BOOST_AUTO_TEST_CASE( test_node )
     BOOST_CHECK( output.is_equal(
         "<!DOCTYPE html><html>"
         "<head><title>Hello</title></head>"
+        "<!--This is an example-->"
         "<body><p id='content'>hello world</p></body>"
         "</html>"
     ) );
@@ -144,13 +146,14 @@ BOOST_AUTO_TEST_CASE( test_node )
 BOOST_AUTO_TEST_CASE( test_indent_elements )
 {
     boost::test_tools::output_test_stream output;
-    html_document().print(output, Indentation{true});
+    html_document().print(output, Indentation{Indentation::Element|Indentation::Comment});
     BOOST_CHECK( output.is_equal(
 R"(<!DOCTYPE html>
 <html>
     <head>
         <title>Hello</title>
     </head>
+    <!--This is an example-->
     <body>
         <p id='content'>hello world</p>
     </body>
@@ -161,17 +164,39 @@ R"(<!DOCTYPE html>
 BOOST_AUTO_TEST_CASE( test_indent_attributes )
 {
     boost::test_tools::output_test_stream output;
-    html_document().print(output, Indentation{true, true});
+    html_document().print(output, Indentation{Indentation::Element|Indentation::Attribute|Indentation::Comment});
     BOOST_CHECK( output.is_equal(
 R"(<!DOCTYPE html>
 <html>
     <head>
         <title>Hello</title>
     </head>
+    <!--This is an example-->
     <body>
         <p
             id='content'
         >hello world</p>
+    </body>
+</html>)"
+    ) );
+}
+
+
+BOOST_AUTO_TEST_CASE( test_indent_comments )
+{
+    boost::test_tools::output_test_stream output;
+    html_document().print(output, Indentation{Indentation::Element|Indentation::Comment|Indentation::CommentText});
+    BOOST_CHECK( output.is_equal(
+R"(<!DOCTYPE html>
+<html>
+    <head>
+        <title>Hello</title>
+    </head>
+    <!--
+        This is an example
+    -->
+    <body>
+        <p id='content'>hello world</p>
     </body>
 </html>)"
     ) );
