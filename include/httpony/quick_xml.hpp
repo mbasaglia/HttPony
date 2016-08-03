@@ -243,6 +243,7 @@ public:
     void print(std::ostream& out, const Indentation& indent) const override
     {
         indent.indent(out, true);
+        /// \todo Escape special characters
         out << _name << "='" << _value << '\'';
     }
 
@@ -294,6 +295,7 @@ public:
 
     void print(std::ostream& out, const Indentation& indent) const override
     {
+        /// \todo Escape special characters
         out << _contents;
     }
 
@@ -351,6 +353,28 @@ public:
 
 private:
     std::string _string;
+};
+
+class Comment : public Node
+{
+public:
+    Comment(std::string contents)
+        : _contents(std::move(contents))
+    {}
+
+    std::string contents() const
+    {
+        return _contents;
+    }
+
+    void print(std::ostream& out, const Indentation& indent) const override
+    {
+        /// \todo Remove/escape --
+        out << "<!--" << _contents << "-->";
+    }
+
+private:
+    std::string _contents;
 };
 
 } // namespace quick_xml

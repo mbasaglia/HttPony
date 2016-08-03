@@ -177,3 +177,12 @@ R"(<!DOCTYPE html>
     ) );
 }
 
+BOOST_AUTO_TEST_CASE( test_comment )
+{
+    Comment text("hello");
+    BOOST_CHECK( text.contents() == "hello" );
+    boost::test_tools::output_test_stream output;
+    output << text;
+    BOOST_CHECK( output.is_equal( "<!--hello-->" ) );
+}
+
