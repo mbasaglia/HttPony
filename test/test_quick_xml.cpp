@@ -240,3 +240,26 @@ BOOST_AUTO_TEST_CASE( test_link )
     BOOST_CHECK( output.is_equal( "<a href='/bar'>bar</a>" ) );
 }
 
+BOOST_AUTO_TEST_CASE( test_input )
+{
+    Input input("name", "text", "hello");
+    BOOST_CHECK( input.value() == "hello" );
+    input.set_value("world");
+    BOOST_CHECK( input.value() == "world" );
+    boost::test_tools::output_test_stream output;
+    output << input;
+    BOOST_CHECK( output.is_equal( "<input name='name' id='name' type='text' value='world'/>" ) );
+}
+
+BOOST_AUTO_TEST_CASE( test_label )
+{
+    Label label("name", "Name");
+    BOOST_CHECK( label.target() == "name" );
+    label.set_target("username");
+    BOOST_CHECK( label.target() == "username" );
+    boost::test_tools::output_test_stream output;
+    output << label;
+    BOOST_CHECK( output.is_equal( "<label for='username'>Name</label>" ) );
+}
+
+

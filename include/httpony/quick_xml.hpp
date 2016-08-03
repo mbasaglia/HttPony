@@ -512,6 +512,65 @@ public:
     Attribute* href;
 };
 
+class Input : public Element
+{
+public:
+    Input(const std::string& name, std::string type, std::string value)
+        : Element(
+            "input",
+            Attribute{"name", name},
+            Attribute{"id", name},
+            Attribute{"type", std::move(type)}
+        )
+    {
+        _value = &append(Attribute{"value", std::move(value)});
+    }
+
+    std::string value() const
+    {
+        return _value->value();
+    }
+
+    void set_value(const std::string& value)
+    {
+        _value->set_value(value);
+    }
+
+public:
+    Attribute* _value;
+};
+
+class Label : public BlockElement
+{
+public:
+    template<class NodeT>
+        Label(
+            std::enable_if_t<std::is_base_of<Node, NodeT>::value, std::string> target,
+            const NodeT& contents)
+        : BlockElement("label")
+    {
+        _target = &append(Attribute{"for", std::move(target)});
+        append(contents);
+    }
+
+    Label(std::string target, std::string text)
+        : Label(std::move(target), Text{std::move(text)})
+    {}
+
+    std::string target() const
+    {
+        return _target->value();
+    }
+
+    void set_target(const std::string& target)
+    {
+        _target->set_value(target);
+    }
+
+public:
+    Attribute* _target;
+};
+
 } // namespace html
 
 } // namespace quick_xml
