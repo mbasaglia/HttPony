@@ -27,6 +27,7 @@
 #include "httpony/quick_xml.hpp"
 
 using namespace httpony::quick_xml;
+using namespace httpony::quick_xml::html;
 
 BOOST_AUTO_TEST_CASE( test_text )
 {
@@ -206,5 +207,36 @@ BOOST_AUTO_TEST_CASE( test_comment )
     boost::test_tools::output_test_stream output;
     output << text;
     BOOST_CHECK( output.is_equal( "<!--hello-->" ) );
+}
+
+BOOST_AUTO_TEST_CASE( test_ul )
+{
+    List list;
+    list.add_item(Text{"hello"});
+    list.add_item(Text{"world"});
+    boost::test_tools::output_test_stream output;
+    output << list;
+    BOOST_CHECK( output.is_equal( "<ul><li>hello</li><li>world</li></ul>" ) );
+}
+
+BOOST_AUTO_TEST_CASE( test_ol )
+{
+    List list(true);
+    list.add_item(Text{"hello"});
+    list.add_item(Text{"world"});
+    boost::test_tools::output_test_stream output;
+    output << list;
+    BOOST_CHECK( output.is_equal( "<ol><li>hello</li><li>world</li></ol>" ) );
+}
+
+BOOST_AUTO_TEST_CASE( test_link )
+{
+    Link link("/foo", "bar");
+    BOOST_CHECK( link.target() == "/foo" );
+    link.set_target("/bar");
+    BOOST_CHECK( link.target() == "/bar" );
+    boost::test_tools::output_test_stream output;
+    output << link;
+    BOOST_CHECK( output.is_equal( "<a href='/bar'>bar</a>" ) );
 }
 

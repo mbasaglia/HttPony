@@ -71,26 +71,28 @@ protected:
 
             if ( boost::filesystem::is_directory(file) )
             {
+                using namespace httpony::quick_xml::html;
                 httpony::Response response(request.protocol);
                 response.body.start_output("text/html");
-                response.body << "<!DOCTYPE html>\n<html>\n"
-                    << "<head><title>" << file << "</title></head>\n"
-                    << "<body><ul>";
+                HtmlDocument html(file.string());
+                auto& list = html.body().append(List{});
 
                 if ( !request.url.path.empty() )
                 {
-                    response.body << "<li><a href='..'>Parent</a></li>\n";
+                    list.add_item(Link{"..", "Parent"});
                 }
 
                 for ( const auto& item : boost::filesystem::directory_iterator(file) )
                 {
                     std::string basename = item.path().filename().string();
-                    response.body << "<li><a href='"
-                        << (request.url.path / basename).url_encoded()
-                        << "'>" << basename << "</a></li>\n";
+                    list.add_item(Link{
+                        (request.url.path / basename).url_encoded(),
+                        basename
+                    });
                 }
 
-                response.body << "</ul></body>\n</html>";
+                html.print(response.body, true);
+                response.body << '\n';
                 return response;
             }
             else if ( boost::filesystem::is_regular(file) )

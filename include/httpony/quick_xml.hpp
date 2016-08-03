@@ -55,6 +55,14 @@ public:
         level(level)
     {}
 
+    explicit Indentation(int what)
+        : Indentation(NodeTypes(what))
+    {}
+
+    Indentation(bool indent)
+        : Indentation(indent ? Element : Nothing)
+    {}
+
     void indent(std::ostream& out, NodeType type = Element) const
     {
         if ( type & what )
@@ -118,15 +126,16 @@ public:
 
 protected:
     template<class NodeT>
-        void append(std::shared_ptr<NodeT> child)
+        NodeT& append(std::shared_ptr<NodeT> child)
         {
-            _children.push_back(std::move(child));
+            _children.push_back(child);
+            return *child;
         }
 
     template<class NodeT>
-        void append(NodeT&& child)
+        NodeT& append(NodeT&& child)
         {
-            _children.push_back(
+            return append(
                 std::make_shared<std::remove_cv_t<std::remove_reference_t<NodeT>>>(
                     std::forward<NodeT>(child)
             ));
@@ -153,9 +162,9 @@ protected:
             append_range(sequence.begin(), sequence.end());
         }
 
-private:
     void append(){}
 
+private:
     std::vector<std::shared_ptr<Node>> _children;
 };
 
@@ -217,6 +226,8 @@ public:
         return true;
     }
 
+    using Node::append;
+
 private:
     std::string _tag_name;
 };
@@ -258,6 +269,11 @@ public:
     std::string value() const
     {
         return _value;
+    }
+
+    void set_value(const std::string& value)
+    {
+        _value = value;
     }
 
     void print(std::ostream& out, const Indentation& indent) const override
@@ -407,15 +423,20 @@ private:
     std::string _contents;
 };
 
+namespace html{
+
 class HtmlDocument : public Node
 {
 public:
     HtmlDocument(std::string title, BlockElement body = BlockElement{"body"})
-        : _title(std::make_shared<Text>(std::move(title))),
-          _head(std::make_shared<BlockElement>("head", BlockElement{"title", _title})),
-          _body(std::make_shared<BlockElement>(std::move(body)))
     {
-        append(DocType{"html"}, BlockElement{"html", _head, _body});
+        auto shared_title = std::make_shared<Text>(std::move(title));
+        _title = shared_title.get();
+        auto shared_head = std::make_shared<BlockElement>("head", BlockElement{"title", shared_title});
+        _head = shared_head.get();
+        auto shared_body = std::make_shared<BlockElement>(std::move(body));
+        _body = shared_body.get();
+        append(DocType{"html"}, BlockElement{"html", shared_head, shared_body});
     }
 
     std::string title() const
@@ -438,12 +459,60 @@ public:
         return *_body;
     }
 
-
 private:
-    std::shared_ptr<Text> _title;
-    std::shared_ptr<BlockElement> _head;
-    std::shared_ptr<BlockElement> _body;
+    Text* _title;
+    BlockElement* _head;
+    BlockElement* _body;
 };
+
+class List : public BlockElement
+{
+public:
+    explicit List(bool ordered = false)
+        : BlockElement(ordered ? "ol" : "ul")
+    {}
+
+    template<class ElemT>
+    ElemT& add_item(ElemT&& element)
+    {
+        auto shared = std::make_shared<ElemT>(std::forward<ElemT>(element));
+        append(BlockElement{"li", shared});
+        return *shared;
+    }
+};
+
+class Link : public BlockElement
+{
+public:
+    template<class NodeT>
+        Link(
+            std::enable_if_t<std::is_base_of<Node, NodeT>::value, std::string> target,
+            const NodeT& contents)
+        : BlockElement("a")
+    {
+        href = &append(Attribute{"href", std::move(target)});
+        append(contents);
+    }
+
+    Link(std::string target, std::string text)
+        : Link(std::move(target), Text{std::move(text)})
+    {}
+
+    std::string target() const
+    {
+        return href->value();
+    }
+
+    void set_target(const std::string& target)
+    {
+        href->set_value(target);
+    }
+
+public:
+    Attribute* href;
+};
+
+} // namespace html
 
 } // namespace quick_xml
 } // namespace httpony
