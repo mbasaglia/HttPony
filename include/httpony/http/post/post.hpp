@@ -59,7 +59,7 @@ public:
      */
     bool can_format(const Request& request) const
     {
-        if ( !request.body.has_input() )
+        if ( request.body.has_input() )
             return false;
         return do_can_format(request);
     }

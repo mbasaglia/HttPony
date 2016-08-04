@@ -34,4 +34,9 @@ bool Request::parse_post()
     return httpony::post::FormatRegistry::instance().parse(*this);
 }
 
+bool Request::format_post()
+{
+    return httpony::post::FormatRegistry::instance().format(*this);
+}
+
 } // namespace httpony

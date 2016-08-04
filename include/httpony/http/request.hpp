@@ -78,6 +78,8 @@ struct Request
 
     bool can_parse_post() const;
     bool parse_post();
+
+    bool format_post();
 };
 
 } // namespace httpony

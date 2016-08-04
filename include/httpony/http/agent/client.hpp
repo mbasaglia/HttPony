@@ -133,6 +133,8 @@ protected:
     virtual void process_request(Request& request)
     {
         request.headers["User-Agent"] = _user_agent;
+        if ( !request.post.empty() && !request.body.has_data() )
+            request.format_post();
     }
 
     /**
