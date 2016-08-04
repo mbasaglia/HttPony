@@ -46,6 +46,8 @@ public:
 protected:
     httpony::Response build_response(httpony::Request& request, const httpony::Status& status) const
     {
+        using namespace httpony::quick_xml;
+        using namespace httpony::quick_xml::html;
         try
         {
             if ( status.is_error() )
@@ -69,16 +71,17 @@ protected:
                 httpony::Response response(request.protocol);
                 response.headers["X-Login-Page"] = "Yes";
                 response.body.start_output("text/html");
-                response.body << "<!DOCTYPE html>\n<html>\n"
-                    << "<head><title>Login</title></head>\n"
-                    << "<body>\n<form method='post'>\n"
-                    << "<label for='username'>Username</label>"
-                    << "<input type='text' name='username' id='username'"
-                    << " value='" << request.post["username"] << "' />\n"
-                    << "<label for='password'>Password</label>"
-                    << "<input type='password' name='password' id='password'"
-                    << " value='" << request.post["password"] << "' />\n"
-                    << "</form>\n</body>\n</html>\n";
+
+                HtmlDocument doc("Login");
+                doc.body().append(
+                    Element{"form", Attribute("method", "post"),
+                        Label("username", "Username"),
+                        Input("username", "text", request.post["username"]),
+                        Label("password", "Password"),
+                        Input("password", "password", request.post["password"]),
+                    }
+                );
+                doc.print(response.body, true);
 
                 return response;
             }
@@ -91,11 +94,11 @@ protected:
 
             httpony::Response response(request.protocol);
             response.body.start_output("text/html");
-            response.body << "<!DOCTYPE html>\n<html>\n"
-                << "<head><title>Hello</title></head>\n"
-                << "<body>\n<p>Welcome "
-                << request.cookies["logged_in"]
-                << "!</p>\n</body></html>\n";
+            HtmlDocument doc("Hello");
+            doc.body().append(
+                Element("p", Text("Welcome " + request.cookies["logged_in"] + "!"))
+            );
+            doc.print(response.body, true);
 
             return response;
         }
