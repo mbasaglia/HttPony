@@ -22,7 +22,6 @@
 #define HTTPONY_HTTP_POST_URLENCODED_HPP
 
 #include "post.hpp"
-#include "httpony/uri.hpp"
 
 namespace httpony {
 namespace post {

@@ -21,7 +21,10 @@
 #ifndef HTTPONY_HTTP_POST_POST_HPP
 #define HTTPONY_HTTP_POST_POST_HPP
 
+/// \cond
 #include <melanolib/utils/singleton.hpp>
+/// \endcond
+
 #include "httpony/http/request.hpp"
 
 namespace httpony {

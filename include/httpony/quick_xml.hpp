@@ -21,11 +21,13 @@
 #ifndef HTTPONY_QUICK_XML_HPP
 #define HTTPONY_QUICK_XML_HPP
 
+/// \cond
 #include <ostream>
 #include <vector>
 #include <type_traits>
 
 #include <melanolib/utils/c++-compat.hpp>
+/// \endcond
 
 namespace httpony {
 namespace quick_xml {

@@ -22,7 +22,6 @@
 #ifndef HTTPONY_REQUEST_HPP
 #define HTTPONY_REQUEST_HPP
 
-#include "httpony/ip_address.hpp"
 #include "httpony/http/protocol.hpp"
 #include "httpony/io/network_stream.hpp"
 #include "httpony/uri.hpp"

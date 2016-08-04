@@ -26,7 +26,6 @@
 /// \endcond
 
 #include "httpony/io/buffer.hpp"
-#include "httpony/ip_address.hpp"
 
 namespace httpony {
 namespace io {

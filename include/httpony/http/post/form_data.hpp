@@ -22,8 +22,6 @@
 #define HTTPONY_HTTP_POST_FORM_DATA_HPP
 
 #include "post.hpp"
-#include "httpony/uri.hpp"
-#include "httpony/multipart.hpp"
 #include "httpony/http/formatter.hpp"
 #include "httpony/http/parser.hpp"
 
