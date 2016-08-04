@@ -29,7 +29,7 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
     if ( stream.fail() || stream.bad() )
         return StatusCode::BadRequest;
 
-    request = Request();
+    request.clear_data();
 
     /// \todo Some way to switch parser based on the protocol
     if ( !request_line(stream, request) )
@@ -88,7 +88,7 @@ OperationStatus Http1Parser::response(std::istream& stream, Response& response) 
     if ( stream.fail() || stream.bad() )
         return "network error";
 
-    response = Response();
+    response.clear_data();
 
     /// \todo Some way to switch parser based on the protocol
     if ( !response_line(stream, response) )

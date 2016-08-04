@@ -34,33 +34,36 @@ OperationStatus Client::get_response(const std::shared_ptr<io::Connection>& conn
 
 OperationStatus Client::get_response_attempt(int attempt, Request& request, Response& response)
 {
+    response.connection = request.connection;
 
     if ( !request.connection )
     {
-        response = Response();
-        response.connection = request.connection;
+        response.clear_data();
         return "client not connected";
     }
 
-    process_request(request);
-    auto ostream = request.connection->send_stream();
-    http::Http1Formatter().request(ostream, request);
-    if ( !ostream.send() )
     {
-        response = Response();
-        response.connection = request.connection;
-        return "connection error";
+        process_request(request);
+        auto ostream = request.connection->send_stream();
+        http::Http1Formatter().request(ostream, request);
+        if ( !ostream.send() )
+        {
+            response.clear_data();
+            return "connection error";
+        }
     }
 
-    auto istream = request.connection->receive_stream();
-    OperationStatus status = Http1Parser().response(istream, response);
-    response.connection = request.connection;
+    {
+        auto istream = request.connection->receive_stream();
+        OperationStatus status = Http1Parser().response(istream, response);
+        response.connection = request.connection;
 
-    if ( istream.timed_out() )
-        return "timeout";
+        if ( istream.timed_out() )
+            return "timeout";
 
-    if ( status.error() )
-        return status;
+        if ( status.error() )
+            return status;
+    }
 
     if ( response.body.has_data() )
         response.connection->input_buffer().expect_input(response.body.content_length());

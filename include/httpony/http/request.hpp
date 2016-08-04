@@ -61,6 +61,24 @@ struct Request
           protocol(std::move(protocol))
     {}
 
+    bool can_parse_post() const;
+    bool parse_post();
+
+    bool format_post();
+
+    void clear_data()
+    {
+        method = {};
+        url = {};
+        protocol = Protocol::http_1_1;
+        headers.clear();
+        cookies.clear();
+        get.clear();
+        post.clear();
+        auth = {};
+        body = {};
+    }
+
     std::string method;
     Uri         url;
     Protocol    protocol = Protocol::http_1_1;
@@ -75,11 +93,6 @@ struct Request
     melanolib::time::DateTime received_date;
 
     std::shared_ptr<io::Connection> connection;
-
-    bool can_parse_post() const;
-    bool parse_post();
-
-    bool format_post();
 };
 
 } // namespace httpony

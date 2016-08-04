@@ -113,6 +113,19 @@ struct Response
         }
     }
 
+    void clear_data()
+    {
+        body = io::ContentStream();
+        status = Status();
+        headers.clear();
+        protocol = Protocol::http_1_1;
+        cookies.clear();
+        date = {};
+        www_authenticate.clear();
+        proxy_authenticate.clear();
+    }
+
+
     io::ContentStream body;
     Status      status;
     Headers     headers;
