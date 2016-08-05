@@ -104,7 +104,7 @@ public:
      * \brief Runs the server synchronously
      * \tparam OnSuccess Functor accepting a io::Connectio&
      * \tparam OnFailure Functor accepting a io::Connectio& and a std::string
-     * \tparam CreateConnection Function returning a std::shared_ptr<Connection>
+     * \tparam CreateConnection Function returning an io::Connection
      * \param on_success Functor called on a successful connection
      * \param on_failure Functor called on a connection that had some issues
      * \param create_connection Function called to create a new connection object
@@ -154,18 +154,18 @@ private:
                  const CreateConnection& create_connection)
         {
             connections.push_back(create_connection());
-            auto connection = connections.back().get();
+            auto connection = connections.back();
             acceptor.async_accept(
-                connection->socket().raw_socket(),
+                connection.socket().raw_socket(),
                 [this, connection, on_success, on_failure, create_connection]
-                (boost::system::error_code error)
+                (boost::system::error_code error) mutable
                 {
                     if ( !acceptor.is_open() )
                         return;
 
-                    auto conn_iter = std::find_if(
+                    auto conn_iter = std::find(
                         connections.begin(), connections.end(),
-                        [connection](const auto& c) { return c.get() == connection; }
+                        connection
                     );
 
                     // Should never be == end
@@ -173,12 +173,12 @@ private:
                         throw std::logic_error("Connection vanished");
 
                     if ( _timeout )
-                        connection->socket().set_timeout(*_timeout);
+                        connection.socket().set_timeout(*_timeout);
 
                     if ( !error )
                         on_success(*conn_iter);
                     else
-                        on_failure(**conn_iter, error_to_status(error));
+                        on_failure(*conn_iter, error_to_status(error));
 
                     /// \todo Keep the connection alive if needed
                     connections.erase(conn_iter);
@@ -190,7 +190,7 @@ private:
     melanolib::Optional<melanolib::time::seconds> _timeout;
     boost::asio::io_service                       io_service;
     boost_tcp::acceptor                           acceptor{io_service};
-    std::list<std::shared_ptr<io::Connection>>    connections;
+    std::list<io::Connection>                     connections;
 };
 
 } // namespace io

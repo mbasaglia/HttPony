@@ -37,11 +37,11 @@ public:
         {}
 
 protected:
-    std::shared_ptr<io::Connection> create_connection(const Uri& target) final
+    io::Connection create_connection(const Uri& target) final
     {
         if ( target.scheme == "https" )
-            return std::make_shared<io::Connection>(io::SocketTag<SslSocket>{}, context);
-        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
+            return io::Connection(io::SocketTag<SslSocket>{}, context);
+        return io::Connection(io::SocketTag<io::PlainSocket>{});
     }
 
 private:

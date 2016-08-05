@@ -135,7 +135,7 @@ struct Response
     std::vector<AuthChallenge> www_authenticate;
     std::vector<AuthChallenge> proxy_authenticate;
 
-    std::shared_ptr<io::Connection> connection;
+    io::Connection connection;
 };
 
 } // namespace httpony

@@ -168,7 +168,7 @@ private:
 
         // Drop the connection if there is some network error on the response
         if ( !send(request.connection, response) )
-            request.connection->close();
+            request.connection.close();
     }
 
     /**

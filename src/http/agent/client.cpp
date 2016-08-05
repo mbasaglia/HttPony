@@ -26,7 +26,7 @@
 namespace httpony {
 
 
-OperationStatus Client::get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response)
+OperationStatus Client::get_response(io::Connection& connection, Request& request, Response& response)
 {
     request.connection = connection;
     return get_response_attempt(0, request, response);
@@ -44,7 +44,7 @@ OperationStatus Client::get_response_attempt(int attempt, Request& request, Resp
 
     {
         process_request(request);
-        auto ostream = request.connection->send_stream();
+        auto ostream = request.connection.send_stream();
         http::Http1Formatter().request(ostream, request);
         if ( !ostream.send() )
         {
@@ -54,7 +54,7 @@ OperationStatus Client::get_response_attempt(int attempt, Request& request, Resp
     }
 
     {
-        auto istream = request.connection->receive_stream();
+        auto istream = request.connection.receive_stream();
         OperationStatus status = Http1Parser().response(istream, response);
         response.connection = request.connection;
 
@@ -66,7 +66,7 @@ OperationStatus Client::get_response_attempt(int attempt, Request& request, Resp
     }
 
     if ( response.body.has_data() )
-        response.connection->input_buffer().expect_input(response.body.content_length());
+        response.connection.input_buffer().expect_input(response.body.content_length());
 
     process_response(request, response);
 
@@ -90,7 +90,7 @@ OperationStatus Client::on_attempt(Request& request, Response& response, int att
         }
         /// \todo Implement keeping the connection open on the server side
         if ( response.headers["Connection"] == "close" ||
-             !request.connection->connected() ||
+             !request.connection.connected() ||
              request.url.authority.host != target.authority.host ||
              request.url.authority.port != target.authority.port )
         {

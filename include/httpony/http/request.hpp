@@ -24,12 +24,10 @@
 
 #include "httpony/http/protocol.hpp"
 #include "httpony/io/network_stream.hpp"
+#include "httpony/io/connection.hpp"
 #include "httpony/uri.hpp"
 
 namespace httpony {
-
-namespace io { class Connection; }
-
 
 /**
  * \brief HTTP Authentication credentials
@@ -91,7 +89,7 @@ struct Request
 
     melanolib::time::DateTime received_date;
 
-    std::shared_ptr<io::Connection> connection;
+    io::Connection connection;
 };
 
 } // namespace httpony

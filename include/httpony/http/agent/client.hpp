@@ -57,18 +57,18 @@ public:
      * \param[in]  target URI of the server to connect to
      * \param[out] status Status of the operation
      */
-    std::shared_ptr<io::Connection> connect(Uri target, OperationStatus& status)
+    io::Connection connect(Uri target, OperationStatus& status)
     {
         if ( target.scheme.empty() )
             target.scheme = "http";
 
         auto connection = create_connection(target);
-        status = _basic_client.connect(target, *connection);
+        status = _basic_client.connect(target, connection);
 
         if ( !status.error() )
-            status = on_connect(target, *connection);
+            status = on_connect(target, connection);
 
-        return connection;
+        return std::move(connection);
     }
 
     OperationStatus query(Request& request, Response& response)
@@ -85,7 +85,7 @@ public:
     /**
      * \brief Writes the request and retrieves the response over a connection object
      */
-    OperationStatus get_response(const std::shared_ptr<io::Connection>& connection, Request& request, Response& response);
+    OperationStatus get_response(io::Connection& connection, Request& request, Response& response);
 
     /**
      * \brief The timeout for network I/O operations
@@ -149,9 +149,9 @@ protected:
     /**
      * \brief Creates a new connection object
      */
-    virtual std::shared_ptr<io::Connection> create_connection(const Uri& target)
+    virtual io::Connection create_connection(const Uri& target)
     {
-        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
+        return io::Connection(io::SocketTag<io::PlainSocket>{});
     }
 
     OperationStatus get_response_attempt(int attempt, Request& request, Response& response);
@@ -223,15 +223,15 @@ public:
             if ( !should_run )
                 return;
 
-            std::vector<io::Connection*> connections;
+            std::vector<io::Connection> connections;
             connections.reserve(items.size());
 
             for ( auto& item : items )
-                connections.push_back(item.connection.get());
+                connections.push_back(item.connection);
 
             lock.unlock();
             for ( auto connection : connections )
-                connection->socket().process_async();
+                connection.socket().process_async();
             lock.lock();
 
             std::unique_lock<std::mutex> old_lock(old_requests_mutex);
@@ -256,7 +256,7 @@ public:
         auto& item = items.back();
         lock.unlock();
 
-        basic_client().async_connect(item.url, *item.connection,
+        basic_client().async_connect(item.url, item.connection,
             [this, on_response, on_connect, on_error, &item]()
             {
                 melanolib::callback(on_connect, item);

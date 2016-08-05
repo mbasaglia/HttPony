@@ -64,9 +64,9 @@ private:
     /**
      * \brief Creates a connection linked to a SSL socket
      */
-    std::shared_ptr<io::Connection> create_connection() final
+    io::Connection create_connection() final
     {
-        return std::make_shared<io::Connection>(io::SocketTag<SslSocket>{}, context);
+        return io::Connection(io::SocketTag<SslSocket>{}, context);
     }
 
     /**

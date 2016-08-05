@@ -33,177 +33,208 @@ namespace io {
 class Connection
 {
 public:
-    /**
-     * \brief Stream used to send data through the connection
-     * \note There should be only one send stream per connection at a given time
-     * \todo Better async streaming
-     */
-    class SendStream : public std::ostream
-    {
-    public:
-        SendStream(SendStream&& oth)
-            : std::ostream(oth.rdbuf()),
-              connection(oth.connection)
-        {
-            oth.unset();
-        }
+    class SendStream;
+    class ReceiveStream;
 
-        SendStream& operator=(SendStream&& oth)
-        {
-            rdbuf(oth.rdbuf());
-            connection = oth.connection;
-            oth.unset();
-            return *this;
-        }
-
-        ~SendStream()
-        {
-            send();
-        }
-
-        /**
-         * \brief Ensures all data is being sent,
-         * \returns \b true on success
-         * \note If not called, the data will still be sent but you might not be
-         * able to detect whether that has been successful
-         */
-        bool send()
-        {
-            if ( connection && connection->commit_output() )
-                return true;
-            setstate(badbit);
-            return false;
-        }
-
-    private:
-        void unset()
-        {
-            connection = nullptr;
-            rdbuf(nullptr);
-        }
-
-        SendStream(Connection* connection)
-            : std::ostream(&connection->output_buffer()),
-             connection(connection)
-        {}
-
-        friend Connection;
-        Connection* connection;
-    };
-
-    class ReceiveStream : public std::istream
-    {
-    public:
-        ReceiveStream(ReceiveStream&& oth)
-            : std::istream(oth.rdbuf()),
-              connection(oth.connection)
-        {
-            oth.unset();
-        }
-
-        ReceiveStream& operator=(ReceiveStream&& oth)
-        {
-            rdbuf(oth.rdbuf());
-            connection = oth.connection;
-            oth.unset();
-            return *this;
-        }
-
-        bool timed_out() const
-        {
-            return connection->_socket.timed_out();
-        }
-
-    private:
-        void unset()
-        {
-            connection = nullptr;
-            rdbuf(nullptr);
-        }
-
-        ReceiveStream(Connection* connection)
-            : std::istream(&connection->input_buffer()),
-             connection(connection)
-        {
-            OperationStatus _status;
-            /// \todo Avoid magic number, keep reading if needed
-            auto sz = connection->_input_buffer.read_some(1024, _status);
-            if ( _status.error() || sz <= 0 )
-                setstate(badbit);
-        }
-
-        friend Connection;
-        Connection* connection;
-    };
-
-
-    template<class... SocketArgs>
-        explicit Connection(SocketArgs&&... args)
-            : _socket(std::forward<SocketArgs>(args)...)
+    template<class Tag, class... SocketArgs>
+        explicit Connection(SocketTag<Tag> st, SocketArgs&&... args)
+            : data(std::make_shared<Data>(st, std::forward<SocketArgs>(args)...))
     {}
+
+    Connection() = default;
+
 
     NetworkInputBuffer& input_buffer()
     {
-        return _input_buffer;
+        return data->input_buffer;
     }
 
     NetworkOutputBuffer& output_buffer()
     {
-        return _output_buffer;
+        return data->output_buffer;
     }
 
     OperationStatus commit_output()
     {
-        if ( _output_buffer.size() == 0 )
+        if ( data->output_buffer.size() == 0 )
             return {};
         OperationStatus status;
-        _socket.write(_output_buffer.data(), status);
-        _output_buffer.consume(_output_buffer.size());
+        data->socket.write(data->output_buffer.data(), status);
+        data->output_buffer.consume(data->output_buffer.size());
         return status;
     }
 
     void close()
     {
-        _socket.close();
+        data->socket.close();
     }
 
     IPAddress remote_address() const
     {
-        return _socket.remote_address();
+        return data->socket.remote_address();
     }
 
     IPAddress local_address() const
     {
-        return _socket.local_address();
-    }
-
-    SendStream send_stream()
-    {
-        return SendStream(this);
+        return data->socket.local_address();
     }
 
     bool connected() const
     {
-        return _socket.is_open();
+        return data->socket.is_open();
     }
 
-    ReceiveStream receive_stream()
-    {
-        return ReceiveStream(this);
-    }
+    SendStream send_stream();
+
+    ReceiveStream receive_stream();
 
     TimeoutSocket& socket()
     {
-        return _socket;
+        return data->socket;
     }
 
+    explicit operator bool() const
+    {
+        return !!data;
+    }
+
+    bool operator==(const io::Connection& oth) const
+    {
+        return data == oth.data;
+    }
+
+    bool operator!=(const io::Connection& oth) const
+    {
+        return data != oth.data;
+    }
 
 private:
-    TimeoutSocket       _socket;
-    NetworkInputBuffer  _input_buffer{_socket};
-    NetworkOutputBuffer _output_buffer;
+    struct Data
+    {
+        template<class... SocketArgs>
+            explicit Data(SocketArgs&&... args)
+                : socket(std::forward<SocketArgs>(args)...)
+        {}
+
+        TimeoutSocket       socket;
+        NetworkInputBuffer  input_buffer{socket};
+        NetworkOutputBuffer output_buffer;
+    };
+
+    std::shared_ptr<Data> data;
 };
 
+/**
+ * \brief Stream used to send data through the connection
+ * \note There should be only one send stream per connection at a given time
+ * \todo Better async streaming
+ */
+class Connection::SendStream : public std::ostream
+{
+public:
+    SendStream(SendStream&& oth)
+        : std::ostream(oth.rdbuf()),
+            connection(oth.connection)
+    {
+        oth.unset();
+    }
+
+    SendStream& operator=(SendStream&& oth)
+    {
+        rdbuf(oth.rdbuf());
+        connection = std::move(oth.connection);
+        oth.unset();
+        return *this;
+    }
+
+    ~SendStream()
+    {
+        send();
+    }
+
+    /**
+        * \brief Ensures all data is being sent,
+        * \returns \b true on success
+        * \note If not called, the data will still be sent but you might not be
+        * able to detect whether that has been successful
+        */
+    bool send()
+    {
+        if ( connection && connection.commit_output() )
+            return true;
+        setstate(badbit);
+        return false;
+    }
+
+private:
+    void unset()
+    {
+        rdbuf(nullptr);
+    }
+
+    SendStream(Connection connection)
+        : std::ostream(&connection.output_buffer()),
+            connection(std::move(connection))
+    {}
+
+    friend Connection;
+    Connection connection;
+};
+
+class Connection::ReceiveStream : public std::istream
+{
+public:
+    ReceiveStream(ReceiveStream&& oth)
+        : std::istream(oth.rdbuf()),
+            connection(std::move(oth.connection))
+    {
+        oth.unset();
+    }
+
+    ReceiveStream& operator=(ReceiveStream&& oth)
+    {
+        rdbuf(oth.rdbuf());
+        connection = std::move(oth.connection);
+        oth.unset();
+        return *this;
+    }
+
+    bool timed_out() const
+    {
+        return connection.data->socket.timed_out();
+    }
+
+private:
+    void unset()
+    {
+        rdbuf(nullptr);
+    }
+
+    ReceiveStream(Connection connection)
+        : std::istream(&connection.input_buffer()),
+            connection(std::move(connection))
+    {
+        OperationStatus _status;
+        /// \todo Avoid magic number, keep reading if needed
+        auto sz = this->connection.data->input_buffer.read_some(1024, _status);
+        if ( _status.error() || sz <= 0 )
+            setstate(badbit);
+    }
+
+    friend Connection;
+    Connection connection;
+};
+
+
+inline Connection::SendStream Connection::send_stream()
+{
+    return SendStream(*this);
+}
+
+inline Connection::ReceiveStream Connection::receive_stream()
+{
+    return ReceiveStream(*this);
+}
 
 } // namespace io
 } // namespace httpony

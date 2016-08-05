@@ -63,18 +63,18 @@ void Server::start()
 
     _thread = std::thread([this](){
         _listen_server.run(
-            [this](const std::shared_ptr<io::Connection>& connection){
-                if ( accept(*connection) )
+            [this](io::Connection& connection){
+                if ( accept(connection) )
                 {
                     /// \todo Switch parser based on protocol
                     Http1Parser parser;
-                    auto stream = connection->receive_stream();
+                    auto stream = connection.receive_stream();
                     Request request;
                     auto status = parser.request(stream, request);
                     if ( stream.timed_out() )
                         status = StatusCode::RequestTimeout;
                     else if ( request.body.has_data() )
-                        connection->input_buffer().expect_input(request.body.content_length());
+                        connection.input_buffer().expect_input(request.body.content_length());
                     request.connection = connection;
                     respond(request, status);
                 }
@@ -115,10 +115,10 @@ void Server::process_log_format(
             break;
         case 'h': // Remote host
         case 'a': // Remote IP-address
-            output << request.connection->remote_address().string;
+            output << request.connection.remote_address().string;
             break;
         case 'A': // Local IP-address
-            output << request.connection->local_address().string;
+            output << request.connection.local_address().string;
             break;
         case 'B': // Size of response in bytes, excluding HTTP headers.
             output << response.body.content_length();
@@ -161,9 +161,9 @@ void Server::process_log_format(
             break;
         case 'p':
             if ( argument == "remote" )
-                output << request.connection->remote_address().port;
+                output << request.connection.remote_address().port;
             else if ( argument == "local" )
-                output << request.connection->local_address().port;
+                output << request.connection.local_address().port;
             else // canonical
                 output << _listen_address.port;
             break;
@@ -280,7 +280,7 @@ bool Server::send(Response& response) const
 {
     if ( !response.connection )
         return false;
-    auto stream = response.connection->send_stream();
+    auto stream = response.connection.send_stream();
     /// \todo Switch formatter based on protocol
     /// (Needs to implement stuff like HTTP/2)
     http::Http1Formatter().response(stream, response);

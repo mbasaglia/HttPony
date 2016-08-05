@@ -106,7 +106,7 @@ private:
 
         // Drop the connection if there is some network error on the response
         if ( !send(request.connection, response) )
-            request.connection->close();
+            request.connection.close();
     }
 
     std::string log_format = "%h %l %u %t \"%r\" %s %b \"%{Referer}i\" \"%{User-Agent}i\"";

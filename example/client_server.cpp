@@ -142,7 +142,7 @@ protected:
         response.clean_body(request);
 
         if ( !send(request.connection, response) )
-            request.connection->close();
+            request.connection.close();
     }
 };
 

@@ -101,13 +101,13 @@ protected:
 
     bool send(Response& response) const;
 
-    bool send(const std::shared_ptr<io::Connection>& connection, Response& response) const
+    bool send(io::Connection& connection, Response& response) const
     {
         response.connection = connection;
         return send(response);
     }
     
-    bool send(const std::shared_ptr<io::Connection>& connection, Response&& response) const
+    bool send(io::Connection& connection, Response&& response) const
     {
         return send(connection, response);
     }
@@ -116,9 +116,9 @@ private:
     /**
      * \brief Creates a new connection object
      */
-    virtual std::shared_ptr<io::Connection> create_connection()
+    virtual io::Connection create_connection()
     {
-        return std::make_shared<io::Connection>(io::SocketTag<io::PlainSocket>{});
+        return io::Connection(io::SocketTag<io::PlainSocket>{});
     }
 
     /**
