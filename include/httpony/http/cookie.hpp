@@ -107,12 +107,14 @@ inline std::ostream& operator<<(std::ostream& os, CookieJar::const_reference coo
 
 /**
  * \brief Cookie as stored on the client
+ * \todo Have a single class for both, the information stored is just slightly different
  */
 class ClientCookie
 {
 public:
     ClientCookie(const Cookie& cookie)
-        : domain(cookie.domain),
+        : value(cookie.value),
+          domain(cookie.domain),
           path(cookie.path),
           secure(cookie.secure),
           http_only(cookie.http_only)
@@ -147,7 +149,7 @@ public:
     bool matches_domain(const std::string& string) const
     {
         /// \todo canonicalize domains ( https://tools.ietf.org/html/rfc6265#section-5.1.2 )
-        if ( domain == string )
+        if ( domain.empty() || domain == string )
             return true;
         if ( !melanolib::string::ends_with(string, '.' + domain) )
             return false;
@@ -173,7 +175,7 @@ public:
 
     bool expired(const melanolib::time::DateTime& date = {}) const
     {
-        return expiry_time < date;
+        return !is_session() && expiry_time < date;
     }
 
     bool is_session() const
