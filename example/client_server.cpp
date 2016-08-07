@@ -33,7 +33,7 @@ public:
 
         std::cout << "=============\nServer:\n";
         httpony::http::Http1Formatter("\n").request(std::cout, request);
-        std::cout << "=============\n";
+        std::cout << "\n=============\n";
 
         send_response(request, response);
     }
@@ -184,9 +184,10 @@ protected:
 
     void process_response(httpony::Request& request, httpony::Response& response) override
     {
+        std::cout.clear();
         std::cout << "=============\nClient:\n";
         httpony::http::Http1Formatter("\n").response(std::cout, response);
-        std::cout << "=============\n";
+        std::cout << "\n=============\n";
 
         for ( const auto& cookie : response.cookies )
         {
