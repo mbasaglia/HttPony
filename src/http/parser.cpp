@@ -55,6 +55,9 @@ Status Http1Parser::request(std::istream& stream, Request& request) const
     if ( request.headers.contains("Authorization") )
         auth(request.headers.get("Authorization"), request.auth);
 
+    /// \todo Maybe move parsing/formatting out of UserAgent
+    if ( request.headers.contains("User-Agent") )
+        request.user_agent = request.headers.get("User-Agent");
 
     if ( request.headers.contains("Content-Length") )
     {

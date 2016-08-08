@@ -24,8 +24,8 @@
 namespace httpony {
 namespace version {
 
-melanolib::gsl::cstring_view name = "@PROJECT_NAME@";
-melanolib::gsl::cstring_view version = "@PROJECT_VERSION@";
+std::string name = "@PROJECT_NAME@";
+std::string version = "@PROJECT_VERSION@";
 int major = @PROJECT_VERSION_MAJOR@;
 int minor = @PROJECT_VERSION_MINOR@;
 

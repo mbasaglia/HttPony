@@ -29,6 +29,8 @@
 #include <melanolib/string/ascii.hpp>
 /// \endcond
 
+#include "httpony/util/version.hpp"
+
 namespace httpony {
 
 class UserAgent
@@ -40,6 +42,13 @@ public:
         Product,
         Comment
     };
+
+    static UserAgent default_user_agent()
+    {
+        return UserAgent().append_product(version::name, version::version);
+    }
+
+    UserAgent() = default;
 
     UserAgent(const std::string& user_agent_string)
     {
@@ -54,10 +63,20 @@ public:
             if ( melanolib::string::ascii::is_space(next) )
                 break;
             else if ( next == '(' )
-                append_comment(stream.get_until([](char c){ return c == ')'; }, false));
+                append_raw(stream.get_until([](char c){ return c == ')'; }, false));
             else
-                append_product(stream.get_until(melanolib::string::ascii::is_space));
+                append_raw(stream.get_until(melanolib::string::ascii::is_space));
         }
+    }
+
+    UserAgent(std::vector<std::string> items)
+        : tokens(std::move(items))
+    {
+        tokens.erase(
+            std::remove_if(tokens.begin(), tokens.end(),
+                [](const std::string& str) { return str.empty(); }),
+            tokens.end()
+        );
     }
 
     std::size_t size() const
@@ -163,29 +182,48 @@ public:
         return os;
     }
 
-    void append_comment(const std::string& comment)
+    UserAgent& append_comment(const std::string& comment)
     {
         if ( comment.empty() )
-            return;
+            return *this;
         if ( comment.front() != '(' )
             tokens.push_back('(' + comment + ')');
         else
             tokens.push_back(comment);
+
+        return *this;
     }
 
-    void append_product(const std::string& name, const std::string& version = {})
+    UserAgent& append_product(const std::string& name, const std::string& version = {})
     {
         if ( name.empty() )
-            return;
+            return *this;
         if ( !version.empty() )
             tokens.push_back(name + '/' + version);
         else
             tokens.push_back(name);
+
+        return *this;
     }
 
-    void append_raw(const std::string& item)
+    UserAgent& append_raw(const std::string& item)
     {
-        tokens.push_back(item);
+        if ( !item.empty() )
+            tokens.push_back(item);
+        return *this;
+    }
+
+    UserAgent operator+ (const UserAgent& oth) const
+    {
+        UserAgent result = *this;
+        result.tokens.insert(result.tokens.end(), oth.tokens.begin(), oth.tokens.end());
+        return result;
+    }
+
+    UserAgent& operator+= (const UserAgent& oth)
+    {
+        tokens.insert(tokens.end(), oth.tokens.begin(), oth.tokens.end());
+        return *this;
     }
 
 private:

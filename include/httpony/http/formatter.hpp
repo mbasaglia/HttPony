@@ -250,6 +250,9 @@ private:
         if ( !request.headers.contains("Host") )
             header(stream, "Host", request.url.authority.host);
 
+        if ( !request.user_agent.empty() && !request.headers.contains("User-Agent") )
+            header(stream, "User-Agent", request.user_agent);
+
         if ( !request.cookies.empty() && !request.headers.contains("Cookie") )
         {
             stream << "Cookie" << ": ";

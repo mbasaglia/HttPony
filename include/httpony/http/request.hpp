@@ -85,6 +85,7 @@ struct Request
     DataMap     get;
     DataMap     post;
     Auth        auth;
+    UserAgent   user_agent;
 
     io::ContentStream body;
 

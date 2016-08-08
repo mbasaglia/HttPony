@@ -37,16 +37,13 @@ namespace httpony {
 class Client
 {
 public:
-    /**
-     * \todo Add more semantic properties to user_agent, and add it as a request attribute
-     */
-    explicit Client(const std::string& user_agent, int max_redirects = 0)
+    explicit Client(
+        int max_redirects = 0,
+        const UserAgent& user_agent = UserAgent::default_user_agent()
+    )
         : _user_agent(user_agent),
           _max_redirects(melanolib::math::max(0, max_redirects))
     {}
-
-    /// \todo Some way to build the default user agent
-    Client() : Client("HttPony/1.0") {}
 
     virtual ~Client()
     {
@@ -105,12 +102,12 @@ public:
         _basic_client.clear_timeout();
     }
 
-    const std::string& user_agent() const
+    const UserAgent& user_agent() const
     {
         return _user_agent;
     }
 
-    void set_user_agent(const std::string& user_agent)
+    void set_user_agent(const UserAgent& user_agent)
     {
         _user_agent = user_agent;
     }
@@ -132,7 +129,7 @@ protected:
      */
     virtual void process_request(Request& request)
     {
-        request.headers["User-Agent"] = _user_agent;
+        request.user_agent = _user_agent;
         if ( !request.post.empty() && !request.body.has_data() )
             request.format_post();
     }
@@ -166,7 +163,7 @@ private:
         friend class BasicAsyncClient;
 
     io::BasicClient _basic_client;
-    std::string _user_agent;
+    UserAgent _user_agent;
     int _max_redirects = 0;
 };
 

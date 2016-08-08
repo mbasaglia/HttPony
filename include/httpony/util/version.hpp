@@ -21,13 +21,15 @@
 #ifndef HTTPONY_UTIL_VERSION_HPP
 #define HTTPONY_UTIL_VERSION_HPP
 
-#include <melanolib/utils/gsl.hpp>
+/// \cond
+#include <string>
+/// \endcond
 
 namespace httpony {
 namespace version {
 
-extern melanolib::gsl::cstring_view name;
-extern melanolib::gsl::cstring_view version;
+extern std::string name;
+extern std::string version;
 extern int major;
 extern int minor;
 

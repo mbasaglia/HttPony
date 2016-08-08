@@ -150,7 +150,7 @@ class Client : public httpony::AsyncClient
 {
 public:
     Client()
-        : httpony::AsyncClient("HttPony/1.0", 5)
+        : httpony::AsyncClient(5)
     {}
 
     ~Client()
