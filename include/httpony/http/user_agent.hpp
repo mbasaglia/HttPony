@@ -1,0 +1,196 @@
+/**
+ * \file
+ *
+ * \author Mattia Basaglia
+ *
+ * \copyright Copyright  Mattia Basaglia
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU Affero General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU Affero General Public License for more details.
+ *
+ *  You should have received a copy of the GNU Affero General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+#ifndef HTTPONY_HTTP_USER_AGENT_HPP
+#define HTTPONY_HTTP_USER_AGENT_HPP
+
+/// \cond
+#include <vector>
+#include <string>
+#include <ostream>
+#include <melanolib/string/quickstream.hpp>
+#include <melanolib/string/ascii.hpp>
+/// \endcond
+
+namespace httpony {
+
+class UserAgent
+{
+public:
+    enum class Type
+    {
+        Invalid,
+        Product,
+        Comment
+    };
+
+    UserAgent(const std::string& user_agent_string)
+    {
+        melanolib::string::QuickStream stream(user_agent_string);
+        std::string item;
+        while ( !stream.eof() )
+        {
+            stream.ignore_if(melanolib::string::ascii::is_space_noline);
+            if ( stream.eof() )
+                break;
+            char next = stream.peek();
+            if ( melanolib::string::ascii::is_space(next) )
+                break;
+            else if ( next == '(' )
+                append_comment(stream.get_until([](char c){ return c == ')'; }, false));
+            else
+                append_product(stream.get_until(melanolib::string::ascii::is_space));
+        }
+    }
+
+    std::size_t size() const
+    {
+        return tokens.size();
+    }
+
+    bool empty() const
+    {
+        return tokens.empty();
+    }
+
+    auto begin()
+    {
+        return tokens.begin();
+    }
+
+    auto end()
+    {
+        return tokens.end();
+    }
+
+    auto begin() const
+    {
+        return tokens.begin();
+    }
+
+    auto end() const
+    {
+        return tokens.end();
+    }
+
+    auto cbegin() const
+    {
+        return tokens.begin();
+    }
+
+    auto cend() const
+    {
+        return tokens.end();
+    }
+
+    const std::string& operator[](std::size_t pos) const
+    {
+        return tokens[pos];
+    }
+
+    Type type_at(std::size_t pos) const
+    {
+        if ( pos > size() || tokens[pos].empty() )
+            return Type::Invalid;
+        if ( tokens[pos][0] == '(' )
+            return Type::Comment;
+        return Type::Product;
+    }
+
+    std::string comment(std::size_t pos) const
+    {
+        if ( type_at(pos) == UserAgent::Type::Comment )
+            return tokens[pos];
+        return {};
+    }
+
+    std::string product(std::size_t pos) const
+    {
+        if ( type_at(pos) == UserAgent::Type::Product )
+            return tokens[pos];
+        return {};
+    }
+
+    std::string product_name(std::size_t pos) const
+    {
+        if ( type_at(pos) != UserAgent::Type::Product )
+            return {};
+
+        auto slash = tokens[pos].find('/');
+        if ( slash == std::string::npos )
+            return tokens[pos];
+        else
+            return tokens[pos].substr(0, slash);
+    }
+
+    std::string product_version(std::size_t pos) const
+    {
+        if ( type_at(pos) != UserAgent::Type::Product )
+            return {};
+
+        auto slash = tokens[pos].find('/');
+        if ( slash == std::string::npos )
+            return {};
+        else
+            return tokens[pos].substr(slash + 1);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const UserAgent& agent)
+    {
+        if ( !agent.empty() )
+        {
+            os << agent[0];
+            for ( auto it = agent.begin() + 1; it != agent.end(); ++it )
+                os << ' ' << *it;
+        }
+        return os;
+    }
+
+    void append_comment(const std::string& comment)
+    {
+        if ( comment.empty() )
+            return;
+        if ( comment.front() != '(' )
+            tokens.push_back('(' + comment + ')');
+        else
+            tokens.push_back(comment);
+    }
+
+    void append_product(const std::string& name, const std::string& version = {})
+    {
+        if ( name.empty() )
+            return;
+        if ( !version.empty() )
+            tokens.push_back(name + '/' + version);
+        else
+            tokens.push_back(name);
+    }
+
+    void append_raw(const std::string& item)
+    {
+        tokens.push_back(item);
+    }
+
+private:
+    std::vector<std::string> tokens;
+};
+
+} // namespace httpony
+#endif // HTTPONY_HTTP_USER_AGENT_HPP

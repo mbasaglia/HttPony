@@ -26,6 +26,7 @@
 #include "httpony/io/network_stream.hpp"
 #include "httpony/io/connection.hpp"
 #include "httpony/uri.hpp"
+#include "httpony/http/user_agent.hpp"
 
 namespace httpony {
 
