@@ -64,74 +64,19 @@ struct Cookie
         return *this;
     }
 
-    std::string value;
-    melanolib::Optional<melanolib::time::DateTime> expires;
-    melanolib::Optional<melanolib::time::seconds> max_age;
-    std::string domain;
-    std::string path;
-    bool secure = false;
-    bool http_only = false;
-    std::vector<std::string> extension;
-};
-
-using CookieJar = melanolib::OrderedMultimap<std::string, Cookie>;
-
-inline std::ostream& operator<<(std::ostream& os, CookieJar::const_reference cookie)
-{
-    os << cookie.first << '=' << cookie.second.value;
-
-    if ( cookie.second.expires )
-        os << "; Expires=" << melanolib::time::strftime(*cookie.second.expires, "%r GMT");
-
-    if ( cookie.second.max_age )
-        os << "; Max-Age=" << cookie.second.max_age->count();
-
-    if ( !cookie.second.domain.empty() )
-        os << "; Domain=" << cookie.second.domain;
-
-    if ( !cookie.second.path.empty() )
-        os << "; Path=" << urlencode(cookie.second.path);
-
-    if ( cookie.second.secure )
-        os << "; Secure";
-
-    if ( cookie.second.http_only )
-        os << "; HttpOnly";
-
-    if ( !cookie.second.extension.empty() )
-        for ( const auto extension : cookie.second.extension )
-            os << "; " << extension;
-
-    return os;
-}
-
-/**
- * \brief Cookie as stored on the client
- * \todo Have a single class for both, the information stored is just slightly different
- */
-class ClientCookie
-{
-public:
-    ClientCookie(const Cookie& cookie)
-        : value(cookie.value),
-          domain(cookie.domain),
-          path(cookie.path),
-          secure(cookie.secure),
-          http_only(cookie.http_only)
+    melanolib::Optional<melanolib::time::DateTime> expiry_time() const
     {
-        if ( cookie.max_age )
+        if ( max_age )
         {
-            if ( cookie.max_age->count() <= 0 )
-                expiry_time = melanolib::time::DateTime{
+            if ( max_age->count() <= 0 )
+                return melanolib::time::DateTime{
                     melanolib::time::DateTime::Time::min()
                 };
             else
-                expiry_time = melanolib::time::DateTime{} + *cookie.max_age;
+                return creation_time + *max_age;
         }
-        else if ( cookie.expires )
-        {
-            expiry_time = *cookie.expires;
-        }
+
+        return expires;
     }
 
     /**
@@ -175,12 +120,12 @@ public:
 
     bool expired(const melanolib::time::DateTime& date = {}) const
     {
-        return !is_session() && expiry_time < date;
+        return !is_session() && expiry_time() < date;
     }
 
     bool is_session() const
     {
-        return !expiry_time;
+        return !expiry_time();
     }
 
     void update_access()
@@ -188,20 +133,55 @@ public:
         last_access = {};
     }
 
+
     std::string value;
-    melanolib::Optional<melanolib::time::DateTime> expiry_time;
+    melanolib::Optional<melanolib::time::DateTime> expires;
+    melanolib::Optional<melanolib::time::seconds> max_age;
     std::string domain;
     Path path;
     bool secure = false;
     bool http_only = false;
     melanolib::time::DateTime creation_time;
     melanolib::time::DateTime last_access;
+    std::vector<std::string> extension;
 };
+
+using CookieJar = melanolib::OrderedMultimap<std::string, Cookie>;
+
+inline std::ostream& operator<<(std::ostream& os, CookieJar::const_reference cookie)
+{
+    os << cookie.first << '=' << cookie.second.value;
+
+    if ( cookie.second.expires )
+        os << "; Expires=" << melanolib::time::strftime(*cookie.second.expires, "%r GMT");
+
+    if ( cookie.second.max_age )
+        os << "; Max-Age=" << cookie.second.max_age->count();
+
+    if ( !cookie.second.domain.empty() )
+        os << "; Domain=" << cookie.second.domain;
+
+    if ( !cookie.second.path.empty() )
+        os << "; Path=" << cookie.second.path.url_encoded();
+
+    if ( cookie.second.secure )
+        os << "; Secure";
+
+    if ( cookie.second.http_only )
+        os << "; HttpOnly";
+
+    if ( !cookie.second.extension.empty() )
+        for ( const auto extension : cookie.second.extension )
+            os << "; " << extension;
+
+    return os;
+}
+
 
 /**
  * \todo Order as from https://tools.ietf.org/html/rfc6265#section-5.4 (2.)
  */
-using ClientCookieJar = melanolib::OrderedMultimap<std::string, ClientCookie>;
+using ClientCookieJar = CookieJar;
 
 
 

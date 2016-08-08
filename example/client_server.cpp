@@ -191,8 +191,7 @@ protected:
 
         for ( const auto& cookie : response.cookies )
         {
-            httpony::ClientCookie client_cookie(cookie.second);
-            if ( client_cookie.matches_domain(request.url.authority.host) )
+            if ( cookie.second.matches_domain(request.url.authority.host) )
                 cookies.append(cookie.first, cookie.second);
         }
     }
