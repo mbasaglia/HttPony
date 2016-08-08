@@ -16,6 +16,8 @@
 #
 set(LIBRARY_NAME httpony) # repeated otherwise kdevelop messes up
 
+configure_file(util/version.in.cpp ${CMAKE_CURRENT_BINARY_DIR}/version.cpp)
+
 set(SOURCES
 http/agent/server.cpp
 http/agent/client.cpp
@@ -27,6 +29,7 @@ http/status.cpp
 io/network_stream.cpp
 mime_type.cpp
 uri.cpp
+${CMAKE_CURRENT_BINARY_DIR}/version.cpp
 )
 
 add_library(${LIBRARY_NAME} ${SOURCES})

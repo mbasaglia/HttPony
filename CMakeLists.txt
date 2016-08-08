@@ -16,9 +16,9 @@
 #
 cmake_minimum_required(VERSION 2.6)
 cmake_policy(SET CMP0009 NEW)
+cmake_policy(SET CMP0048 NEW)
 set(NICE_NAME HttPony)
-project(${NICE_NAME} CXX)
-set(PROJECT_VERSION 0.1)
+project(${NICE_NAME} VERSION 0.1 LANGUAGES CXX)
 set(PROJECT_DESCRIPTION "A C++ HTTP Server library")
 string(TOLOWER ${NICE_NAME} LIBRARY_NAME)
 
