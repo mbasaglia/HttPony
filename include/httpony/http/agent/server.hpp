@@ -22,6 +22,10 @@
 #ifndef HTTPONY_SERVER_HPP
 #define HTTPONY_SERVER_HPP
 
+/// \cond
+#include <melanolib/utils/service.hpp>
+/// \endcond
+
 #include "httpony/io/basic_server.hpp"
 #include "httpony/http/response.hpp"
 
@@ -43,22 +47,6 @@ public:
      * \brief Listening address
      */
     io::ListenAddress listen_address() const;
-
-    /**
-     * \brief Starts the server in a background thread
-     * \throws runtime_error if it cannot be started
-     */
-    void start();
-
-    /**
-     * \brief Whether the server has been started
-     */
-    bool started() const;
-
-    /**
-     * \brief Stops the background threads
-     */
-    void stop();
 
     /**
      * \brief The timeout for network I/O operations
@@ -90,6 +78,21 @@ public:
         const Response& response,
         std::ostream& output) const;
 
+    void start()
+    {
+        service.start();
+    }
+
+    void stop()
+    {
+        service.stop();
+    }
+
+    void running()
+    {
+        service.running();
+    }
+
 protected:
     /**
      * \brief Handles connection errors
@@ -113,6 +116,10 @@ protected:
     }
 
 private:
+    void on_start(std::unique_lock<std::mutex>& lock);
+    void on_stop(std::unique_lock<std::mutex>& lock);
+    void loop(std::unique_lock<std::mutex>& lock);
+
     /**
      * \brief Creates a new connection object
      */
@@ -142,10 +149,17 @@ private:
         std::ostream& output
     ) const;
 
+
+    friend melanolib::CallerService<Server>;
+    melanolib::CallerService<Server> service{
+        {this, &Server::on_start},
+        {this, &Server::on_stop},
+        {this, &Server::loop},
+    };
+
     io::ListenAddress _listen_address;
     io::BasicServer _listen_server;
     std::size_t _max_request_body;
-    std::thread _thread;
 };
 
 } // namespace httpony

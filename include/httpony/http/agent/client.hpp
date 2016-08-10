@@ -25,8 +25,8 @@
 #include <list>
 #include <type_traits>
 
-#include <melanolib/utils/movable.hpp>
 #include <melanolib/utils/functional.hpp>
+#include <melanolib/utils/service.hpp>
 /// \endcond
 
 #include "httpony/io/basic_client.hpp"
@@ -122,7 +122,6 @@ public:
         return _max_redirects;
     }
 
-
 protected:
     /**
      * \brief Called right before a request is sent to the connection
@@ -176,67 +175,11 @@ class BasicAsyncClient : public ClientT
 public:
     template<class... Args>
         BasicAsyncClient(Args&&... args)
-            : ClientT(std::forward<Args>(args)...),
-              should_run(true)
+            : ClientT(std::forward<Args>(args)...)
         {}
 
     ~BasicAsyncClient()
     {
-        stop();
-    }
-
-    void start()
-    {
-        if ( !started() )
-        {
-            should_run = true;
-            thread = std::move(std::thread([this]{ run(); }));
-        }
-    }
-
-    bool started() const
-    {
-        return thread.joinable();
-    }
-
-    void stop()
-    {
-        if ( started() )
-        {
-            should_run = false;
-            condition.notify_all();
-            thread.join();
-        }
-    }
-
-    void run()
-    {
-        while( should_run )
-        {
-            std::unique_lock<std::mutex> lock(mutex);
-            while ( items.empty() && should_run )
-                condition.wait(lock);
-
-            if ( !should_run )
-                return;
-
-            std::vector<io::Connection> connections;
-            connections.reserve(items.size());
-
-            for ( auto& item : items )
-                connections.push_back(item.connection);
-
-            lock.unlock();
-            for ( auto connection : connections )
-                connection.socket().process_async();
-            lock.lock();
-
-            std::unique_lock<std::mutex> old_lock(old_requests_mutex);
-            for ( auto it_conn = items.begin(); it_conn != items.end(); )
-            {
-                it_conn = remove_old(it_conn);
-            }
-        }
     }
 
     template<class OnResponse, class OnConnect, class OnError>
@@ -248,7 +191,7 @@ public:
     {
         request.connection = ClientT::create_connection(request.url);
 
-        std::unique_lock<std::mutex> lock(mutex);
+        auto lock = service.lock();
         items.emplace_back(std::move(request));
         auto& item = items.back();
         lock.unlock();
@@ -280,7 +223,7 @@ public:
             }
         );
 
-        condition.notify_one();
+        service.condition().notify_one();
     }
 
     void async_query(Request&& request)
@@ -295,7 +238,46 @@ public:
         );
     }
 
+    void start()
+    {
+        service.start();
+    }
+
+    void stop()
+    {
+        service.stop();
+    }
+
+    void running()
+    {
+        service.running();
+    }
+
 private:
+    void action(std::unique_lock<std::mutex>& lock)
+    {
+        std::vector<io::Connection> connections;
+        connections.reserve(items.size());
+
+        for ( auto& item : items )
+            connections.push_back(item.connection);
+
+        lock.unlock();
+        for ( auto connection : connections )
+            connection.socket().process_async();
+        lock.lock();
+
+        std::unique_lock<std::mutex> old_lock(old_requests_mutex);
+        for ( auto it_conn = items.begin(); it_conn != items.end(); )
+        {
+            it_conn = remove_old(it_conn);
+        }
+    }
+
+    bool wait_condition()
+    {
+        return items.empty();
+    }
 
     io::BasicClient& basic_client()
     {
@@ -315,7 +297,7 @@ private:
         std::unique_lock<std::mutex> lock(old_requests_mutex);
         old_requests.push_back(request);
         lock.unlock();
-        condition.notify_one();
+        service.condition().notify_one();
     }
 
     item_iterator remove_old(item_iterator iter)
@@ -331,13 +313,20 @@ private:
         return ++iter;
     }
 
-    std::thread thread;
-    std::condition_variable condition;
+    using Service = melanolib::LoopService<
+        melanolib::Noop,
+        melanolib::Noop,
+        melanolib::ServiceMethodCaller<BasicAsyncClient>,
+        melanolib::MethodCaller<BasicAsyncClient, bool>
+        >;
+    Service service{
+        {},
+        {},
+        {this, &BasicAsyncClient::action},
+        {this, &BasicAsyncClient::wait_condition},
+    };
 
-    std::mutex mutex;
-    std::atomic<bool> should_run = true;
     std::list<Request> items;
-
     std::mutex old_requests_mutex;
     std::list<Request*> old_requests;
 };

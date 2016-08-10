@@ -251,6 +251,7 @@ int main(int argc, char** argv)
     std::cout << "Hit enter to quit\n";
     std::cin.get();
 
+    client.stop();
     // The destructors will stop client and server and join the thread
     return 0;
 }

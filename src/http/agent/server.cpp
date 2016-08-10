@@ -52,50 +52,43 @@ void Server::set_max_request_body(std::size_t size)
     _max_request_body = size;
 }
 
-bool Server::started() const
-{
-    return _thread.joinable();
-}
-
-void Server::start()
+void Server::on_start(std::unique_lock<std::mutex>& lock)
 {
     _listen_server.start(_listen_address);
-
-    _thread = std::thread([this](){
-        _listen_server.run(
-            [this](io::Connection& connection){
-                if ( accept(connection) )
-                {
-                    /// \todo Switch parser based on protocol
-                    Http1Parser parser;
-                    auto stream = connection.receive_stream();
-                    Request request;
-                    auto status = parser.request(stream, request);
-                    if ( stream.timed_out() )
-                        status = StatusCode::RequestTimeout;
-                    else if ( request.body.has_data() )
-                        connection.input_buffer().expect_input(request.body.content_length());
-                    request.connection = connection;
-                    respond(request, status);
-                }
-            },
-            [this](io::Connection& connection, const OperationStatus& status){
-                error(connection, status);
-            },
-            [this]{
-                return create_connection();
-            }
-        );
-    });
 }
 
-void Server::stop()
+void Server::loop(std::unique_lock<std::mutex>& lock)
 {
-    if ( started() )
-    {
-        _listen_server.stop();
-        _thread.join();
-    }
+    lock.unlock();
+    _listen_server.run(
+        [this](io::Connection& connection){
+            if ( accept(connection) )
+            {
+                /// \todo Switch parser based on protocol
+                Http1Parser parser;
+                auto stream = connection.receive_stream();
+                Request request;
+                auto status = parser.request(stream, request);
+                if ( stream.timed_out() )
+                    status = StatusCode::RequestTimeout;
+                else if ( request.body.has_data() )
+                    connection.input_buffer().expect_input(request.body.content_length());
+                request.connection = connection;
+                respond(request, status);
+            }
+        },
+        [this](io::Connection& connection, const OperationStatus& status){
+            error(connection, status);
+        },
+        [this]{
+            return create_connection();
+        }
+    );
+}
+
+void Server::on_stop(std::unique_lock<std::mutex>& lock)
+{
+    _listen_server.stop();
 }
 
 void Server::process_log_format(
